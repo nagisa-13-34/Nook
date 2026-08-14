@@ -50,7 +50,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkPagination>
 		</div>
 		<div v-else-if="tab === 'owned'" class="_gaps">
-			<MkButton v-if="$i?.policies.canCreateChannel" type="routerLink" primary rounded to="/channels/new"><i class="ti ti-plus"></i> Create Community</MkButton>
+			<MkButton v-if="$i?.policies.canCreateChannel" type="routerLink" primary rounded to="/channels/new"><i class="ti ti-plus"></i> {{ communityI18n.createCommunity }}</MkButton>
 			<MkPagination v-slot="{items}" :paginator="ownedPaginator">
 				<div :class="$style.root">
 					<MkChannelPreview v-for="channel in items" :key="channel.id" :channel="channel"/>
@@ -72,11 +72,9 @@ import MkButton from '@/components/MkButton.vue';
 import MkFoldableSection from '@/components/MkFoldableSection.vue';
 import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
-import { useRouter } from '@/router.js';
 import { Paginator } from '@/utility/paginator.js';
 import { $i } from '@/i.js';
-
-const router = useRouter();
+import { communityI18n } from '@/nook/community-i18n.js';
 
 type SearchType = 'nameAndDescription' | 'nameOnly';
 
@@ -96,84 +94,31 @@ onMounted(() => {
 	searchType.value = props.type ?? 'nameAndDescription';
 });
 
-const featuredPaginator = markRaw(new Paginator('channels/featured', {
-	limit: 10,
-	noPaging: true,
-}));
-const favoritesPaginator = markRaw(new Paginator('channels/my-favorites', {
-	limit: 100,
-	noPaging: true,
-}));
-const followingPaginator = markRaw(new Paginator('channels/followed', {
-	limit: 10,
-}));
-const ownedPaginator = markRaw(new Paginator('channels/owned', {
-	limit: 10,
-}));
+const featuredPaginator = markRaw(new Paginator('channels/featured', { limit: 10, noPaging: true }));
+const favoritesPaginator = markRaw(new Paginator('channels/my-favorites', { limit: 100, noPaging: true }));
+const followingPaginator = markRaw(new Paginator('channels/followed', { limit: 10 }));
+const ownedPaginator = markRaw(new Paginator('channels/owned', { limit: 10 }));
 
 async function search() {
 	const query = searchQuery.value.toString().trim();
-
 	if (query == null) return;
-
 	const type = searchType.value.toString().trim();
-
-	if (type !== 'nameAndDescription' && type !== 'nameOnly') {
-		console.error(`Unrecognized search type: ${type}`);
-		return;
-	}
-
-	channelPaginator.value = markRaw(new Paginator('channels/search', {
-		limit: 10,
-		params: {
-			query: searchQuery.value,
-			type: type,
-		},
-	}));
-
+	if (type !== 'nameAndDescription' && type !== 'nameOnly') return;
+	channelPaginator.value = markRaw(new Paginator('channels/search', { limit: 10, params: { query: searchQuery.value, type } }));
 	key.value = query + type;
 }
 
 const headerActions = computed(() => []);
+const headerTabs = computed(() => [{ key: 'search', title: i18n.ts.search, icon: 'ti ti-search' },
+	{ key: 'featured', title: communityI18n.discover, icon: 'ti ti-sparkles' },
+	{ key: 'favorites', title: communityI18n.saved, icon: 'ti ti-bookmark' },
+	{ key: 'following', title: communityI18n.joined, icon: 'ti ti-users' },
+	{ key: 'owned', title: communityI18n.yours, icon: 'ti ti-user-star' }]);
 
-const headerTabs = computed(() => [{
-	key: 'search',
-	title: i18n.ts.search,
-	icon: 'ti ti-search',
-}, {
-	key: 'featured',
-	title: 'Discover',
-	icon: 'ti ti-sparkles',
-}, {
-	key: 'favorites',
-	title: 'Saved',
-	icon: 'ti ti-bookmark',
-}, {
-	key: 'following',
-	title: 'Joined',
-	icon: 'ti ti-users',
-}, {
-	key: 'owned',
-	title: 'Yours',
-	icon: 'ti ti-user-star',
-}]);
-
-definePage(() => ({
-	title: 'Community',
-	icon: 'ti ti-users',
-}));
+definePage(() => ({ title: communityI18n.community, icon: 'ti ti-users' }));
 </script>
 
 <style lang="scss" module>
-.searchRoot {
-	width: 100%;
-	max-width: 700px;
-	margin: 0 auto;
-}
-
-.root {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-	gap: var(--MI-margin);
-}
+.searchRoot { width: 100%; max-width: 700px; margin: 0 auto; }
+.root { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: var(--MI-margin); }
 </style>
