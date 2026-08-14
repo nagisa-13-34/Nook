@@ -1,0 +1,64 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { createHash } from 'node:crypto';
+import { URLSearchParams } from 'node:url';
+import { Inject, Injectable } from '@nestjs/common';
+import type { DataSource } from 'typeorm';
+import type { MiMeta } from '@/models/_.js';
+import { DI } from '@/di-symbols.js';
+import { HttpRequestService } from '@/core/HttpRequestService.js';
+
+export class NookTranslationUnavailableError extends Error {}
+
+@Injectable()
+export class NookTranslationService {
+	constructor(
+		@Inject(DI.db) private db: DataSource,
+		@Inject(DI.meta) private serverSettings: MiMeta,
+		private httpRequestService: HttpRequestService,
+	) {}
+
+	public async translate(kind: 'note' | 'communityMessage', objectId: string, text: string, targetLanguage: string): Promise<{ sourceLang: string; text: string }> {
+		if (this.serverSettings.deeplAuthKey == null) throw new NookTranslationUnavailableError();
+		const sourceHash = createHash('sha256').update(text).digest('hex');
+		let targetLang = targetLanguage.trim();
+		if (targetLang.includes('-')) targetLang = targetLang.split('-')[0];
+		targetLang = targetLang.toUpperCase();
+
+		const cached = await this.db.query<Array<{ sourceLang: string; translatedText: string }>>(
+			`SELECT "sourceLang", "translatedText" FROM "nook_translation_cache"
+			 WHERE "kind"=$1 AND "objectId"=$2 AND "sourceHash"=$3 AND "targetLang"=$4 LIMIT 1`,
+			[kind, objectId, sourceHash, targetLang],
+		);
+		if (cached[0] != null) return { sourceLang: cached[0].sourceLang, text: cached[0].translatedText };
+
+		const params = new URLSearchParams();
+		params.append('text', text);
+		params.append('target_lang', targetLang);
+		const endpoint = this.serverSettings.deeplIsPro ? 'https://api.deepl.com/v2/translate' : 'https://api-free.deepl.com/v2/translate';
+		const response = await this.httpRequestService.send(endpoint, {
+			method: 'POST',
+			headers: {
+				Authorization: `DeepL-Auth-Key ${this.serverSettings.deeplAuthKey}`,
+				'Content-Type': 'application/x-www-form-urlencoded',
+				Accept: 'application/json, */*',
+			},
+			body: params.toString(),
+		});
+		const json = await response.json() as { translations?: Array<{ detected_source_language: string; text: string }> };
+		const translation = json.translations?.[0];
+		if (translation == null) throw new NookTranslationUnavailableError();
+
+		await this.db.query(
+			`INSERT INTO "nook_translation_cache" ("kind","objectId","sourceHash","targetLang","sourceLang","translatedText")
+			 VALUES ($1,$2,$3,$4,$5,$6)
+			 ON CONFLICT ("kind","objectId","sourceHash","targetLang") DO UPDATE
+			 SET "sourceLang"=EXCLUDED."sourceLang", "translatedText"=EXCLUDED."translatedText", "createdAt"=now()`,
+			[kind, objectId, sourceHash, targetLang, translation.detected_source_language, translation.text],
+		);
+		return { sourceLang: translation.detected_source_language, text: translation.text };
+	}
+}
