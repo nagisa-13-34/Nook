@@ -6,7 +6,7 @@
 import { defineAsyncComponent } from 'vue';
 import type { AsyncComponentLoader } from 'vue';
 import type { RouteDef } from '@/lib/nirax.js';
-import { $i, iAmModerator } from '@/i.js';
+import { $i, iAmAdmin, iAmModerator } from '@/i.js';
 import MkLoading from '@/pages/_loading_.vue';
 import MkError from '@/pages/_error_.vue';
 import PageTimeline from '@/pages/timeline.vue';
@@ -465,15 +465,15 @@ export const ROUTE_DEF = [{
 	}, {
 		path: '/nook-settings',
 		name: 'nookSettings',
-		component: page(() => import('@/pages/admin/nook-settings.vue')),
+		component: iAmAdmin ? page(() => import('@/pages/admin/nook-settings.vue')) : page(() => import('@/pages/not-found.vue')),
 	}, {
 		path: '/nook-policies/:id/edit',
 		name: 'nookPolicyEdit',
-		component: page(() => import('@/pages/admin/nook-policy.edit.vue')),
+		component: iAmAdmin ? page(() => import('@/pages/admin/nook-policy.edit.vue')) : page(() => import('@/pages/not-found.vue')),
 	}, {
 		path: '/nook-policies/new',
 		name: 'nookPolicyEdit',
-		component: page(() => import('@/pages/admin/nook-policy.edit.vue')),
+		component: iAmAdmin ? page(() => import('@/pages/admin/nook-policy.edit.vue')) : page(() => import('@/pages/not-found.vue')),
 	}, {
 		path: '/branding',
 		name: 'branding',
