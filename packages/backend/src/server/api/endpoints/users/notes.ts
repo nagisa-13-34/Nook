@@ -39,7 +39,7 @@ export const meta = {
 		},
 
 		bothWithRepliesAndWithFiles: {
-			message: 'Specifying both withReplies and withFiles is not supported',
+			message: 'withReplies cannot be combined with withFiles or fileType.',
 			code: 'BOTH_WITH_REPLIES_AND_WITH_FILES',
 			id: '91c8cb9f-36ed-46e7-9ca2-7df96ed6e222',
 		},
@@ -66,6 +66,7 @@ export const paramDef = {
 		untilDate: { type: 'integer' },
 		allowPartial: { type: 'boolean', default: false }, // true is recommended but for compatibility false by default
 		withFiles: { type: 'boolean', default: false },
+		fileType: { type: 'string', enum: ['image', 'video'] },
 	},
 	required: ['userId'],
 } as const;
@@ -90,7 +91,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const sinceId = ps.sinceId ?? (ps.sinceDate ? this.idService.gen(ps.sinceDate!) : null);
 			const isSelf = me && (me.id === ps.userId);
 
-			if (ps.withReplies && ps.withFiles) throw new ApiError(meta.errors.bothWithRepliesAndWithFiles);
+			if (ps.withReplies && (ps.withFiles || ps.fileType != null)) throw new ApiError(meta.errors.bothWithRepliesAndWithFiles);
+			const withMedia = ps.withFiles || ps.fileType != null;
 
 			// early return if me is blocked by requesting user
 			if (me != null) {
@@ -107,14 +109,15 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					limit: ps.limit,
 					userId: ps.userId,
 					withChannelNotes: ps.withChannelNotes,
-					withFiles: ps.withFiles,
+					withFiles: withMedia,
+					fileType: ps.fileType,
 					withRenotes: ps.withRenotes,
 				}, me);
 
 				return await this.noteEntityService.packMany(timeline, me);
 			}
 
-			const redisTimelines: FanoutTimelineName[] = [ps.withFiles ? `userTimelineWithFiles:${ps.userId}` : `userTimeline:${ps.userId}`];
+			const redisTimelines: FanoutTimelineName[] = [withMedia ? `userTimelineWithFiles:${ps.userId}` : `userTimeline:${ps.userId}`];
 
 			if (ps.withReplies) redisTimelines.push(`userTimelineWithReplies:${ps.userId}`);
 			if (ps.withChannelNotes) redisTimelines.push(`userTimelineWithChannel:${ps.userId}`);
@@ -133,9 +136,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				ignoreAuthorFromInstanceBlock: true,
 				ignoreAuthorFromUserSuspension: true,
 				excludeReplies: ps.withChannelNotes && !ps.withReplies, // userTimelineWithChannel may include replies
-				excludeNoFiles: ps.withChannelNotes && ps.withFiles, // userTimelineWithChannel may include notes without files
+				excludeNoFiles: ps.withChannelNotes && withMedia, // userTimelineWithChannel may include notes without files
 				excludePureRenotes: !ps.withRenotes,
 				noteFilter: note => {
+					if (ps.fileType != null && !note.attachedFileTypes.some(type => type.startsWith(`${ps.fileType}/`))) return false;
 					if (note.channel?.isSensitive && !isSelf) return false;
 					if (note.visibility === 'specified' && (!me || (me.id !== note.userId && !note.visibleUserIds.some(v => v === me.id)))) return false;
 					if (note.visibility === 'followers' && !isFollowing && !isSelf) return false;
@@ -148,7 +152,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					limit,
 					userId: ps.userId,
 					withChannelNotes: ps.withChannelNotes,
-					withFiles: ps.withFiles,
+					withFiles: withMedia,
+					fileType: ps.fileType,
 					withRenotes: ps.withRenotes,
 				}, me),
 			});
@@ -164,6 +169,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		userId: string,
 		withChannelNotes: boolean,
 		withFiles: boolean,
+		fileType: 'image' | 'video' | undefined,
 		withRenotes: boolean,
 	}, me: MiLocalUser | null) {
 		const mutingChannelIds = me
@@ -218,6 +224,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 		if (ps.withFiles) {
 			query.andWhere('note.fileIds != \'{}\'');
+		}
+
+		if (ps.fileType != null) {
+			query.andWhere(`EXISTS (
+				SELECT 1
+				FROM unnest(note."attachedFileTypes") AS "attachedType"
+				WHERE "attachedType" LIKE :fileTypePrefix
+			)`, { fileTypePrefix: `${ps.fileType}/%` });
 		}
 
 		if (ps.withRenotes === false) {
