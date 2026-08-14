@@ -32,7 +32,7 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload preview
+      - name: Upload Nook UI preview only
         uses: actions/upload-pages-artifact@v4
         with:
           path: preview
