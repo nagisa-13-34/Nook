@@ -5,12 +5,14 @@
 ### Client
 - Feat: NookのPolicyとFeature Flagを管理する画面を追加
 - Feat: 管理画面からユーザーの国・確認済み年齢区分・Policyを設定できるように
+- Feat: Nookブランド表示とスマートフォン向けBottom Navigationを追加
 
 ### Server
 - Feat: NookのPolicyとFeature Flagを管理する管理者APIを追加
 - Feat: 投稿作成時にNook Policy Engineの権限判定を適用
 - Feat: Nookのユーザー安全設定を管理するAPIを追加
 - Feat: 画像・動画付き投稿とChat送信時にNook Policy Engineの権限判定を適用
+- Feat: 相互フォロー状態と成人・保護対象の組み合わせに応じたChat権限判定を追加
 
 ## 2026.7.0
 
