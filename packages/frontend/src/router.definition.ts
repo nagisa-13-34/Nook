@@ -463,6 +463,18 @@ export const ROUTE_DEF = [{
 		name: 'settings',
 		component: page(() => import('@/pages/admin/settings.vue')),
 	}, {
+		path: '/nook-settings',
+		name: 'nookSettings',
+		component: page(() => import('@/pages/admin/nook-settings.vue')),
+	}, {
+		path: '/nook-policies/:id/edit',
+		name: 'nookPolicyEdit',
+		component: page(() => import('@/pages/admin/nook-policy.edit.vue')),
+	}, {
+		path: '/nook-policies/new',
+		name: 'nookPolicyEdit',
+		component: page(() => import('@/pages/admin/nook-policy.edit.vue')),
+	}, {
 		path: '/branding',
 		name: 'branding',
 		component: page(() => import('@/pages/admin/branding.vue')),
