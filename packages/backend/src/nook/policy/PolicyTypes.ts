@@ -74,5 +74,5 @@ export type NookPolicyDecision = Readonly<{
 	allowed: boolean;
 	permission: NookPermission;
 	policyId: string | null;
-	reason: 'allowed' | 'denied' | 'policy_not_found';
+	reason: 'allowed' | 'denied' | 'policy_not_found' | 'enforcement_disabled';
 }>;
