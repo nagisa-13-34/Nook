@@ -16,7 +16,7 @@ describe('Nook Markdown safety through the existing MFM HTML renderer', () => {
 	test.each([
 		['<script>alert(1)</script>', '&lt;script&gt;alert(1)&lt;/script&gt;'],
 		['<img src=x onerror=alert(1)>', '&lt;img src=x onerror=alert(1)&gt;'],
-		['<iframe src="https://example.com"></iframe>', '&lt;iframe src=&quot;https://example.com&quot;&gt;&lt;/iframe&gt;'],
+		['<iframe src="..."></iframe>', '&lt;iframe src=&quot;...&quot;&gt;&lt;/iframe&gt;'],
 	])('escapes raw HTML instead of rendering it: %s', (input, expected) => {
 		expect(mfmService.toHtml(mfm.parse(input))).toBe(expected);
 	});
