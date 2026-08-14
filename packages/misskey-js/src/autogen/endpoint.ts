@@ -75,8 +75,12 @@ import type {
 	AdminInviteListResponse,
 	AdminMetaResponse,
 	AdminNookGetSettingsResponse,
+	AdminNookGetUserPolicyContextRequest,
+	AdminNookGetUserPolicyContextResponse,
 	AdminNookUpdateFeatureFlagRequest,
 	AdminNookUpdateFeatureFlagResponse,
+	AdminNookUpdateUserPolicyContextRequest,
+	AdminNookUpdateUserPolicyContextResponse,
 	AdminNookUpsertPolicyRequest,
 	AdminNookUpsertPolicyResponse,
 	AdminPromoCreateRequest,
@@ -727,7 +731,9 @@ export type Endpoints = {
 	'admin/invite/list': { req: AdminInviteListRequest; res: AdminInviteListResponse };
 	'admin/meta': { req: EmptyRequest; res: AdminMetaResponse };
 	'admin/nook/get-settings': { req: EmptyRequest; res: AdminNookGetSettingsResponse };
+	'admin/nook/get-user-policy-context': { req: AdminNookGetUserPolicyContextRequest; res: AdminNookGetUserPolicyContextResponse };
 	'admin/nook/update-feature-flag': { req: AdminNookUpdateFeatureFlagRequest; res: AdminNookUpdateFeatureFlagResponse };
+	'admin/nook/update-user-policy-context': { req: AdminNookUpdateUserPolicyContextRequest; res: AdminNookUpdateUserPolicyContextResponse };
 	'admin/nook/upsert-policy': { req: AdminNookUpsertPolicyRequest; res: AdminNookUpsertPolicyResponse };
 	'admin/promo/create': { req: AdminPromoCreateRequest; res: EmptyResponse };
 	'admin/queue/clear': { req: AdminQueueClearRequest; res: EmptyResponse };
