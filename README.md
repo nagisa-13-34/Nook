@@ -1,63 +1,224 @@
-<div align="center">
-<a href="https://misskey-hub.net">
-	<img src="./assets/title_float.svg" alt="Misskey logo" style="border-radius:50%" width="300"/>
-</a>
+# Nook
 
-**🌎 **Misskey** is an open source, federated social media platform that's free forever! 🚀**
+Nook is a federated social platform built on top of [Misskey](https://github.com/misskey-dev/misskey).
 
-[Learn more](https://misskey-hub.net/)
+It keeps Misskey / MFM / ActivityPub compatibility as a priority while adding a Nook-specific UI, safety and policy layer, privacy-oriented defaults, community features, and a more familiar posting experience.
 
----
+> [!IMPORTANT]
+> Nook is an independent derivative of Misskey and is still under active development. It is not the official Misskey distribution.
 
-<a href="https://misskey-hub.net/servers/">
-		<img src="https://custom-icon-badges.herokuapp.com/badge/find_an-instance-acea31?logoColor=acea31&style=for-the-badge&logo=misskey&labelColor=363B40" alt="find an instance"/></a>
+## What Nook adds
 
-<a href="https://misskey-hub.net/docs/for-admin/install/guides/">
-		<img src="https://custom-icon-badges.herokuapp.com/badge/create_an-instance-FBD53C?logoColor=FBD53C&style=for-the-badge&logo=server&labelColor=363B40" alt="create an instance"/></a>
+### Nook UI
 
-<a href="./CONTRIBUTING.md">
-		<img src="https://custom-icon-badges.herokuapp.com/badge/become_a-contributor-A371F7?logoColor=A371F7&style=for-the-badge&logo=git-merge&labelColor=363B40" alt="become a contributor"/></a>
+- Nook desktop sidebar and mobile navigation
+- Home, Explore, Community, Chat, Notifications, Widgets, Settings, and account navigation
+- Responsive desktop navigation with compact mode
+- Nook-oriented labels, icons, empty states, and interaction flows
 
-<a href="https://discord.gg/Wp8gVStHW3">
-		<img src="https://custom-icon-badges.herokuapp.com/badge/join_the-community-5865F2?logoColor=5865F2&style=for-the-badge&logo=discord&labelColor=363B40" alt="join the community"/></a>
+### Timelines and profiles
 
-<a href="https://www.patreon.com/syuilo">
-		<img src="https://custom-icon-badges.herokuapp.com/badge/become_a-patron-F96854?logoColor=F96854&style=for-the-badge&logo=patreon&labelColor=363B40" alt="become a patron"/></a>
+- Following timeline
+- Discover timeline
+- Media timeline
+- Profile tabs for Posts, Media, Videos, and Works
+- Bookmarks UI
+- Likes / reactions private by default for newly created users
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/misskey-dev/misskey)
+### Community and Chat
 
-<a href="https://flatt.tech/oss/gmo/trampoline" target="_blank"><img src="https://flatt.tech/assets/images/badges/gmo-oss.svg" height="24px"/></a>
+- Community MVP
+- Chat policy enforcement
+- Room chat policy enforcement
+- Follow policy enforcement
+- Mutual-follow and age/policy-aware access decisions
 
-</div>
+### Safety and policy layer
 
-## Thanks
+Nook adds a policy system around actions such as posting, following, and chat.
 
-<a href="https://sentry.io/"><img src="https://github.com/misskey-dev/misskey/assets/4439005/98576556-222f-467a-94be-e98dbda1d852" height="30" alt="Sentry" /></a>
+The implementation is designed to keep policy decisions explicit and testable while avoiding changes to the underlying ActivityPub protocol.
 
-Thanks to [Sentry](https://sentry.io/) for providing the error tracking platform that helps us catch unexpected errors.
+Current policy work includes:
 
-<a href="https://www.chromatic.com/"><img src="https://user-images.githubusercontent.com/321738/84662277-e3db4f80-af1b-11ea-88f5-91d67a5e59f6.png" height="30" alt="Chromatic" /></a>
+- account-state / age-group / country-aware policy selection
+- protected-user communication checks
+- remote-user conservative handling when age information is unavailable
+- batched room policy evaluation to avoid participant-scaled database queries
+- unit and endpoint coverage for important policy boundaries
 
-Thanks to [Chromatic](https://www.chromatic.com/) for providing the visual testing platform that helps us review UI changes and catch visual regressions.
+## Hybrid Markdown + MFM
 
-<a href="https://about.codecov.io/for/open-source/"><img src="https://about.codecov.io/wp-content/themes/codecov/assets/brand/sentry-cobranding/logos/codecov-by-sentry-logo.svg" height="30" alt="Codecov" /></a>
+Nook is also developing a small Markdown-like input layer that works together with existing MFM instead of replacing it.
 
-Thanks to [Codecov](https://about.codecov.io/for/open-source/) for providing the code coverage platform that helps us improve our test coverage.
+Examples:
 
-<a href="https://crowdin.com/"><img src="https://user-images.githubusercontent.com/20679825/230709597-1299a011-171a-4294-a91e-355a9b37c672.svg" height="30" alt="Crowdin" /></a>
+````text
+**bold**
+*italic*
+~~strikethrough~~
+`inline code`
 
-Thanks to [Crowdin](https://crowdin.com/) for providing the localization platform that helps us translate Misskey into many languages.
+> quote
 
-<a href="https://hub.docker.com/"><img src="https://user-images.githubusercontent.com/20679825/230148221-f8e73a32-a49b-47c3-9029-9a15c3824f92.png" height="30" alt="Docker" /></a>
+[OpenAI](https://openai.com)
 
-Thanks to [Docker](https://hub.docker.com/) for providing the container platform that helps us run Misskey in production.
+- item one
+- item two
 
----
+# Heading
 
-<div align="center">
-	
-Support us with a ⭐ !
+```js
+const hello = "world";
+```
 
-[![Star History Chart](https://api.star-history.com/svg?repos=misskey-dev/misskey&type=Date)](https://star-history.com/#misskey-dev/misskey&Date)
+Hello @user #hashtag :custom_emoji:
+$[shake MFM still works]
+````
 
-</div>
+The design intentionally stays close to Misskey's existing rendering pipeline:
+
+```text
+Markdown-like preprocessor
+        ↓
+existing mfm-js parser
+        ↓
+existing MFM AST
+        ↓
+existing renderer
+```
+
+Compatibility rules are more important than full CommonMark compliance:
+
+- `note.text` keeps the original user input
+- existing notes remain on the legacy MFM path
+- remote notes are not reinterpreted as Nook Markdown
+- MFM mentions, hashtags, custom emoji, functions, quotes, URLs, and code remain supported
+- inline and fenced code keep Markdown and MFM inactive inside the code
+- raw user HTML is not introduced as a rendering path
+- no Markdown-to-HTML-to-DOM reparse pipeline is used
+- no large Markdown dependency is required
+
+This feature is still being validated before it is merged into the main branch.
+
+## Compatibility principles
+
+Nook tries to keep changes narrow and reversible.
+
+In particular:
+
+- existing `note.text` storage is preserved
+- existing note data structures are kept compatible wherever possible
+- ActivityPub payloads are not changed just to support Nook UI features
+- remote notes keep their existing parsing behavior
+- existing MFM remains the primary compatible formatting system
+- security-sensitive rendering stays on the existing AST/component rendering path
+
+## Repository structure
+
+This repository follows the upstream Misskey monorepo layout.
+
+| Path | Purpose |
+| --- | --- |
+| `packages/backend` | API, database, federation, policies, note creation |
+| `packages/frontend` | Nook / Misskey web client |
+| `packages/misskey-js` | JavaScript / TypeScript client types and shared SDK code |
+| `packages/i18n` | localization infrastructure |
+| `packages/sw` | service worker |
+| `locales` | translation source files |
+
+## Development
+
+Nook currently inherits most of its development environment from Misskey.
+
+### Requirements
+
+The development guide expects at least:
+
+- Node.js supported by the current Misskey base
+- pnpm (`packageManager` is currently `pnpm@11.11.0`)
+- PostgreSQL
+- Redis
+- FFmpeg
+
+Meilisearch is optional for basic development, but some features and tests may require it.
+
+### Install dependencies
+
+```sh
+corepack enable
+pnpm install
+```
+
+### Start local middleware with Docker Compose
+
+```sh
+docker compose -f compose.local-db.yml up -d
+```
+
+Then configure the local instance as described in [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+### Development server
+
+```sh
+pnpm dev
+```
+
+### Build
+
+```sh
+pnpm build
+```
+
+### Tests and lint
+
+```sh
+pnpm test
+pnpm lint
+```
+
+Useful focused commands include:
+
+```sh
+pnpm backend-unit-test
+pnpm --filter backend typecheck
+pnpm --filter frontend typecheck
+pnpm --filter misskey-js typecheck
+```
+
+When the API schema changes, regenerate `misskey-js` using the repository's generator rather than editing generated files manually:
+
+```sh
+pnpm --filter misskey-js update-autogen-code
+```
+
+## Contributing
+
+Nook is based on a large upstream project, so changes should stay focused and preserve compatibility unless there is a clear reason not to.
+
+Before making larger changes, please read:
+
+- [CONTRIBUTING.md](./CONTRIBUTING.md)
+- [AGENTS.md](./AGENTS.md) for repository-specific agent/development instructions
+
+For Nook-specific work, prefer:
+
+- small diffs over broad rewrites
+- tests for policy, parser, and compatibility boundaries
+- existing Misskey components and parsers over parallel implementations
+- explicit handling of local / remote / legacy data
+- security and federation compatibility over convenience
+
+## Upstream
+
+Nook is built from [Misskey](https://github.com/misskey-dev/misskey), an open-source federated social platform.
+
+A large part of the backend, frontend, federation stack, MFM implementation, tooling, translations, and development infrastructure comes from the Misskey project and its contributors.
+
+When debugging behavior that is not Nook-specific, checking the corresponding upstream Misskey implementation is often useful.
+
+## License
+
+Nook is distributed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**, following the license of the upstream codebase.
+
+See [LICENSE](./LICENSE) for the full license text.
