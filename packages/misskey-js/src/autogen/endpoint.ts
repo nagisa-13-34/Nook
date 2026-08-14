@@ -74,6 +74,11 @@ import type {
 	AdminInviteListRequest,
 	AdminInviteListResponse,
 	AdminMetaResponse,
+	AdminNookGetSettingsResponse,
+	AdminNookUpdateFeatureFlagRequest,
+	AdminNookUpdateFeatureFlagResponse,
+	AdminNookUpsertPolicyRequest,
+	AdminNookUpsertPolicyResponse,
 	AdminPromoCreateRequest,
 	AdminQueueClearRequest,
 	AdminQueueDeliverDelayedResponse,
@@ -721,6 +726,9 @@ export type Endpoints = {
 	'admin/invite/create': { req: AdminInviteCreateRequest; res: AdminInviteCreateResponse };
 	'admin/invite/list': { req: AdminInviteListRequest; res: AdminInviteListResponse };
 	'admin/meta': { req: EmptyRequest; res: AdminMetaResponse };
+	'admin/nook/get-settings': { req: EmptyRequest; res: AdminNookGetSettingsResponse };
+	'admin/nook/update-feature-flag': { req: AdminNookUpdateFeatureFlagRequest; res: AdminNookUpdateFeatureFlagResponse };
+	'admin/nook/upsert-policy': { req: AdminNookUpsertPolicyRequest; res: AdminNookUpsertPolicyResponse };
 	'admin/promo/create': { req: AdminPromoCreateRequest; res: EmptyResponse };
 	'admin/queue/clear': { req: AdminQueueClearRequest; res: EmptyResponse };
 	'admin/queue/deliver-delayed': { req: EmptyRequest; res: AdminQueueDeliverDelayedResponse };
