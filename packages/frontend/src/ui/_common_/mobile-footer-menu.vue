@@ -5,37 +5,32 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div ref="rootEl" :class="$style.root">
-	<button :class="$style.item" class="_button" @click="drawerMenuShowing = true">
-		<div :class="$style.itemInner">
-			<i :class="$style.itemIcon" class="ti ti-menu-2"></i><span v-if="menuIndicated" :class="$style.itemIndicator" class="_blink"><i class="_indicatorCircle"></i></span>
-		</div>
+	<button :class="[$style.item, { [$style.active]: currentPath === '/' }]" class="_button" :aria-label="i18n.ts.home" :aria-current="currentPath === '/' ? 'page' : undefined" @click="mainRouter.push('/')">
+		<i :class="$style.itemIcon" class="ti ti-home"></i>
+		<span :class="$style.itemLabel">{{ i18n.ts.home }}</span>
 	</button>
 
-	<button :class="$style.item" class="_button" @click="mainRouter.push('/')">
-		<div :class="$style.itemInner">
-			<i :class="$style.itemIcon" class="ti ti-home"></i>
-		</div>
+	<button :class="[$style.item, { [$style.active]: currentPath.startsWith('/explore') }]" class="_button" :aria-label="i18n.ts.explore" :aria-current="currentPath.startsWith('/explore') ? 'page' : undefined" @click="mainRouter.push('/explore')">
+		<i :class="$style.itemIcon" class="ti ti-compass"></i>
+		<span :class="$style.itemLabel">{{ i18n.ts.explore }}</span>
 	</button>
 
-	<button :class="$style.item" class="_button" @click="mainRouter.push('/my/notifications')">
-		<div :class="$style.itemInner">
-			<i :class="$style.itemIcon" class="ti ti-bell"></i>
-			<span v-if="$i?.hasUnreadNotification" :class="$style.itemIndicator" class="_blink">
-				<span class="_indicateCounter" :class="$style.itemIndicateValueIcon">{{ $i.unreadNotificationsCount > 99 ? '99+' : $i.unreadNotificationsCount }}</span>
-			</span>
-		</div>
+	<button :class="[$style.item, $style.create]" class="_button" :aria-label="i18n.ts.create" data-testid="open-post-form" @click="os.post()">
+		<span :class="$style.createIcon"><i :class="$style.itemIcon" class="ti ti-plus"></i></span>
+		<span :class="$style.itemLabel">{{ i18n.ts.create }}</span>
 	</button>
 
-	<button :class="$style.item" class="_button" @click="widgetsShowing = true">
-		<div :class="$style.itemInner">
-			<i :class="$style.itemIcon" class="ti ti-apps"></i>
-		</div>
+	<button :class="[$style.item, { [$style.active]: currentPath.startsWith('/channels') }]" class="_button" :aria-label="i18n.ts.nookCommunity" :aria-current="currentPath.startsWith('/channels') ? 'page' : undefined" @click="mainRouter.push('/channels')">
+		<i :class="$style.itemIcon" class="ti ti-users-group"></i>
+		<span :class="$style.itemLabel">{{ i18n.ts.nookCommunity }}</span>
 	</button>
 
-	<button :class="[$style.item, $style.post]" class="_button" @click="os.post()">
-		<div :class="$style.itemInner">
-			<i :class="$style.itemIcon" class="ti ti-pencil"></i>
-		</div>
+	<button :class="[$style.item, { [$style.active]: currentPath.startsWith('/chat') }]" class="_button" :aria-label="$i?.hasUnreadChatMessages ? i18n.ts.nookUnreadChat : i18n.ts.chat" :aria-current="currentPath.startsWith('/chat') ? 'page' : undefined" :disabled="$i == null || $i.policies.chatAvailability === 'unavailable'" @click="mainRouter.push('/chat')">
+		<span :class="$style.iconWrapper">
+			<i :class="$style.itemIcon" class="ti ti-messages"></i>
+			<i v-if="$i?.hasUnreadChatMessages" :class="$style.unread" class="_indicatorCircle"></i>
+		</span>
+		<span :class="$style.itemLabel">{{ i18n.ts.chat }}</span>
 	</button>
 </div>
 </template>
@@ -45,20 +40,14 @@ import { computed, ref, useTemplateRef, watch } from 'vue';
 import { $i } from '@/i.js';
 import * as os from '@/os.js';
 import { mainRouter } from '@/router.js';
-import { navbarItemDef } from '@/navbar.js';
+import { i18n } from '@/i18n.js';
 
-const drawerMenuShowing = defineModel<boolean>('drawerMenuShowing');
-const widgetsShowing = defineModel<boolean>('widgetsShowing');
+defineModel<boolean>('drawerMenuShowing');
+defineModel<boolean>('widgetsShowing');
 
 const rootEl = useTemplateRef('rootEl');
 
-const menuIndicated = computed(() => {
-	for (const def in navbarItemDef) {
-		if (def === 'notifications') continue; // 通知は下にボタンとして表示されてるから
-		if (navbarItemDef[def].indicated) return true;
-	}
-	return false;
-});
+const currentPath = computed(() => mainRouter.currentRoute.value.path);
 
 const rootElHeight = ref(0);
 
@@ -90,67 +79,58 @@ watch(rootEl, () => {
 }
 
 .item {
-	padding: 12px 0;
+	display: flex;
+	min-width: 0;
+	padding: 8px 2px 6px;
+	flex-direction: column;
+	align-items: center;
+	gap: 3px;
+	color: var(--MI_THEME-navFg);
 
-	&:first-child {
-		padding-left: 12px;
+	&.active {
+		color: var(--MI_THEME-accent);
 	}
 
-	&:last-child {
-		padding-right: 12px;
-	}
-
-	&.post {
-		.itemInner {
-			background: linear-gradient(90deg, var(--MI_THEME-buttonGradateA), var(--MI_THEME-buttonGradateB));
-			color: var(--MI_THEME-fgOnAccent);
-
-			&:hover {
-				background: linear-gradient(90deg, hsl(from var(--MI_THEME-accent) h s calc(l + 5)), hsl(from var(--MI_THEME-accent) h s calc(l + 5)));
-			}
-
-			&:active {
-				background: linear-gradient(90deg, hsl(from var(--MI_THEME-accent) h s calc(l + 5)), hsl(from var(--MI_THEME-accent) h s calc(l + 5)));
-			}
-		}
+	&:disabled {
+		opacity: 0.45;
 	}
 }
 
-.itemInner {
+.create {
+	margin-top: -8px;
+}
+
+.createIcon {
+	display: grid;
+	width: 40px;
+	height: 40px;
+	place-items: center;
+	border-radius: 50%;
+	background: linear-gradient(90deg, var(--MI_THEME-buttonGradateA), var(--MI_THEME-buttonGradateB));
+	color: var(--MI_THEME-fgOnAccent);
+}
+
+.iconWrapper {
 	position: relative;
-	padding: 0;
-	aspect-ratio: 1;
-	width: 100%;
-	max-width: 42px;
-	margin: auto;
-	align-content: center;
-	border-radius: 100%;
-
-	&:hover {
-		background: var(--MI_THEME-panelHighlight);
-	}
-
-	&:active {
-		background: var(--MI_THEME-panelHighlight);
-	}
 }
 
 .itemIcon {
-	font-size: 15px;
+	font-size: 20px;
 }
 
-.itemIndicator {
-	position: absolute;
-	bottom: -4px;
-	left: 0;
-	right: 0;
-	color: var(--MI_THEME-indicator);
+.itemLabel {
+	max-width: 100%;
+	overflow: hidden;
 	font-size: 10px;
-	pointer-events: none;
+	line-height: 1.2;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
 
-	&:has(.itemIndicateValueIcon) {
-		animation: none;
-		font-size: 8px;
-	}
+.unread {
+	position: absolute;
+	top: -2px;
+	right: -5px;
+	color: var(--MI_THEME-indicator);
 }
 </style>
