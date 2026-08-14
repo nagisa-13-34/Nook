@@ -266,10 +266,22 @@ type AdminMetaResponse = operations['admin___meta']['responses']['200']['content
 type AdminNookGetSettingsResponse = operations['admin___nook___get-settings']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
+type AdminNookGetUserPolicyContextRequest = operations['admin___nook___get-user-policy-context']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type AdminNookGetUserPolicyContextResponse = operations['admin___nook___get-user-policy-context']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
 type AdminNookUpdateFeatureFlagRequest = operations['admin___nook___update-feature-flag']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
 type AdminNookUpdateFeatureFlagResponse = operations['admin___nook___update-feature-flag']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type AdminNookUpdateUserPolicyContextRequest = operations['admin___nook___update-user-policy-context']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type AdminNookUpdateUserPolicyContextResponse = operations['admin___nook___update-user-policy-context']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 type AdminNookUpsertPolicyRequest = operations['admin___nook___upsert-policy']['requestBody']['content']['application/json'];
@@ -1626,8 +1638,12 @@ declare namespace entities {
         AdminInviteListResponse,
         AdminMetaResponse,
         AdminNookGetSettingsResponse,
+        AdminNookGetUserPolicyContextRequest,
+        AdminNookGetUserPolicyContextResponse,
         AdminNookUpdateFeatureFlagRequest,
         AdminNookUpdateFeatureFlagResponse,
+        AdminNookUpdateUserPolicyContextRequest,
+        AdminNookUpdateUserPolicyContextResponse,
         AdminNookUpsertPolicyRequest,
         AdminNookUpsertPolicyResponse,
         AdminPromoCreateRequest,
