@@ -485,6 +485,33 @@ export type paths = {
          */
         post: operations['admin___meta'];
     };
+    '/admin/nook/get-settings': {
+        /**
+         * admin/nook/get-settings
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *read:admin:meta*
+         */
+        post: operations['admin___nook___get-settings'];
+    };
+    '/admin/nook/update-feature-flag': {
+        /**
+         * admin/nook/update-feature-flag
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:admin:meta*
+         */
+        post: operations['admin___nook___update-feature-flag'];
+    };
+    '/admin/nook/upsert-policy': {
+        /**
+         * admin/nook/upsert-policy
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:admin:roles*
+         */
+        post: operations['admin___nook___upsert-policy'];
+    };
     '/admin/promo/create': {
         /**
          * admin/promo/create
@@ -9575,6 +9602,319 @@ export interface operations {
                         remoteNotesCleaningExpiryDaysForEachNotes: number;
                         remoteNotesCleaningMaxProcessingDurationInMinutes: number;
                         showRoleBadgesOfRemoteUsers: boolean;
+                    };
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    'admin___nook___get-settings': {
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': {
+                        policies: {
+                            id: string;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                            country: string;
+                            /** @enum {string} */
+                            ageGroup: 'U13' | '13_15' | '16_17' | '18_PLUS' | 'UNKNOWN';
+                            accountStates: ('active' | 'limited' | 'suspended' | 'banned')[];
+                            permissions: {
+                                create_post: boolean;
+                                create_image_post: boolean;
+                                create_video_post: boolean;
+                                public_profile: boolean;
+                                discoverable_profile: boolean;
+                                follow_user: boolean;
+                                receive_follow: boolean;
+                                send_chat: boolean;
+                                receive_chat: boolean;
+                                chat_with_stranger: boolean;
+                                chat_with_adult: boolean;
+                                voice_call: boolean;
+                                video_call: boolean;
+                                call_with_stranger: boolean;
+                                call_with_adult: boolean;
+                                join_community: boolean;
+                                create_community: boolean;
+                                join_space: boolean;
+                                speak_in_space: boolean;
+                                create_space: boolean;
+                                external_link: boolean;
+                                location_share: boolean;
+                                recommendation: boolean;
+                                personalized_ads: boolean;
+                            };
+                            priority: number;
+                            enabled: boolean;
+                        }[];
+                        featureFlags: {
+                            /** @enum {string} */
+                            name: 'video' | 'chat' | 'voice_call' | 'video_call' | 'community' | 'spaces' | 'recommendations' | 'external_links' | 'migration' | 'federation';
+                            enabled: boolean;
+                            /** Format: date-time */
+                            updatedAt: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    'admin___nook___update-feature-flag': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    /** @enum {string} */
+                    name: 'video' | 'chat' | 'voice_call' | 'video_call' | 'community' | 'spaces' | 'recommendations' | 'external_links' | 'migration' | 'federation';
+                    enabled: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': {
+                        /** @enum {string} */
+                        name: 'video' | 'chat' | 'voice_call' | 'video_call' | 'community' | 'spaces' | 'recommendations' | 'external_links' | 'migration' | 'federation';
+                        enabled: boolean;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    };
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    'admin___nook___upsert-policy': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    id: string;
+                    country: string;
+                    /** @enum {string} */
+                    ageGroup: 'U13' | '13_15' | '16_17' | '18_PLUS' | 'UNKNOWN';
+                    accountStates: ('active' | 'limited' | 'suspended' | 'banned')[];
+                    permissions: {
+                        create_post: boolean;
+                        create_image_post: boolean;
+                        create_video_post: boolean;
+                        public_profile: boolean;
+                        discoverable_profile: boolean;
+                        follow_user: boolean;
+                        receive_follow: boolean;
+                        send_chat: boolean;
+                        receive_chat: boolean;
+                        chat_with_stranger: boolean;
+                        chat_with_adult: boolean;
+                        voice_call: boolean;
+                        video_call: boolean;
+                        call_with_stranger: boolean;
+                        call_with_adult: boolean;
+                        join_community: boolean;
+                        create_community: boolean;
+                        join_space: boolean;
+                        speak_in_space: boolean;
+                        create_space: boolean;
+                        external_link: boolean;
+                        location_share: boolean;
+                        recommendation: boolean;
+                        personalized_ads: boolean;
+                    };
+                    priority: number;
+                    enabled: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': {
+                        id: string;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                        country: string;
+                        /** @enum {string} */
+                        ageGroup: 'U13' | '13_15' | '16_17' | '18_PLUS' | 'UNKNOWN';
+                        accountStates: ('active' | 'limited' | 'suspended' | 'banned')[];
+                        permissions: {
+                            create_post: boolean;
+                            create_image_post: boolean;
+                            create_video_post: boolean;
+                            public_profile: boolean;
+                            discoverable_profile: boolean;
+                            follow_user: boolean;
+                            receive_follow: boolean;
+                            send_chat: boolean;
+                            receive_chat: boolean;
+                            chat_with_stranger: boolean;
+                            chat_with_adult: boolean;
+                            voice_call: boolean;
+                            video_call: boolean;
+                            call_with_stranger: boolean;
+                            call_with_adult: boolean;
+                            join_community: boolean;
+                            create_community: boolean;
+                            join_space: boolean;
+                            speak_in_space: boolean;
+                            create_space: boolean;
+                            external_link: boolean;
+                            location_share: boolean;
+                            recommendation: boolean;
+                            personalized_ads: boolean;
+                        };
+                        priority: number;
+                        enabled: boolean;
                     };
                 };
             };
