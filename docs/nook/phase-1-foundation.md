@@ -35,12 +35,14 @@ The smartphone layout uses a Nook header with menu and notifications, plus a fiv
 
 The Timeline adds stable Nook views without duplicating the Misskey API. Following uses the existing home timeline, Discover uses the local timeline with a global fallback, and Media uses the home timeline with its attachment-only filter. Discover does not introduce a recommendation algorithm yet, so the future Recommendations feature flag can switch a dedicated module in without changing the tab contract.
 
+Profiles expose Posts, Media, Videos, and Works as stable Nook tabs. Media and Videos use the existing user notes API with a MIME-family filter backed by the note's stored attachment types. Works reuses Misskey Gallery, which already represents content that the author deliberately publishes as a work, avoiding a duplicate content model during the gradual fork.
+
 ## Administration
 
 Administrator-only APIs can list the current settings, upsert a complete policy, update one emergency feature flag, and assign a local user's country, verified age group, or explicit policy. Every write records its before/after state in the existing Misskey moderation audit log. The user safety settings are available from the existing administrator user detail page and do not require storing a date of birth.
 
 ## Next small changes
 
-1. Add the Nook profile tabs and bookmark entry points.
+1. Add bookmark entry points and private-by-default Likes controls.
 2. Replace the temporary Channels-backed Community destination with the dedicated Community model.
 3. Apply relationship-aware rules to voice/video calls and Spaces token issuance.
