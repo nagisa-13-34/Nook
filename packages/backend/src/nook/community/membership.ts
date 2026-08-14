@@ -77,11 +77,11 @@ export async function leaveNookCommunity(db: DataSource, communityId: string, us
 	await db.query('DELETE FROM "nook_community_join_request" WHERE "communityId" = $1 AND "userId" = $2 AND "status" = \'pending\'', [communityId, userId]);
 }
 
-export async function respondNookCommunityJoinRequest(db: DataSource, requestId: string, responderId: string, approve: boolean): Promise<{ communityId: string; userId: string }> {
+export async function respondNookCommunityJoinRequest(db: DataSource, communityId: string, requestId: string, responderId: string, approve: boolean): Promise<{ communityId: string; userId: string }> {
 	return await db.transaction(async manager => {
 		const rows = await manager.query<Array<{ communityId: string; userId: string; status: string }>>(
-			'SELECT "communityId", "userId", "status" FROM "nook_community_join_request" WHERE "id" = $1 FOR UPDATE',
-			[requestId],
+			'SELECT "communityId", "userId", "status" FROM "nook_community_join_request" WHERE "id" = $1 AND "communityId" = $2 FOR UPDATE',
+			[requestId, communityId],
 		);
 		const request = rows[0];
 		if (request == null || request.status !== 'pending') throw new NookCommunityMembershipError('NO_SUCH_REQUEST');
@@ -99,8 +99,8 @@ export async function respondNookCommunityJoinRequest(db: DataSource, requestId:
 		}
 
 		await manager.query(
-			`UPDATE "nook_community_join_request" SET "status" = $2, "respondedAt" = now(), "respondedBy" = $3 WHERE "id" = $1`,
-			[requestId, approve ? 'approved' : 'rejected', responderId],
+			`UPDATE "nook_community_join_request" SET "status" = $2, "respondedAt" = now(), "respondedBy" = $3 WHERE "id" = $1 AND "communityId" = $4`,
+			[requestId, approve ? 'approved' : 'rejected', responderId, communityId],
 		);
 		return { communityId: request.communityId, userId: request.userId };
 	});
