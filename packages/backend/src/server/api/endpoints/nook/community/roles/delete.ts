@@ -1,0 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+import { Inject, Injectable } from '@nestjs/common'; import { DataSource } from 'typeorm'; import { DI } from '@/di-symbols.js'; import { Endpoint } from '@/server/api/endpoint-base.js'; import { requireNookCommunityPermission, NookCommunityAccessError } from '@/nook/community/access.js'; import { deleteNookCommunityRole, NookCommunityRoleError } from '@/nook/community/roles.js'; import { ApiError } from '../../../../error.js';
+export const meta = { tags: ['channels'], requireCredential: true, kind: 'write:channels', errors: { forbidden: { message: 'You cannot manage roles.', code: 'FORBIDDEN', id: '58ce79af-35da-4e1c-bc2e-88f645d60e0d' }, noSuchRole: { message: 'No such role.', code: 'NO_SUCH_ROLE', id: 'e0873376-0b28-4fc1-bad3-89eba6e6151a' } } } as const;
+export const paramDef = { type: 'object', properties: { communityId: { type: 'string', format: 'misskey:id' }, roleId: { type: 'string', format: 'misskey:id' } }, required: ['communityId', 'roleId'] } as const;
+@Injectable() export default class extends Endpoint<typeof meta, typeof paramDef> { constructor(@Inject(DI.db) private db: DataSource) { super(meta, paramDef, async (ps, me) => { try { await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'roles.manage'); await deleteNookCommunityRole(this.db, ps.communityId, ps.roleId); } catch (error) { if (error instanceof NookCommunityAccessError) throw new ApiError(meta.errors.forbidden); if (error instanceof NookCommunityRoleError) throw new ApiError(meta.errors.noSuchRole); throw error; } }); } }
