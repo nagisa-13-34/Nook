@@ -150,9 +150,15 @@ function transformLine(line: string): string {
 	return transformInline(line);
 }
 
+function isFenceEnd(line: string): boolean {
+	return line.trimEnd() === '```';
+}
+
 /**
  * Adds Nook's small Markdown-like extensions without replacing MFM itself.
  * Fenced code is copied byte-for-byte so Markdown/MFM stays inert inside it.
+ * A closing fence may have trailing whitespace; only that marker is normalized
+ * because mfm-js requires the closing backticks to end the line exactly.
  */
 export function preprocessHybridMfm(source: string): string {
 	const lines = source.split(/(\r\n|\n|\r)/);
@@ -167,8 +173,12 @@ export function preprocessHybridMfm(source: string): string {
 		}
 
 		if (inFence) {
-			result += part;
-			if (part === '```') inFence = false;
+			if (isFenceEnd(part)) {
+				result += '```';
+				inFence = false;
+			} else {
+				result += part;
+			}
 			continue;
 		}
 

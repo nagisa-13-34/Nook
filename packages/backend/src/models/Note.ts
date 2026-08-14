@@ -264,10 +264,6 @@ export class MiNote {
 	constructor(data: Partial<MiNote>) {
 		if (data == null) return;
 
-		if (data.nookMarkdown == null) {
-			this.nookMarkdown = data.userHost === null && data.uri == null;
-		}
-
 		for (const [k, v] of Object.entries(data)) {
 			(this as any)[k] = v;
 		}

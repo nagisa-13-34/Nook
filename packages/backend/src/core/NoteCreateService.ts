@@ -11,6 +11,8 @@ import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { extractMentions } from '@/misc/extract-mentions.js';
 import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mfm.js';
 import { extractHashtags } from '@/misc/extract-hashtags.js';
+import { parseNoteTextMfm } from '@/misc/parse-note-text-mfm.js';
+import { resolveNookMarkdownForNote } from '@/misc/resolve-nook-markdown.js';
 import type { IMentionedRemoteUsers } from '@/models/Note.js';
 import { MiNote } from '@/models/Note.js';
 import type { BlockingsRepository, ChannelFollowingsRepository, ChannelsRepository, DriveFilesRepository, FollowingsRepository, InstancesRepository, MiFollowing, MiMeta, MutingsRepository, NotesRepository, NoteThreadMutingsRepository, UserListMembershipsRepository, UserProfilesRepository, UsersRepository } from '@/models/_.js';
@@ -171,6 +173,7 @@ type Option = {
 	createdAt?: Date | null;
 	name?: string | null;
 	text?: string | null;
+	nookMarkdown?: boolean;
 	reply?: MiNote | null;
 	renote?: MiNote | null;
 	files?: MiDriveFile[] | null;
@@ -286,6 +289,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 		renoteId: MiNote['id'] | null;
 		fileIds: MiDriveFile['id'][];
 		text: string | null;
+		nookMarkdown?: boolean;
 		cw: string | null;
 		visibility: string;
 		visibleUserIds: MiUser['id'][];
@@ -424,6 +428,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 			files: files,
 			poll: data.poll,
 			text: data.text,
+			nookMarkdown: data.nookMarkdown,
 			reply,
 			renote,
 			cw: data.cw,
@@ -465,6 +470,8 @@ export class NoteCreateService implements OnApplicationShutdown {
 		if (data.createdAt == null) data.createdAt = new Date();
 		if (data.visibility == null) data.visibility = 'public';
 		if (data.localOnly == null) data.localOnly = false;
+		const nookMarkdown = resolveNookMarkdownForNote(user.host, data.uri, data.nookMarkdown);
+		data.nookMarkdown = nookMarkdown;
 		if (data.channel != null) data.visibility = 'public';
 		if (data.channel != null) data.visibleUsers = [];
 		if (data.channel != null) data.localOnly = true;
@@ -588,7 +595,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 		// Parse MFM if needed
 		if (!tags || !emojis || !mentionedUsers) {
-			const tokens = (data.text ? mfm.parse(data.text)! : []);
+			const tokens = parseNoteTextMfm(data.text, nookMarkdown);
 			const cwTokens = data.cw ? mfm.parse(data.cw)! : [];
 			const choiceTokens = data.poll && data.poll.choices
 				? concat(data.poll.choices.map(choice => mfm.parse(choice)!))
@@ -656,6 +663,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 				: null,
 			name: data.name,
 			text: data.text,
+			nookMarkdown: data.nookMarkdown ?? false,
 			hasPoll: data.poll != null,
 			cw: data.cw ?? null,
 			tags: tags.map(tag => normalizeForSearch(tag)),
