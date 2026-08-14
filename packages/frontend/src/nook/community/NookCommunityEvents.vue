@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<button class="_button" :class="$style.primary">{{ l.create }}</button>
 	</form>
 	<article v-for="event in events" :key="event.id" class="_panel" :class="$style.event">
-		<h3>{{ event.cancelledAt ? '🚫 ' : '📅 ' }}{{ event.title }}</h3><p v-if="event.description">{{ event.description }}</p>
+		<h3>{{ event.cancelledAt ? '🚫 ' : '📅 ' }}{{ event.title }}</h3><p v-if="event.description">{{ event.description }}</p><NookAutoTranslation v-if="event.description" kind="communityEvent" :object-id="event.id" :text="event.description"/>
 		<div>{{ new Date(event.startsAt).toLocaleString() }}<span v-if="event.endsAt"> – {{ new Date(event.endsAt).toLocaleString() }}</span></div>
 		<small>✅ {{ event.goingCount }} · ⭐ {{ event.interestedCount }}</small>
 		<div :class="$style.actions"><button class="_button" @click="rsvp(event.id,'going')">✅ Going</button><button class="_button" @click="rsvp(event.id,'interested')">⭐ Interested</button><button class="_button" @click="rsvp(event.id,'not_going')">✖</button></div>
@@ -20,7 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </section>
 </template>
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'; import { nookApi } from './nook-api.js'; import { communityLabels as l } from './labels.js'; import type { CommunityEvent } from './types.js';
+import { onMounted, ref } from 'vue'; import { nookApi } from './nook-api.js'; import { communityLabels as l } from './labels.js'; import NookAutoTranslation from './NookAutoTranslation.vue'; import type { CommunityEvent } from './types.js';
 const props=defineProps<{communityId:string;canManage:boolean}>(); const events=ref<CommunityEvent[]>([]); const title=ref(''); const description=ref(''); const startsAt=ref(''); const endsAt=ref('');
 async function load(){events.value=await nookApi('nook/community/events/list',{communityId:props.communityId});}
 async function createEvent(){await nookApi('nook/community/events/create',{communityId:props.communityId,title:title.value,description:description.value||null,startsAt:new Date(startsAt.value).toISOString(),endsAt:endsAt.value?new Date(endsAt.value).toISOString():null});title.value='';description.value='';startsAt.value='';endsAt.value='';await load();}
