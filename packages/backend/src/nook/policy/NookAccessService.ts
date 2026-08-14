@@ -26,14 +26,23 @@ export class NookAccessService {
 	}
 
 	public async evaluate(user: MiLocalUser, permission: NookPermission): Promise<NookPolicyDecision> {
+		const [decision] = await this.evaluateMany(user, [permission]);
+		if (decision == null) {
+			throw new Error('Nook policy evaluation did not return a decision.');
+		}
+
+		return decision;
+	}
+
+	public async evaluateMany(user: MiLocalUser, permissions: readonly NookPermission[]): Promise<NookPolicyDecision[]> {
 		const enforcementFlag = await this.nookFeatureFlagsRepository.findOneBy({ name: 'policy_enforcement' });
 		if (!(enforcementFlag?.enabled ?? defaultNookFeatureFlags.policy_enforcement)) {
-			return {
+			return permissions.map(permission => ({
 				allowed: true,
 				permission,
 				policyId: null,
 				reason: 'enforcement_disabled',
-			};
+			}));
 		}
 
 		const [policies, profile] = await Promise.all([
@@ -56,7 +65,8 @@ export class NookAccessService {
 			...(profile?.nookPolicyId == null ? {} : { assignedPolicyId: profile.nookPolicyId }),
 		};
 
-		return new NookPolicyEngine(policies).evaluate(subject, permission);
+		const engine = new NookPolicyEngine(policies);
+		return permissions.map(permission => engine.evaluate(subject, permission));
 	}
 
 	private getAccountState(user: MiLocalUser): NookAccountState {
