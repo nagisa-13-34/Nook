@@ -50,7 +50,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkPagination>
 		</div>
 		<div v-else-if="tab === 'owned'" class="_gaps">
-			<MkButton v-if="$i?.policies.canCreateChannel" type="routerLink" primary rounded to="/channels/new"><i class="ti ti-plus"></i> {{ communityI18n.createCommunity }}</MkButton>
+			<MkButton v-if="$i?.policies.canCreateChannel" type="routerLink" primary rounded to="/channels/new"><i class="ti ti-plus"></i> {{ i18n.ts.createNew }}</MkButton>
 			<MkPagination v-slot="{items}" :paginator="ownedPaginator">
 				<div :class="$style.root">
 					<MkChannelPreview v-for="channel in items" :key="channel.id" :channel="channel"/>
@@ -74,7 +74,6 @@ import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
 import { Paginator } from '@/utility/paginator.js';
 import { $i } from '@/i.js';
-import { communityI18n } from '@/nook/community-i18n.js';
 
 type SearchType = 'nameAndDescription' | 'nameOnly';
 
@@ -110,12 +109,12 @@ async function search() {
 
 const headerActions = computed(() => []);
 const headerTabs = computed(() => [{ key: 'search', title: i18n.ts.search, icon: 'ti ti-search' },
-	{ key: 'featured', title: communityI18n.discover, icon: 'ti ti-sparkles' },
-	{ key: 'favorites', title: communityI18n.saved, icon: 'ti ti-bookmark' },
-	{ key: 'following', title: communityI18n.joined, icon: 'ti ti-users' },
-	{ key: 'owned', title: communityI18n.yours, icon: 'ti ti-user-star' }]);
+	{ key: 'featured', title: i18n.ts._channel.featured, icon: 'ti ti-sparkles' },
+	{ key: 'favorites', title: i18n.ts.favorites, icon: 'ti ti-bookmark' },
+	{ key: 'following', title: i18n.ts._channel.following, icon: 'ti ti-users' },
+	{ key: 'owned', title: i18n.ts._channel.owned, icon: 'ti ti-user-star' }]);
 
-definePage(() => ({ title: communityI18n.community, icon: 'ti ti-users' }));
+definePage(() => ({ title: i18n.ts.channel, icon: 'ti ti-users' }));
 </script>
 
 <style lang="scss" module>
