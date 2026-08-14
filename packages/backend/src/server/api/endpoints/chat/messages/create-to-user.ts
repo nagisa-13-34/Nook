@@ -10,7 +10,9 @@ import { GetterService } from '@/server/api/GetterService.js';
 import { DI } from '@/di-symbols.js';
 import { ApiError } from '@/server/api/error.js';
 import { ChatService } from '@/core/ChatService.js';
-import type { DriveFilesRepository, MiUser } from '@/models/_.js';
+import type { DriveFilesRepository } from '@/models/_.js';
+import type { MiLocalUser } from '@/models/User.js';
+import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 
 export const meta = {
 	tags: ['chat'],
@@ -62,6 +64,14 @@ export const meta = {
 			code: 'YOU_HAVE_BEEN_BLOCKED',
 			id: 'c15a5199-7422-4968-941a-2a462c478f7d',
 		},
+
+		restrictedByNookPolicy: {
+			message: 'You are not allowed to send or receive chat messages under the current Nook policy.',
+			code: 'RESTRICTED_BY_NOOK_POLICY',
+			id: '177b633e-63eb-4912-9169-5053d5f3aca0',
+			kind: 'permission',
+			httpStatusCode: 403,
+		},
 	},
 } as const;
 
@@ -83,9 +93,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 		private getterService: GetterService,
 		private chatService: ChatService,
+		private nookAccessService: NookAccessService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			await this.chatService.checkChatAvailability(me.id, 'write');
+			const senderDecision = await this.nookAccessService.evaluate(me, 'send_chat');
+			if (!senderDecision.allowed) {
+				throw new ApiError(meta.errors.restrictedByNookPolicy);
+			}
 
 			let file = null;
 			if (ps.fileId != null) {
@@ -113,6 +128,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				if (err.id === '15348ddd-432d-49c2-8a5a-8069753becff') throw new ApiError(meta.errors.noSuchUser);
 				throw err;
 			});
+			if (toUser.host == null) {
+				const recipientDecision = await this.nookAccessService.evaluate(toUser as MiLocalUser, 'receive_chat');
+				if (!recipientDecision.allowed) {
+					// Do not expose whether a recipient is unavailable because of an age or account policy.
+					throw new ApiError(meta.errors.noSuchUser);
+				}
+			}
 
 			return await this.chatService.createMessageToUser(me, toUser, {
 				text: ps.text,
