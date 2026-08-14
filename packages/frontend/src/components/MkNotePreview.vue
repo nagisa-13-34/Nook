@@ -30,6 +30,7 @@ import { normalizeNookMarkdownToMfm } from '@@/js/nook-markdown.js';
 import type { PollEditorModelValue } from '@/components/MkPollEditor.vue';
 import MkCwButton from '@/components/MkCwButton.vue';
 
+const MAX_NOTE_TEXT_LENGTH = 3000;
 const showContent = ref(false);
 
 const props = defineProps<{
@@ -41,7 +42,11 @@ const props = defineProps<{
 	user: Misskey.entities.User;
 }>();
 
-const previewText = computed(() => normalizeNookMarkdownToMfm(props.text.trim()));
+const previewText = computed(() => {
+	const source = props.text.trim();
+	const normalized = normalizeNookMarkdownToMfm(source);
+	return Array.from(normalized).length <= MAX_NOTE_TEXT_LENGTH ? normalized : source;
+});
 </script>
 
 <style lang="scss" module>
