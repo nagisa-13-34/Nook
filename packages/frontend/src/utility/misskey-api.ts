@@ -6,8 +6,11 @@
 import * as Misskey from 'misskey-js';
 import { ref } from 'vue';
 import { apiUrl } from '@@/js/config.js';
+import { normalizeNookMarkdownToMfm } from '@@/js/nook-markdown.js';
 import { $i } from '@/i.js';
 export const pendingApiRequestsCount = ref(0);
+
+const MAX_NOTE_TEXT_LENGTH = 3000;
 
 // Implements Misskey.api.ApiClient.request
 export function misskeyApi<
@@ -29,6 +32,16 @@ export function misskeyApi<
 	};
 
 	const promise = new Promise<_ResT>((resolve, reject) => {
+		// Nook accepts a small Markdown-like superset in newly submitted local
+		// notes. The result remains ordinary MFM, so storage, federation and the
+		// existing renderer stay unchanged. Do not normalize fetched/remote notes.
+		if (endpoint === 'notes/create' && 'text' in data && typeof data.text === 'string') {
+			const normalized = normalizeNookMarkdownToMfm(data.text);
+			// Conversion can add a few MFM delimiter characters. Never turn a valid
+			// near-limit note into an invalid request just because of normalization.
+			if (Array.from(normalized).length <= MAX_NOTE_TEXT_LENGTH) data.text = normalized;
+		}
+
 		// Append a credential
 		if ($i) data.i = $i.token;
 		if (token !== undefined) data.i = token;
