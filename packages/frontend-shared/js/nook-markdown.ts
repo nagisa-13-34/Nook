@@ -97,15 +97,19 @@ function normalizeInline(text: string): string {
 			const next = text[cursor + 1];
 
 			// `\[` is also native MFM block-math syntax. Treat it as a Markdown
-			// escape only when it clearly prefixes a Markdown link.
-			if (next === '[' && looksLikeMarkdownLink(text, cursor + 1)) {
-				result += '<plain>[</plain>';
-				cursor += 2;
-				continue;
+			// escape only when it clearly prefixes a complete Markdown link. The
+			// whole escaped link is made plain so its URL is not auto-linkified.
+			if (next === '[') {
+				const linkEnd = findMarkdownLinkEnd(text, cursor + 1);
+				if (linkEnd !== -1) {
+					result += toMfmPlain(text.slice(cursor + 1, linkEnd + 1));
+					cursor = linkEnd + 1;
+					continue;
+				}
 			}
 
 			if (isEscapableMarkdownMarker(next)) {
-				result += `<plain>${next}</plain>`;
+				result += toMfmPlain(next);
 				cursor += 2;
 				continue;
 			}
@@ -134,13 +138,23 @@ function normalizeInline(text: string): string {
 	return result;
 }
 
+function toMfmPlain(text: string): string {
+	// A literal `</plain>` would terminate the MFM tag early. Split that exact
+	// sequence into safe plain chunks so arbitrary escaped text cannot break out.
+	const chunks = text.split('</plain>');
+	return chunks.map((chunk, index) => {
+		const suffix = index < chunks.length - 1 ? '<plain><</plain><plain>/plain></plain>' : '';
+		return `<plain>${chunk}</plain>${suffix}`;
+	}).join('');
+}
+
 function isEscapableMarkdownMarker(char: string): boolean {
 	return ['\\', '*', '_', '~', '`', '>', '#', '-', '$', ':', '@'].includes(char);
 }
 
-function looksLikeMarkdownLink(text: string, openBracket: number): boolean {
+function findMarkdownLinkEnd(text: string, openBracket: number): number {
 	const closeBracket = findUnescaped(text, ']', openBracket + 1);
-	if (closeBracket === -1 || text[closeBracket + 1] !== '(') return false;
+	if (closeBracket === -1 || text[closeBracket + 1] !== '(') return -1;
 
 	let depth = 1;
 	for (let cursor = closeBracket + 2; cursor < text.length; cursor++) {
@@ -151,11 +165,11 @@ function looksLikeMarkdownLink(text: string, openBracket: number): boolean {
 		if (text[cursor] === '(') depth++;
 		if (text[cursor] === ')') {
 			depth--;
-			if (depth === 0) return true;
+			if (depth === 0) return cursor;
 		}
 	}
 
-	return false;
+	return -1;
 }
 
 function findClosingItalic(text: string, start: number): number {
