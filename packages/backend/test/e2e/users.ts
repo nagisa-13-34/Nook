@@ -7,11 +7,13 @@ process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
 import { inspect } from 'node:util';
-import { beforeAll, beforeEach, describe, test } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, test } from 'vitest';
 import { DEFAULT_POLICIES } from '@/core/RoleService.js';
+import { MiDriveFile } from '@/models/DriveFile.js';
 import { nookPermissions } from '@/nook/policy/PolicyTypes.js';
-import { api, castAsError, post, role, signup, successfulApiCall, uploadFile } from '../utils.js';
+import { api, castAsError, initTestDb, post, role, signup, successfulApiCall, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
+import type { Repository } from 'typeorm';
 
 describe('ユーザー', () => {
 	// エンティティとしてのユーザーを主眼においたテストを記述する
@@ -163,6 +165,7 @@ describe('ユーザー', () => {
 	};
 
 	let root: misskey.entities.SignupResponse;
+	let DriveFiles: Repository<MiDriveFile>;
 	let alice: misskey.entities.SignupResponse;
 	let aliceNote: misskey.entities.Note;
 
@@ -203,6 +206,8 @@ describe('ユーザー', () => {
 	let userFollowRequested: misskey.entities.SignupResponse;
 
 	beforeAll(async () => {
+		const connection = await initTestDb(true);
+		DriveFiles = connection.getRepository(MiDriveFile);
 		root = await signup({ username: 'root' });
 		alice = await signup({ username: 'alice' });
 		aliceNote = await post(alice, { text: 'test' });
@@ -388,6 +393,73 @@ describe('ユーザー', () => {
 				verifiedAgeGroup: null,
 				policyId: null,
 			}, root);
+		});
+	});
+
+	describe.each([
+		{ enableFanoutTimeline: true },
+		{ enableFanoutTimeline: false },
+	])('プロフィールのメディアフィルター (enableFanoutTimeline: $enableFanoutTimeline)', ({ enableFanoutTimeline }) => {
+		beforeAll(async () => {
+			await api('admin/update-meta', { enableFanoutTimeline }, root);
+		});
+
+		afterAll(async () => {
+			await api('admin/update-meta', { enableFanoutTimeline: true }, root);
+		});
+
+		test('画像・動画・混在投稿を種類別に取得できる', async () => {
+			const suffix = enableFanoutTimeline ? 'fanout' : 'database';
+			const creator = await signup({ username: `profile_media_${suffix}` });
+			const image = await uploadFile(creator, { path: '192.jpg' });
+			const video = await uploadFile(creator, { path: '192.jpg' });
+			const mixedImage = await uploadFile(creator, { path: '192.jpg' });
+			const mixedVideo = await uploadFile(creator, { path: '192.jpg' });
+			assert.ok(image.body);
+			assert.ok(video.body);
+			assert.ok(mixedImage.body);
+			assert.ok(mixedVideo.body);
+			await DriveFiles.update({ id: video.body.id }, { type: 'video/mp4' });
+			await DriveFiles.update({ id: mixedVideo.body.id }, { type: 'video/mp4' });
+
+			const textNote = await post(creator, { text: 'text only' });
+			const imageNote = await post(creator, { text: 'image', fileIds: [image.body.id] });
+			const videoNote = await post(creator, { text: 'video', fileIds: [video.body.id] });
+			const mixedNote = await post(creator, { text: 'mixed', fileIds: [mixedImage.body.id, mixedVideo.body.id] });
+			await new Promise(resolve => setTimeout(resolve, 250));
+
+			const imageResponse = await api('users/notes', {
+				userId: creator.id,
+				fileType: 'image',
+				limit: 100,
+			}, creator);
+			const videoResponse = await api('users/notes', {
+				userId: creator.id,
+				fileType: 'video',
+				limit: 100,
+			}, creator);
+
+			assert.strictEqual(imageResponse.status, 200);
+			assert.ok(imageResponse.body.some(note => note.id === imageNote.id));
+			assert.ok(imageResponse.body.some(note => note.id === mixedNote.id));
+			assert.ok(!imageResponse.body.some(note => note.id === videoNote.id));
+			assert.ok(!imageResponse.body.some(note => note.id === textNote.id));
+			assert.strictEqual(videoResponse.status, 200);
+			assert.ok(videoResponse.body.some(note => note.id === videoNote.id));
+			assert.ok(videoResponse.body.some(note => note.id === mixedNote.id));
+			assert.ok(!videoResponse.body.some(note => note.id === imageNote.id));
+			assert.ok(!videoResponse.body.some(note => note.id === textNote.id));
+		});
+
+		test('返信込みとメディア種類の同時指定を拒否する', async () => {
+			const response = await api('users/notes', {
+				userId: alice.id,
+				withReplies: true,
+				fileType: 'image',
+			}, alice);
+
+			assert.strictEqual(response.status, 400);
+			assert.strictEqual(castAsError(response.body).error.code, 'BOTH_WITH_REPLIES_AND_WITH_FILES');
 		});
 	});
 
