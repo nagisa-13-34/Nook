@@ -13467,7 +13467,51 @@ export interface Locale extends ILocale {
          * 指定されたポリシーが見つかりません。
          */
         "policyNotFound": string;
+        /**
+         * ユーザー安全設定
+         */
+        "userSafetySettings": string;
+        /**
+         * 生年月日を保存せず、確認済みの年齢区分と国から利用ルールを決定できます。
+         */
+        "userSafetyDescription": string;
+        /**
+         * 未設定の場合は空欄、日本はJPを指定します。
+         */
+        "userCountryCaption": string;
+        /**
+         * 確認済み年齢区分
+         */
+        "verifiedAgeGroup": string;
+        /**
+         * 割り当てるポリシー
+         */
+        "assignedPolicy": string;
+        /**
+         * 自動判定を選ぶと、国・年齢区分・アカウント状態から決定します。
+         */
+        "assignedPolicyCaption": string;
+        /**
+         * 未設定
+         */
+        "notVerified": string;
+        /**
+         * 自動判定
+         */
+        "automaticPolicy": string;
+        /**
+         * このユーザーの安全設定を変更しますか？
+         */
+        "updateUserSafetyConfirm": string;
+        /**
+         * ユーザー安全設定を保存しました。
+         */
+        "userSafetySaved": string;
         "features": {
+            /**
+             * 投稿ポリシーの強制
+             */
+            "policyEnforcement": string;
             /**
              * 動画投稿
              */
