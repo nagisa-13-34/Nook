@@ -10,6 +10,7 @@ import { GetterService } from '@/server/api/GetterService.js';
 import { DI } from '@/di-symbols.js';
 import { ApiError } from '@/server/api/error.js';
 import { ChatService } from '@/core/ChatService.js';
+import { UserFollowingService } from '@/core/UserFollowingService.js';
 import type { DriveFilesRepository } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { NookAccessService } from '@/nook/policy/NookAccessService.js';
@@ -94,13 +95,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private getterService: GetterService,
 		private chatService: ChatService,
 		private nookAccessService: NookAccessService,
+		private userFollowingService: UserFollowingService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			await this.chatService.checkChatAvailability(me.id, 'write');
-			const senderDecision = await this.nookAccessService.evaluate(me, 'send_chat');
-			if (!senderDecision.allowed) {
-				throw new ApiError(meta.errors.restrictedByNookPolicy);
-			}
 
 			let file = null;
 			if (ps.fileId != null) {
@@ -128,12 +126,17 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				if (err.id === '15348ddd-432d-49c2-8a5a-8069753becff') throw new ApiError(meta.errors.noSuchUser);
 				throw err;
 			});
-			if (toUser.host == null) {
-				const recipientDecision = await this.nookAccessService.evaluate(toUser as MiLocalUser, 'receive_chat');
-				if (!recipientDecision.allowed) {
-					// Do not expose whether a recipient is unavailable because of an age or account policy.
-					throw new ApiError(meta.errors.noSuchUser);
-				}
+			const policyEvaluation = await this.nookAccessService.evaluateDirectChat(
+				me,
+				toUser.host == null ? toUser as MiLocalUser : null,
+				() => this.userFollowingService.isMutual(me.id, toUser.id),
+			);
+			if (policyEvaluation.sender.some(decision => !decision.allowed)) {
+				throw new ApiError(meta.errors.restrictedByNookPolicy);
+			}
+			if (policyEvaluation.senderTargetSensitive.some(decision => !decision.allowed) || policyEvaluation.recipient?.some(decision => !decision.allowed)) {
+				// Do not expose whether a recipient is unavailable because of an age or account policy.
+				throw new ApiError(meta.errors.noSuchUser);
 			}
 
 			return await this.chatService.createMessageToUser(me, toUser, {
