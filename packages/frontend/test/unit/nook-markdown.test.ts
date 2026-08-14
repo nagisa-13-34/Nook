@@ -85,9 +85,9 @@ describe('Nook Markdown-like input', () => {
 		});
 
 		test.each([
-			['# Heading', '**Heading**'],
-			['## Heading', '**Heading**'],
-			['### Heading', '**Heading**'],
+			['# Heading', '<b>Heading</b>'],
+			['## Heading', '<b>Heading</b>'],
+			['### Heading', '<b>Heading</b>'],
 		])('normalizes compact heading %s', (input, expected) => {
 			expect(normalizeNookMarkdownToMfm(input)).toBe(expected);
 			expectTypes(input, ['bold']);
@@ -100,6 +100,7 @@ describe('Nook Markdown-like input', () => {
 		});
 
 		test('Markdown bold can contain a Hashtag', () => {
+			expect(normalizeNookMarkdownToMfm('**Hello #nook**')).toBe('<b>Hello #nook</b>');
 			expectTypes('**Hello #nook**', ['bold', 'hashtag']);
 		});
 
@@ -191,6 +192,7 @@ describe('Nook Markdown-like input', () => {
 		test('malformed URL does not throw or become a link', () => {
 			const input = '[click](https://)';
 			expect(() => parse(input)).not.toThrow();
+			expectTypes(input, [], ['link']);
 		});
 	});
 
