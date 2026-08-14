@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 50092)
+Total output lines: 3500
+
 _lang_: "日本語"
 
 headlineMisskey: "ノートでつながるネットワーク"
@@ -1367,6 +1370,9 @@ nookUnreadNotifications: "通知、未読{count}件"
 nookFollowing: "フォロー中"
 nookDiscover: "みつける"
 nookMedia: "メディア"
+nookPosts: "投稿"
+nookVideos: "動画"
+nookWorks: "作品"
 directMessage: "ダイレクトメッセージ"
 directMessage_short: "メッセージ"
 compress: "圧縮"
@@ -1713,9 +1719,7 @@ _initialTutorial:
     home: "あなたがフォローしているアカウントの投稿を見られます。"
     local: "このサーバーにいるユーザー全員の投稿を見られます。"
     social: "ホームタイムラインとローカルタイムラインの投稿が両方表示されます。"
-    global: "接続している他のすべてのサーバーからの投稿を見られます。"
-    description2: "それぞれのタイムラインは、画面上部でいつでも切り替えられます。"
-    description3: "その他にも、リストタイムラインやチャンネルタイムラインなどがあります。詳しくは{link}をご覧ください。"
+    globa…92 tokens truncated…。"
   _postNote:
     title: "ノートの投稿設定"
     description1: "Misskeyにノートを投稿する際には、様々なオプションの設定が可能です。投稿フォームはこのようになっています。"
