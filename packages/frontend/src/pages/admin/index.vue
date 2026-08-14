@@ -45,6 +45,7 @@ import { lookupUser, lookupUserByEmail, lookupFile } from '@/utility/admin-looku
 import { definePage, provideMetadataReceiver, provideReactiveMetadata } from '@/page.js';
 import { useRouter } from '@/router.js';
 import { genSearchIndexes } from '@/utility/inapp-search.js';
+import { iAmAdmin } from '@/i.js';
 
 const searchIndex = await import('search-index:admin').then(({ searchIndexes }) => genSearchIndexes(searchIndexes));
 
@@ -184,12 +185,12 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		text: i18n.ts.general,
 		to: '/admin/settings',
 		active: currentPage.value?.route.name === 'settings',
-	}, {
+	}, ...(iAmAdmin ? [{
 		icon: 'ti ti-shield-cog',
 		text: i18n.ts._nookAdmin.title,
 		to: '/admin/nook-settings',
 		active: currentPage.value?.route.name === 'nookSettings' || currentPage.value?.route.name === 'nookPolicyEdit',
-	}, {
+	}] : []), {
 		icon: 'ti ti-paint',
 		text: i18n.ts.branding,
 		to: '/admin/branding',
