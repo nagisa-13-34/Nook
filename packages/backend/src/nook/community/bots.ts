@@ -73,7 +73,7 @@ export async function authenticateNookCommunityBot(db: DataSource, botId: string
 }
 
 export function ensureBotChannelAllowed(bot: NookCommunityBotRecord, channelId: string): void {
-	if (Array.isArray(bot.allowedChannelIds) && bot.allowedChannelIds.length > 0 && !bot.allowedChannelIds.includes(channelId)) throw new NookCommunityBotError('CHANNEL_FORBIDDEN');
+	if (!Array.isArray(bot.allowedChannelIds) || !bot.allowedChannelIds.includes(channelId)) throw new NookCommunityBotError('CHANNEL_FORBIDDEN');
 }
 
 export async function rotateNookCommunityBotSecret(db: DataSource, communityId: string, botId: string): Promise<string> {
