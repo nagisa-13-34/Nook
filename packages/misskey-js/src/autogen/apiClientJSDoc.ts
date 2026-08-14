@@ -594,6 +594,39 @@ declare module '../api.js' {
 
     /**
      * No description provided.
+     *
+     * **Credential required**: *Yes* / **Permission**: *read:admin:meta*
+     */
+    request<E extends 'admin/nook/get-settings', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * No description provided.
+     *
+     * **Credential required**: *Yes* / **Permission**: *write:admin:meta*
+     */
+    request<E extends 'admin/nook/update-feature-flag', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * No description provided.
+     *
+     * **Credential required**: *Yes* / **Permission**: *write:admin:roles*
+     */
+    request<E extends 'admin/nook/upsert-policy', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * No description provided.
      * 
      * **Credential required**: *Yes* / **Permission**: *write:admin:promo*
      */
