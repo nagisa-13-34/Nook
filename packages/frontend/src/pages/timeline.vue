@@ -6,6 +6,20 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <PageWithHeader v-model:tab="src" :actions="headerActions" :tabs="$i ? headerTabs : headerTabsWhenNotLogin" :swipable="true" :displayMyAvatar="true" :canOmitTitle="true">
 	<div class="_spacer" style="--MI_SPACER-w: 800px;">
+		<nav v-if="$i" :class="$style.nookTabs" :aria-label="i18n.ts.timeline">
+			<button
+				v-for="tab in nookTimelineTabs"
+				:key="tab.key"
+				type="button"
+				class="_button"
+				:class="[$style.nookTab, { [$style.nookTabActive]: nookTimelineView === tab.key }]"
+				:aria-current="nookTimelineView === tab.key ? 'page' : undefined"
+				@click="selectNookTimeline(tab.key)"
+			>
+				<i :class="tab.icon"></i>
+				<span>{{ tab.title }}</span>
+			</button>
+		</nav>
 		<MkTip v-if="isBasicTimeline(src)" :k="`tl.${src}`" style="margin-bottom: var(--MI-margin);">
 			{{ i18n.ts._timelineDescription[src] }}
 		</MkTip>
@@ -31,6 +45,7 @@ import { computed, watch, provide, useTemplateRef, ref, onMounted, onActivated }
 import type { Tab } from '@/components/global/MkPageHeader.tabs.vue';
 import type { MenuItem } from '@/types/menu.js';
 import type { BasicTimelineType } from '@/timelines.js';
+import type { NookTimelineView } from '@/nook/timeline.js';
 import type { PageHeaderItem } from '@/types/page-header.js';
 import MkStreamingNotesTimeline from '@/components/MkStreamingNotesTimeline.vue';
 import MkPostForm from '@/components/MkPostForm.vue';
@@ -45,6 +60,7 @@ import { deepMerge } from '@/utility/merge.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { availableBasicTimelines, hasWithReplies, isAvailableBasicTimeline, isBasicTimeline, basicTimelineIconClass } from '@/timelines.js';
 import { prefer } from '@/preferences.js';
+import { detectNookTimelineView, isNookDiscoverAvailable, resolveNookTimelineSource } from '@/nook/timeline.js';
 
 const tlComponent = useTemplateRef('tlComponent');
 
@@ -88,6 +104,28 @@ const onlyFiles = computed<boolean>({
 	},
 	set: (x) => saveTlFilter('onlyFiles', x),
 });
+
+const nookTimelineView = computed(() => detectNookTimelineView(src.value, onlyFiles.value));
+const nookTimelineTabs = computed(() => [{
+	key: 'following' as const,
+	title: i18n.ts.nookFollowing,
+	icon: 'ti ti-users',
+}, ...(isNookDiscoverAvailable(availableBasicTimelines()) ? [{
+	key: 'discover' as const,
+	title: i18n.ts.nookDiscover,
+	icon: 'ti ti-compass',
+}] : []), {
+	key: 'media' as const,
+	title: i18n.ts.nookMedia,
+	icon: 'ti ti-photo',
+}]);
+
+function selectNookTimeline(view: NookTimelineView): void {
+	const target = resolveNookTimelineSource(view, availableBasicTimelines());
+	if (target == null) return;
+	onlyFiles.value = target.onlyFiles;
+	src.value = target.src;
+}
 
 watch([withReplies, onlyFiles], ([withRepliesTo, onlyFilesTo]) => {
 	if (withRepliesTo) {
@@ -326,6 +364,38 @@ definePage(() => ({
 
 .postForm {
 	border-radius: var(--MI-radius);
+}
+
+.nookTabs {
+	display: grid;
+	grid-auto-flow: column;
+	grid-auto-columns: minmax(0, 1fr);
+	margin-bottom: var(--MI-margin);
+	padding: 4px;
+	background: var(--MI_THEME-panel);
+	border-radius: var(--MI-radius);
+}
+
+.nookTab {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	min-height: 40px;
+	padding: 6px 8px;
+	border-radius: calc(var(--MI-radius) - 4px);
+	color: var(--MI_THEME-fg);
+
+	&:focus-visible {
+		outline: 2px solid var(--MI_THEME-focus);
+		outline-offset: -2px;
+	}
+}
+
+.nookTabActive {
+	background: var(--MI_THEME-accentedBg);
+	color: var(--MI_THEME-accent);
+	font-weight: 700;
 }
 
 .tl {
