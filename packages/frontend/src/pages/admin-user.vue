@@ -56,6 +56,27 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<template #caption>{{ i18n.ts.moderationNoteDescription }}</template>
 			</MkTextarea>
 
+			<FormSection v-if="iAmAdmin && user.host == null && !isSystem && nookContext != null && nookSettings != null">
+				<template #label>{{ i18n.ts._nookAdmin.userSafetySettings }}</template>
+				<div class="_gaps_m">
+					<MkInfo>{{ i18n.ts._nookAdmin.userSafetyDescription }}</MkInfo>
+					<MkInput v-model="nookCountry" maxlength="2" :spellcheck="false">
+						<template #label>{{ i18n.ts._nookAdmin.country }}</template>
+						<template #caption>{{ i18n.ts._nookAdmin.userCountryCaption }}</template>
+					</MkInput>
+					<MkSelect v-model="nookVerifiedAgeGroup" :items="nookAgeGroupItems">
+						<template #label>{{ i18n.ts._nookAdmin.verifiedAgeGroup }}</template>
+					</MkSelect>
+					<MkSelect v-model="nookPolicyId" :items="nookPolicyItems">
+						<template #label>{{ i18n.ts._nookAdmin.assignedPolicy }}</template>
+						<template #caption>{{ i18n.ts._nookAdmin.assignedPolicyCaption }}</template>
+					</MkSelect>
+					<MkButton primary rounded :disabled="savingNookContext" @click="saveNookContext">
+						<i class="ti ti-shield-check"></i> {{ i18n.ts.save }}
+					</MkButton>
+				</div>
+			</FormSection>
+
 			<!--
 				<FormSection>
 					<template #label>ActivityPub</template>
@@ -218,6 +239,7 @@ import MkSwitch from '@/components/MkSwitch.vue';
 import FormLink from '@/components/form/link.vue';
 import FormSection from '@/components/form/section.vue';
 import MkButton from '@/components/MkButton.vue';
+import MkInput from '@/components/MkInput.vue';
 import MkFolder from '@/components/MkFolder.vue';
 import MkKeyValue from '@/components/MkKeyValue.vue';
 import MkSelect from '@/components/MkSelect.vue';
@@ -264,6 +286,28 @@ const silenced = ref(info.value.isSilenced);
 const suspended = ref(info.value.isSuspended);
 const isSystem = ref(user.value.host == null && user.value.username.includes('.'));
 const moderationNote = ref(info.value.moderationNote);
+const nookContext = ref(result.nookContext);
+const nookSettings = ref(result.nookSettings);
+const nookCountry = ref(nookContext.value?.country ?? '');
+const nookVerifiedAgeGroup = ref(nookContext.value?.verifiedAgeGroup ?? null);
+const nookPolicyId = ref(nookContext.value?.policyId ?? null);
+const savingNookContext = ref(false);
+type NookAgeGroup = Misskey.entities.AdminNookGetUserPolicyContextResponse['verifiedAgeGroup'];
+const nookAgeGroupItems: { label: string; value: NookAgeGroup }[] = [
+	{ label: i18n.ts._nookAdmin.notVerified, value: null },
+	{ label: i18n.ts._nookAdmin.ageGroups.u13, value: 'U13' },
+	{ label: i18n.ts._nookAdmin.ageGroups.age13To15, value: '13_15' },
+	{ label: i18n.ts._nookAdmin.ageGroups.age16To17, value: '16_17' },
+	{ label: i18n.ts._nookAdmin.ageGroups.adult, value: '18_PLUS' },
+	{ label: i18n.ts._nookAdmin.ageGroups.unknown, value: 'UNKNOWN' },
+];
+const nookPolicyItems = computed(() => [
+	{ label: i18n.ts._nookAdmin.automaticPolicy, value: null },
+	...(nookSettings.value?.policies.filter(policy => policy.enabled).map(policy => ({
+		label: `${policy.id} (${policy.country} / ${policy.ageGroup})`,
+		value: policy.id,
+	})) ?? []),
+]);
 const filesPaginator = markRaw(new Paginator('admin/drive/files', {
 	limit: 10,
 	computedParams: computed(() => ({
@@ -291,18 +335,24 @@ const announcementsPaginator = markRaw(new Paginator('admin/announcements/list',
 }));
 const expandedRoleIds = ref<(typeof info.value.roles[number]['id'])[]>([]);
 
-function _fetch_() {
-	return Promise.all([misskeyApi('users/show', {
+async function _fetch_() {
+	const _user = await misskeyApi('users/show', {
 		userId: props.userId,
-	}), misskeyApi('admin/show-user', {
+	});
+	const [_info, _ips, _nookContext, _nookSettings] = await Promise.all([misskeyApi('admin/show-user', {
 		userId: props.userId,
 	}), iAmAdmin ? misskeyApi('admin/get-user-ips', {
 		userId: props.userId,
-	}) : Promise.resolve(null)]).then(([_user, _info, _ips]) => ({
+	}) : Promise.resolve(null), iAmAdmin && _user.host == null ? misskeyApi('admin/nook/get-user-policy-context', {
+		userId: props.userId,
+	}) : Promise.resolve(null), iAmAdmin && _user.host == null ? misskeyApi('admin/nook/get-settings') : Promise.resolve(null)]);
+	return {
 		user: _user,
 		info: _info,
 		ips: _ips,
-	}));
+		nookContext: _nookContext,
+		nookSettings: _nookSettings,
+	};
 }
 
 watch(moderationNote, async () => {
@@ -320,6 +370,41 @@ async function refreshUser() {
 	suspended.value = info.value.isSuspended;
 	isSystem.value = user.value.host == null && user.value.username.includes('.');
 	moderationNote.value = info.value.moderationNote;
+	nookContext.value = result.nookContext;
+	nookSettings.value = result.nookSettings;
+	nookCountry.value = nookContext.value?.country ?? '';
+	nookVerifiedAgeGroup.value = nookContext.value?.verifiedAgeGroup ?? null;
+	nookPolicyId.value = nookContext.value?.policyId ?? null;
+}
+
+async function saveNookContext() {
+	const country = nookCountry.value.trim().toUpperCase();
+	if (country !== '' && !/^[A-Z]{2}$/.test(country)) {
+		await os.alert({ type: 'warning', text: i18n.ts._nookAdmin.validationError });
+		return;
+	}
+
+	const { canceled } = await os.confirm({
+		type: 'warning',
+		text: i18n.ts._nookAdmin.updateUserSafetyConfirm,
+	});
+	if (canceled) return;
+
+	savingNookContext.value = true;
+	try {
+		await os.apiWithDialog('admin/nook/update-user-policy-context', {
+			userId: user.value.id,
+			country: country === '' ? null : country,
+			verifiedAgeGroup: nookVerifiedAgeGroup.value,
+			policyId: nookPolicyId.value,
+		});
+		os.toast(i18n.ts._nookAdmin.userSafetySaved);
+		await refreshUser();
+	} catch {
+		// apiWithDialog already displays the API error.
+	} finally {
+		savingNookContext.value = false;
+	}
 }
 
 async function updateRemoteUser() {
