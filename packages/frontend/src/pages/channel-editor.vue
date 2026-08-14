@@ -8,15 +8,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div class="_spacer" style="--MI_SPACER-w: 700px;">
 		<div v-if="channelId == null || channel != null" class="_gaps_m">
 			<MkInput v-model="name">
-				<template #label>{{ i18n.ts.name }}</template>
+				<template #label>Community name</template>
 			</MkInput>
 
 			<MkTextarea v-model="description" mfmAutocomplete :mfmPreview="true">
-				<template #label>{{ i18n.ts.description }}</template>
+				<template #label>About this community</template>
 			</MkTextarea>
 
 			<MkColorInput v-model="color">
-				<template #label>{{ i18n.ts.color }}</template>
+				<template #label>Community color</template>
 			</MkColorInput>
 
 			<MkSwitch v-model="isSensitive">
@@ -24,19 +24,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkSwitch>
 
 			<MkSwitch v-model="allowRenoteToExternal">
-				<template #label>{{ i18n.ts._channel.allowRenoteToExternal }}</template>
+				<template #label>Allow posts to be shared outside this community</template>
 			</MkSwitch>
 
 			<div>
-				<MkButton v-if="bannerId == null" @click="setBannerImage"><i class="ti ti-plus"></i> {{ i18n.ts._channel.setBanner }}</MkButton>
+				<MkButton v-if="bannerId == null" @click="setBannerImage"><i class="ti ti-photo-plus"></i> Add community banner</MkButton>
 				<div v-else-if="bannerUrl">
 					<img :src="bannerUrl" style="width: 100%;"/>
-					<MkButton @click="removeBannerImage()"><i class="ti ti-trash"></i> {{ i18n.ts._channel.removeBanner }}</MkButton>
+					<MkButton @click="removeBannerImage()"><i class="ti ti-trash"></i> Remove banner</MkButton>
 				</div>
 			</div>
 
 			<MkFolder :defaultOpen="true">
-				<template #label>{{ i18n.ts.pinnedNotes }}</template>
+				<template #label>Pinned posts</template>
 
 				<div class="_gaps">
 					<MkButton primary rounded @click="addPinnedNote()"><i class="ti ti-plus"></i></MkButton>
@@ -59,8 +59,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkFolder>
 
 			<div class="_buttons">
-				<MkButton primary @click="save()"><i class="ti ti-device-floppy"></i> {{ channelId ? i18n.ts.save : i18n.ts.create }}</MkButton>
-				<MkButton v-if="channelId" danger @click="archive()"><i class="ti ti-trash"></i> {{ i18n.ts.archive }}</MkButton>
+				<MkButton primary @click="save()"><i class="ti ti-device-floppy"></i> {{ channelId ? 'Save Community' : 'Create Community' }}</MkButton>
+				<MkButton v-if="channelId" danger @click="archive()"><i class="ti ti-archive"></i> Archive Community</MkButton>
 			</div>
 		</div>
 	</div>
@@ -179,8 +179,8 @@ async function archive() {
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
-		title: i18n.tsx.channelArchiveConfirmTitle({ name: name.value }),
-		text: i18n.ts.channelArchiveConfirmDescription,
+		title: `Archive ${name.value}?`,
+		text: 'This community will become read-only and will no longer accept new posts.',
 	});
 	if (canceled) return;
 
@@ -210,8 +210,8 @@ const headerActions = computed(() => []);
 const headerTabs = computed(() => []);
 
 definePage(() => ({
-	title: props.channelId ? i18n.ts._channel.edit : i18n.ts._channel.create,
-	icon: 'ti ti-device-tv',
+	title: props.channelId ? 'Edit Community' : 'Create Community',
+	icon: 'ti ti-users-group',
 }));
 </script>
 
@@ -233,7 +233,7 @@ definePage(() => ({
 	height: 32px;
 	color: #ff2a2a;
 	right: 8px;
-	opacity: 0.8;
+	topacity: 0.8;
 }
 
 .pinnedNoteHandle {
