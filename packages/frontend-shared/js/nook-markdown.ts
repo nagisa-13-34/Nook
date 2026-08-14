@@ -3,6 +3,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+/**
+ * Nook's post composer accepts a small Markdown-like superset of MFM.
+ *
+ * mfm-js already understands the requested bold, italic, strike, inline code,
+ * fenced code (including a language label), blockquote and http(s) link
+ * syntaxes. This normalizer therefore only fills the two missing block-level
+ * conveniences (headings and unordered lists) and Markdown-style escapes.
+ *
+ * It is intentionally run only for newly submitted local input. Historical and
+ * remote note text is never passed through this function.
+ */
 export function normalizeNookMarkdownToMfm(text: string): string {
 	let inFence = false;
 
@@ -16,34 +27,38 @@ export function normalizeNookMarkdownToMfm(text: string): string {
 			return line;
 		}
 
-		if (/^[\t ]*```(?:[A-Za-z0-9_+-]+)?[\t ]*$/.test(body)) {
+		// mfm-js already supports a language label on fenced code. Keep the full
+		// fence untouched and make its body opaque to all Nook normalization.
+		if (/^[\t ]*```(?:[^\r\n`]*)$/.test(body)) {
 			inFence = true;
 			return line;
 		}
 
-		const heading = body.match(/^([\t ]{0,3})#{1,3}[\t ]+(.+)$/);
-		if (heading) return `${heading[1]}**${normalizeInline(heading[2])}**${cr}`;
+		const heading = body.match(/^([\t ]{0,3})(#{1,3})[\t ]+(.+)$/);
+		if (heading) {
+			// SNS headings intentionally stay compact: all three Markdown heading
+			// levels use the existing MFM bold node instead of large HTML headings.
+			return `${heading[1]}**${normalizeEscapes(heading[3])}**${cr}`;
+		}
 
 		const listItem = body.match(/^([\t ]{0,3})-[\t ]+(.+)$/);
-		if (listItem) return `${listItem[1]}• ${normalizeInline(listItem[2])}${cr}`;
+		if (listItem) {
+			return `${listItem[1]}• ${normalizeEscapes(listItem[2])}${cr}`;
+		}
 
-		return `${normalizeInline(body)}${cr}`;
+		return `${normalizeEscapes(body)}${cr}`;
 	}).join('\n');
 }
 
-function normalizeInline(text: string): string {
+function normalizeEscapes(text: string): string {
 	let result = '';
 	let cursor = 0;
 
 	while (cursor < text.length) {
 		const char = text[cursor];
 
-		if (char === '\\' && cursor + 1 < text.length) {
-			result += text.slice(cursor, cursor + 2);
-			cursor += 2;
-			continue;
-		}
-
+		// Existing MFM inline code is opaque. Escapes inside it are code text, not
+		// Markdown escapes.
 		if (char === '`') {
 			const end = findUnescaped(text, '`', cursor + 1);
 			if (end === -1) {
@@ -55,6 +70,7 @@ function normalizeInline(text: string): string {
 			continue;
 		}
 
+		// Preserve existing MFM functions byte-for-byte, including nested ones.
 		if (text.startsWith('$[', cursor)) {
 			const end = findMfmFunctionEnd(text, cursor);
 			if (end === -1) {
@@ -66,11 +82,32 @@ function normalizeInline(text: string): string {
 			continue;
 		}
 
-		if (char === '*' && isSingleStar(text, cursor) && canOpenItalic(text, cursor)) {
-			const end = findClosingItalic(text, cursor + 1);
-			if (end !== -1) {
-				result += `<i>${normalizeInline(text.slice(cursor + 1, end))}</i>`;
-				cursor = end + 1;
+		// <plain> is itself existing MFM syntax whose contents must remain literal.
+		if (text.startsWith('<plain>', cursor)) {
+			const end = text.indexOf('</plain>', cursor + 7);
+			if (end === -1) {
+				result += text.slice(cursor);
+				break;
+			}
+			result += text.slice(cursor, end + 8);
+			cursor = end + 8;
+			continue;
+		}
+
+		if (char === '\\' && cursor + 1 < text.length) {
+			const next = text[cursor + 1];
+
+			// `\[` is also native MFM block-math syntax. Treat it as a Markdown
+			// escape only when it is clearly escaping a link opener.
+			if (next === '[' && looksLikeMarkdownLink(text, cursor + 1)) {
+				result += '<plain>[</plain>';
+				cursor += 2;
+				continue;
+			}
+
+			if (isEscapableMarkdownMarker(next)) {
+				result += `<plain>${next}</plain>`;
+				cursor += 2;
 				continue;
 			}
 		}
@@ -82,36 +119,28 @@ function normalizeInline(text: string): string {
 	return result;
 }
 
-function findClosingItalic(text: string, start: number): number {
-	let cursor = start;
+function isEscapableMarkdownMarker(char: string): boolean {
+	return ['\\', '*', '_', '~', '`', '>', '#', '-', '$', ':', '@'].includes(char);
+}
 
-	while (cursor < text.length) {
-		const char = text[cursor];
+function looksLikeMarkdownLink(text: string, openBracket: number): boolean {
+	const closeBracket = findUnescaped(text, ']', openBracket + 1);
+	if (closeBracket === -1 || text[closeBracket + 1] !== '(') return false;
 
-		if (char === '\\') {
-			cursor += 2;
+	let depth = 1;
+	for (let cursor = closeBracket + 2; cursor < text.length; cursor++) {
+		if (text[cursor] === '\\') {
+			cursor++;
 			continue;
 		}
-
-		if (char === '`') {
-			const end = findUnescaped(text, '`', cursor + 1);
-			if (end === -1) return -1;
-			cursor = end + 1;
-			continue;
+		if (text[cursor] === '(') depth++;
+		if (text[cursor] === ')') {
+			depth--;
+			if (depth === 0) return true;
 		}
-
-		if (text.startsWith('$[', cursor)) {
-			const end = findMfmFunctionEnd(text, cursor);
-			if (end === -1) return -1;
-			cursor = end + 1;
-			continue;
-		}
-
-		if (char === '*' && isSingleStar(text, cursor) && canCloseItalic(text, cursor)) return cursor;
-		cursor++;
 	}
 
-	return -1;
+	return false;
 }
 
 function findUnescaped(text: string, target: string, start: number): number {
@@ -145,22 +174,4 @@ function findMfmFunctionEnd(text: string, start: number): number {
 	}
 
 	return -1;
-}
-
-function isSingleStar(text: string, index: number): boolean {
-	return text[index - 1] !== '*' && text[index + 1] !== '*';
-}
-
-function canOpenItalic(text: string, index: number): boolean {
-	const previous = text[index - 1];
-	const next = text[index + 1];
-	if (next == null || /\s/u.test(next)) return false;
-	return previous == null || !/[\p{L}\p{N}]/u.test(previous);
-}
-
-function canCloseItalic(text: string, index: number): boolean {
-	const previous = text[index - 1];
-	const next = text[index + 1];
-	if (previous == null || /\s/u.test(previous)) return false;
-	return next == null || !/[\p{L}\p{N}]/u.test(next);
 }
