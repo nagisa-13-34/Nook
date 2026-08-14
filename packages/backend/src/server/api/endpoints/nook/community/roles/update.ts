@@ -8,7 +8,7 @@ import { DataSource } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { requireNookCommunityPermission, NookCommunityAccessError } from '@/nook/community/access.js';
-import { assertCanGrantNookCommunityPermissions, NookCommunityAuthorizationError } from '@/nook/community/authorization.js';
+import { assertCanGrantNookCommunityPermissions, requireGrantableNookCommunityRole, NookCommunityAuthorizationError } from '@/nook/community/authorization.js';
 import { updateNookCommunityRole, NookCommunityRoleError } from '@/nook/community/roles.js';
 import { ApiError } from '../../../../error.js';
 
@@ -21,9 +21,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	constructor(@Inject(DI.db) private db: DataSource) { super(meta, paramDef, async (ps, me) => {
 		try {
 			const actor = await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'roles.manage');
+			await requireGrantableNookCommunityRole(this.db, ps.communityId, actor, ps.roleId);
 			if (ps.permissions != null) assertCanGrantNookCommunityPermissions(actor, ps.permissions);
 		} catch (error) {
-			if (error instanceof NookCommunityAccessError || error instanceof NookCommunityAuthorizationError) throw new ApiError(meta.errors.forbidden);
+			if (error instanceof NookCommunityAccessError) throw new ApiError(meta.errors.forbidden);
+			if (error instanceof NookCommunityAuthorizationError) {
+				if (error.code === 'NO_SUCH_ROLE') throw new ApiError(meta.errors.noSuchRole);
+				throw new ApiError(meta.errors.forbidden);
+			}
 			throw error;
 		}
 		try { return await updateNookCommunityRole(this.db, { communityId: ps.communityId, roleId: ps.roleId, ...(ps.name != null ? { name: ps.name } : {}), ...(ps.color !== undefined ? { color: ps.color } : {}), ...(ps.position != null ? { position: ps.position } : {}), ...(ps.permissions != null ? { permissions: ps.permissions } : {}) }); } catch (error) { if (error instanceof NookCommunityRoleError && error.code === 'NO_SUCH_ROLE') throw new ApiError(meta.errors.noSuchRole); if (error instanceof NookCommunityRoleError && error.code === 'INVALID_PERMISSIONS') throw new ApiError(meta.errors.invalidPermissions); throw error; }
