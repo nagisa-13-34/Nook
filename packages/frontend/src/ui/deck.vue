@@ -5,7 +5,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="[$style.root]">
-	<XTitlebar v-if="prefer.r.showTitlebar.value" style="flex-shrink: 0;"/>
+	<XTitlebar v-if="prefer.r.showTitlebar.value && !isMobile" style="flex-shrink: 0;"/>
+	<XNookMobileHeader v-if="isMobile" v-model:drawerMenuShowing="drawerMenuShowing" v-model:widgetsShowing="widgetsShowing"/>
 
 	<div :class="$style.nonTitlebarArea">
 		<XSidebar v-if="!isMobile && prefer.r['deck.navbarPosition'].value === 'left'"/>
@@ -92,6 +93,7 @@ import { genId } from '@/utility/id.js';
 import XSidebar from '@/ui/_common_/navbar.vue';
 import XNavbarH from '@/ui/_common_/navbar-h.vue';
 import XMobileFooterMenu from '@/ui/_common_/mobile-footer-menu.vue';
+import XNookMobileHeader from '@/ui/_common_/nook-mobile-header.vue';
 import XTitlebar from '@/ui/_common_/titlebar.vue';
 import XPreferenceRestore from '@/ui/_common_/PreferenceRestore.vue';
 import XReloadSuggestion from '@/ui/_common_/ReloadSuggestion.vue';
