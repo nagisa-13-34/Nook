@@ -56,6 +56,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<MkInfo warn>{{ i18n.ts.notesSearchNotAvailable }}</MkInfo>
 			</div>
 		</div>
+		<div v-if="channel && tab === 'community'">
+			<NookCommunityPanel :communityId="channelId"/>
+		</div>
 	</div>
 	<template #footer>
 		<div :class="$style.footer">
@@ -98,6 +101,7 @@ import { notesSearchAvailable } from '@/utility/check-permissions.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { useRouter } from '@/router.js';
 import { Paginator } from '@/utility/paginator.js';
+import NookCommunityPanel from '@/nook/community/NookCommunityPanel.vue';
 
 const router = useRouter();
 
@@ -190,7 +194,7 @@ async function unmute() {
 	const _channel = channel.value;
 	os.apiWithDialog('channels/mute/delete', { channelId: _channel.id }).then(() => {
 		_channel.isMuting = false;
-	});
+		});
 }
 
 async function search() {
@@ -238,6 +242,7 @@ const headerActions = computed(() => {
 
 const headerTabs = computed(() => [
 	{ key: 'overview', title: i18n.ts.overview, icon: 'ti ti-info-circle' },
+	{ key: 'community', title: 'Community', icon: 'ti ti-users-group' },
 	{ key: 'timeline', title: i18n.ts.timeline, icon: 'ti ti-home' },
 	{ key: 'featured', title: i18n.ts.featured, icon: 'ti ti-bolt' },
 	{ key: 'search', title: i18n.ts.search, icon: 'ti ti-search' },
