@@ -27,7 +27,11 @@ The user profile stores an optional ISO country code, verified age group, and ex
 
 ## Runtime enforcement
 
-Note creation now asks `NookAccessService` for the `create_post` permission before any note is written. Attachments also require `create_image_post` and/or `create_video_post` according to their validated MIME types. One-to-one chat checks `send_chat` for the sender and `receive_chat` for a local recipient before writing the message; room chat checks `send_chat` for the sender. Runtime enforcement is protected by the `policy_enforcement` feature flag, which starts disabled so an upgrade cannot unexpectedly block every existing user. Administrators must configure policies that cover the intended country and verified-age combinations before enabling it. Once enabled, a user without a matching policy is denied by default. Profiles without verification data are evaluated as country `*` and age group `UNKNOWN`, so access for those users must be granted deliberately through an appropriate fallback policy.
+Note creation now asks `NookAccessService` for the `create_post` permission before any note is written. Attachments also require `create_image_post` and/or `create_video_post` according to their validated MIME types. One-to-one chat checks `send_chat` for the sender and `receive_chat` for a local recipient before writing the message. Non-mutual users additionally require `chat_with_stranger`; when a verified adult and a protected age group communicate, the protected side additionally requires `chat_with_adult`. This relationship logic is centralized in `NookAccessService`, and recipient-side denials are returned as a generic unavailable-user response so policy attributes cannot be inferred. Room chat checks `send_chat` for the sender. Runtime enforcement is protected by the `policy_enforcement` feature flag, which starts disabled so an upgrade cannot unexpectedly block every existing user. Administrators must configure policies that cover the intended country and verified-age combinations before enabling it. Once enabled, a user without a matching policy is denied by default. Profiles without verification data are evaluated as country `*` and age group `UNKNOWN`, so access for those users must be granted deliberately through an appropriate fallback policy.
+
+## Nook interface
+
+The smartphone layout uses a Nook header with menu and notifications, plus a five-item bottom navigation for Home, Explore, Create, Community, and Chat. Community currently opens the existing Misskey Channels experience so the navigation can remain stable while the dedicated Community model is implemented incrementally. Desktop navigation displays the Nook wordmark while preserving the existing Misskey components and instance menu.
 
 ## Administration
 
@@ -35,5 +39,5 @@ Administrator-only APIs can list the current settings, upsert a complete policy,
 
 ## Next small changes
 
-1. Add relationship-aware chat rules such as stranger and adult/minor communication.
-2. Add the mobile-first Nook navigation and branding.
+1. Replace the temporary Channels-backed Community destination with the dedicated Community model.
+2. Apply relationship-aware rules to voice/video calls and Spaces token issuance.
