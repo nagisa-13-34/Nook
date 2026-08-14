@@ -12,6 +12,7 @@ import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { UserFollowingService } from '@/core/UserFollowingService.js';
 import { DI } from '@/di-symbols.js';
 import { GetterService } from '@/server/api/GetterService.js';
+import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -58,6 +59,14 @@ export const meta = {
 			code: 'BLOCKED',
 			id: 'c4ab57cc-4e41-45e9-bfd9-584f61e35ce0',
 		},
+
+		restrictedByNookPolicy: {
+			message: 'You are not allowed to follow users under the current Nook policy.',
+			code: 'RESTRICTED_BY_NOOK_POLICY',
+			id: '4dbd8347-bd65-4b1f-8468-0d1f37d423aa',
+			kind: 'permission',
+			httpStatusCode: 403,
+		},
 	},
 
 	res: {
@@ -85,20 +94,31 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private userEntityService: UserEntityService,
 		private getterService: GetterService,
 		private userFollowingService: UserFollowingService,
+		private nookAccessService: NookAccessService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const follower = me;
 
-			// 自分自身
 			if (me.id === ps.userId) {
 				throw new ApiError(meta.errors.followeeIsYourself);
 			}
 
-			// Get followee
 			const followee = await this.getterService.getUser(ps.userId).catch(err => {
 				if (err.id === '15348ddd-432d-49c2-8a5a-8069753becff') throw new ApiError(meta.errors.noSuchUser);
 				throw err;
 			});
+
+			const followerDecision = await this.nookAccessService.evaluate(me, 'follow_user');
+			if (!followerDecision.allowed) {
+				throw new ApiError(meta.errors.restrictedByNookPolicy);
+			}
+
+			if (this.userEntityService.isLocalUser(followee)) {
+				const followeeDecision = await this.nookAccessService.evaluate(followee, 'receive_follow');
+				if (!followeeDecision.allowed) {
+					throw new ApiError(meta.errors.noSuchUser);
+				}
+			}
 
 			try {
 				await this.userFollowingService.follow(follower, followee, { withReplies: ps.withReplies });

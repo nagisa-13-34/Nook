@@ -8,15 +8,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div class="_spacer" style="--MI_SPACER-w: 700px;">
 		<div v-if="channelId == null || channel != null" class="_gaps_m">
 			<MkInput v-model="name">
-				<template #label>{{ communityI18n.communityName }}</template>
+				<template #label>{{ i18n.ts.name }}</template>
 			</MkInput>
 
 			<MkTextarea v-model="description" mfmAutocomplete :mfmPreview="true">
-				<template #label>{{ communityI18n.aboutCommunity }}</template>
+				<template #label>{{ i18n.ts.description }}</template>
 			</MkTextarea>
 
 			<MkColorInput v-model="color">
-				<template #label>{{ communityI18n.communityColor }}</template>
+				<template #label>{{ i18n.ts.color }}</template>
 			</MkColorInput>
 
 			<MkSwitch v-model="isSensitive">
@@ -24,19 +24,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkSwitch>
 
 			<MkSwitch v-model="allowRenoteToExternal">
-				<template #label>{{ communityI18n.allowExternalShare }}</template>
+				<template #label>{{ i18n.ts._channel.allowRenoteToExternal }}</template>
 			</MkSwitch>
 
 			<div>
-				<MkButton v-if="bannerId == null" @click="setBannerImage"><i class="ti ti-photo-plus"></i> {{ communityI18n.addBanner }}</MkButton>
+				<MkButton v-if="bannerId == null" @click="setBannerImage"><i class="ti ti-photo-plus"></i> {{ i18n.ts._channel.setBanner }}</MkButton>
 				<div v-else-if="bannerUrl">
 					<img :src="bannerUrl" style="width: 100%;"/>
-					<MkButton @click="removeBannerImage()"><i class="ti ti-trash"></i> {{ communityI18n.removeBanner }}</MkButton>
+					<MkButton @click="removeBannerImage()"><i class="ti ti-trash"></i> {{ i18n.ts._channel.removeBanner }}</MkButton>
 				</div>
 			</div>
 
 			<MkFolder :defaultOpen="true">
-				<template #label>{{ communityI18n.pinnedPosts }}</template>
+				<template #label>{{ i18n.ts.pinnedNotes }}</template>
 
 				<div class="_gaps">
 					<MkButton primary rounded @click="addPinnedNote()"><i class="ti ti-plus"></i></MkButton>
@@ -59,8 +59,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkFolder>
 
 			<div class="_buttons">
-				<MkButton primary @click="save()"><i class="ti ti-device-floppy"></i> {{ channelId ? communityI18n.saveCommunity : communityI18n.createCommunity }}</MkButton>
-				<MkButton v-if="channelId" danger @click="archive()"><i class="ti ti-archive"></i> {{ communityI18n.archiveCommunity }}</MkButton>
+				<MkButton primary @click="save()"><i class="ti ti-device-floppy"></i> {{ channelId ? i18n.ts.save : i18n.ts.create }}</MkButton>
+				<MkButton v-if="channelId" danger @click="archive()"><i class="ti ti-archive"></i> {{ i18n.ts.archive }}</MkButton>
 			</div>
 		</div>
 	</div>
@@ -83,7 +83,6 @@ import MkSwitch from '@/components/MkSwitch.vue';
 import MkTextarea from '@/components/MkTextarea.vue';
 import MkDraggable from '@/components/MkDraggable.vue';
 import { useRouter } from '@/router.js';
-import { communityI18n } from '@/nook/community-i18n.js';
 
 const router = useRouter();
 
@@ -161,8 +160,8 @@ async function archive() {
 	if (props.channelId == null) return;
 	const { canceled } = await os.confirm({
 		type: 'warning',
-		title: communityI18n.archiveTitle(name.value),
-		text: communityI18n.archiveDescription,
+		title: i18n.tsx.channelArchiveConfirmTitle({ name: name.value }),
+		text: i18n.ts.channelArchiveConfirmDescription,
 	});
 	if (canceled) return;
 	misskeyApi('channels/update', { channelId: props.channelId, isArchived: true }).then(() => os.success());
@@ -182,7 +181,7 @@ const headerActions = computed(() => []);
 const headerTabs = computed(() => []);
 
 definePage(() => ({
-	title: props.channelId ? communityI18n.editCommunity : communityI18n.createCommunity,
+	title: props.channelId ? i18n.ts._channel.edit : i18n.ts._channel.create,
 	icon: 'ti ti-users-group',
 }));
 </script>

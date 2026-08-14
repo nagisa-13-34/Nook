@@ -26,14 +26,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 
 			<MkFoldableSection>
-				<template #header><i class="ti ti-pin ti-fw" style="margin-right: 0.5em;"></i>{{ communityI18n.pinnedPosts }}</template>
+				<template #header><i class="ti ti-pin ti-fw" style="margin-right: 0.5em;"></i>{{ i18n.ts.pinnedNotes }}</template>
 				<div v-if="channel.pinnedNotes && channel.pinnedNotes.length > 0" class="_gaps">
 					<MkNote v-for="note in channel.pinnedNotes" :key="note.id" class="_panel" :note="note"/>
 				</div>
 			</MkFoldableSection>
 		</div>
 		<div v-if="channel && tab === 'timeline'" class="_gaps">
-			<MkInfo v-if="channel.isArchived" warn>{{ communityI18n.communityArchived }}</MkInfo>
+			<MkInfo v-if="channel.isArchived" warn>{{ i18n.ts.thisChannelArchived }}</MkInfo>
 
 			<MkPostForm v-if="$i && prefer.r.showFixedPostFormInChannel.value" :channel="channel" class="post-form _panel" fixed :autofocus="deviceKind === 'desktop'"/>
 
@@ -61,7 +61,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div :class="$style.footer">
 			<div class="_spacer" style="--MI_SPACER-w: 700px; --MI_SPACER-min: 16px; --MI_SPACER-max: 16px;">
 				<div class="_buttonsCenter">
-					<MkButton inline rounded primary gradate @click="openPostForm()"><i class="ti ti-pencil"></i> {{ communityI18n.postToCommunity }}</MkButton>
+					<MkButton inline rounded primary gradate @click="openPostForm()"><i class="ti ti-pencil"></i> {{ i18n.ts.postToTheChannel }}</MkButton>
 				</div>
 			</div>
 		</div>
@@ -98,7 +98,6 @@ import { notesSearchAvailable } from '@/utility/check-permissions.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { useRouter } from '@/router.js';
 import { Paginator } from '@/utility/paginator.js';
-import { communityI18n } from '@/nook/community-i18n.js';
 
 const router = useRouter();
 
@@ -245,7 +244,7 @@ const headerTabs = computed(() => [
 ]);
 
 definePage(() => ({
-	title: channel.value ? channel.value.name : communityI18n.community,
+	title: channel.value ? channel.value.name : i18n.ts.channel,
 	icon: 'ti ti-users-group',
 }));
 </script>
