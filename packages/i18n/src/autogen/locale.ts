@@ -5457,6 +5457,18 @@ export interface Locale extends ILocale {
      */
     "chat": string;
     /**
+     * コミュニティ
+     */
+    "nookCommunity": string;
+    /**
+     * チャット、未読あり
+     */
+    "nookUnreadChat": string;
+    /**
+     * 通知、未読{count}件
+     */
+    "nookUnreadNotifications": ParameterizedString<"count">;
+    /**
      * ダイレクトメッセージ
      */
     "directMessage": string;
