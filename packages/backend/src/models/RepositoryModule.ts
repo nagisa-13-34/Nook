@@ -43,6 +43,8 @@ import {
 	MiNoteFavorite,
 	MiNoteReaction,
 	MiNoteThreadMuting,
+	MiNookFeatureFlag,
+	MiNookPolicy,
 	MiNoteDraft,
 	MiPage,
 	MiPageLike,
@@ -496,6 +498,18 @@ const $roleAssignmentsRepository: Provider = {
 	inject: [DI.db],
 };
 
+const $nookPoliciesRepository: Provider = {
+	provide: DI.nookPoliciesRepository,
+	useFactory: (db: DataSource) => db.getRepository(MiNookPolicy).extend(miRepository as MiRepository<MiNookPolicy>),
+	inject: [DI.db],
+};
+
+const $nookFeatureFlagsRepository: Provider = {
+	provide: DI.nookFeatureFlagsRepository,
+	useFactory: (db: DataSource) => db.getRepository(MiNookFeatureFlag).extend(miRepository as MiRepository<MiNookFeatureFlag>),
+	inject: [DI.db],
+};
+
 const $userMemosRepository: Provider = {
 	provide: DI.userMemosRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiUserMemo).extend(miRepository as MiRepository<MiUserMemo>),
@@ -613,6 +627,8 @@ const $reversiGamesRepository: Provider = {
 		$retentionAggregationsRepository,
 		$rolesRepository,
 		$roleAssignmentsRepository,
+		$nookPoliciesRepository,
+		$nookFeatureFlagsRepository,
 		$flashsRepository,
 		$flashLikesRepository,
 		$userMemosRepository,
@@ -691,6 +707,8 @@ const $reversiGamesRepository: Provider = {
 		$retentionAggregationsRepository,
 		$rolesRepository,
 		$roleAssignmentsRepository,
+		$nookPoliciesRepository,
+		$nookFeatureFlagsRepository,
 		$flashsRepository,
 		$flashLikesRepository,
 		$userMemosRepository,
