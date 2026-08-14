@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref, watch, computed } from 'vue';
 import { nookApi } from './nook-api.js';
 import { nookAutoTranslateEnabled, nookAutoTranslateTargetLang } from './translation-preferences.js';
-const props = defineProps<{ kind: 'note' | 'communityMessage'; objectId: string; text: string | null }>();
+const props = defineProps<{ kind: 'note' | 'communityMessage' | 'communityAnnouncement' | 'communityEvent'; objectId: string; text: string | null }>();
 const loading = ref(false);
 const translated = ref<{ sourceLang: string; text: string } | null>(null);
 const enabled = computed(() => nookAutoTranslateEnabled.value && !!props.text);
