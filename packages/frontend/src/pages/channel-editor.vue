@@ -8,15 +8,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div class="_spacer" style="--MI_SPACER-w: 700px;">
 		<div v-if="channelId == null || channel != null" class="_gaps_m">
 			<MkInput v-model="name">
-				<template #label>Community name</template>
+				<template #label>{{ communityI18n.communityName }}</template>
 			</MkInput>
 
 			<MkTextarea v-model="description" mfmAutocomplete :mfmPreview="true">
-				<template #label>About this community</template>
+				<template #label>{{ communityI18n.aboutCommunity }}</template>
 			</MkTextarea>
 
 			<MkColorInput v-model="color">
-				<template #label>Community color</template>
+				<template #label>{{ communityI18n.communityColor }}</template>
 			</MkColorInput>
 
 			<MkSwitch v-model="isSensitive">
@@ -24,19 +24,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkSwitch>
 
 			<MkSwitch v-model="allowRenoteToExternal">
-				<template #label>Allow posts to be shared outside this community</template>
+				<template #label>{{ communityI18n.allowExternalShare }}</template>
 			</MkSwitch>
 
 			<div>
-				<MkButton v-if="bannerId == null" @click="setBannerImage"><i class="ti ti-photo-plus"></i> Add community banner</MkButton>
+				<MkButton v-if="bannerId == null" @click="setBannerImage"><i class="ti ti-photo-plus"></i> {{ communityI18n.addBanner }}</MkButton>
 				<div v-else-if="bannerUrl">
 					<img :src="bannerUrl" style="width: 100%;"/>
-					<MkButton @click="removeBannerImage()"><i class="ti ti-trash"></i> Remove banner</MkButton>
+					<MkButton @click="removeBannerImage()"><i class="ti ti-trash"></i> {{ communityI18n.removeBanner }}</MkButton>
 				</div>
 			</div>
 
 			<MkFolder :defaultOpen="true">
-				<template #label>Pinned posts</template>
+				<template #label>{{ communityI18n.pinnedPosts }}</template>
 
 				<div class="_gaps">
 					<MkButton primary rounded @click="addPinnedNote()"><i class="ti ti-plus"></i></MkButton>
@@ -59,8 +59,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkFolder>
 
 			<div class="_buttons">
-				<MkButton primary @click="save()"><i class="ti ti-device-floppy"></i> {{ channelId ? 'Save Community' : 'Create Community' }}</MkButton>
-				<MkButton v-if="channelId" danger @click="archive()"><i class="ti ti-archive"></i> Archive Community</MkButton>
+				<MkButton primary @click="save()"><i class="ti ti-device-floppy"></i> {{ channelId ? communityI18n.saveCommunity : communityI18n.createCommunity }}</MkButton>
+				<MkButton v-if="channelId" danger @click="archive()"><i class="ti ti-archive"></i> {{ communityI18n.archiveCommunity }}</MkButton>
 			</div>
 		</div>
 	</div>
@@ -83,6 +83,7 @@ import MkSwitch from '@/components/MkSwitch.vue';
 import MkTextarea from '@/components/MkTextarea.vue';
 import MkDraggable from '@/components/MkDraggable.vue';
 import { useRouter } from '@/router.js';
+import { communityI18n } from '@/nook/community-i18n.js';
 
 const router = useRouter();
 
@@ -112,11 +113,7 @@ watch(() => bannerId.value, async () => {
 
 async function fetchChannel() {
 	if (props.channelId == null) return;
-
-	const result = await misskeyApi('channels/show', {
-		channelId: props.channelId,
-	});
-
+	const result = await misskeyApi('channels/show', { channelId: props.channelId });
 	name.value = result.name;
 	description.value = result.description;
 	bannerId.value = result.bannerId;
@@ -125,21 +122,16 @@ async function fetchChannel() {
 	pinnedNoteIds.value = result.pinnedNoteIds;
 	color.value = result.color;
 	allowRenoteToExternal.value = result.allowRenoteToExternal;
-
 	channel.value = result;
 }
 
 fetchChannel();
 
 async function addPinnedNote() {
-	const { canceled, result: value } = await os.inputText({
-		title: i18n.ts.noteIdOrUrl,
-	});
+	const { canceled, result: value } = await os.inputText({ title: i18n.ts.noteIdOrUrl });
 	if (canceled || value == null) return;
 	const fromUrl = value.includes('/') ? value.split('/').pop() : null;
-	const note = await os.apiWithDialog('notes/show', {
-		noteId: fromUrl ?? value,
-	});
+	const note = await os.apiWithDialog('notes/show', { noteId: fromUrl ?? value });
 	pinnedNoteIds.value.unshift(note.id);
 }
 
@@ -156,47 +148,28 @@ function save() {
 		isSensitive: isSensitive.value,
 		allowRenoteToExternal: allowRenoteToExternal.value,
 	} satisfies Misskey.entities.ChannelsCreateRequest;
-
 	if (props.channelId != null) {
-		os.apiWithDialog('channels/update', {
-			...params,
-			channelId: props.channelId,
-			pinnedNoteIds: pinnedNoteIds.value,
-		});
+		os.apiWithDialog('channels/update', { ...params, channelId: props.channelId, pinnedNoteIds: pinnedNoteIds.value });
 	} else {
 		os.apiWithDialog('channels/create', params).then(created => {
-			router.push('/channels/:channelId', {
-				params: {
-					channelId: created.id,
-				},
-			});
+			router.push('/channels/:channelId', { params: { channelId: created.id } });
 		});
 	}
 }
 
 async function archive() {
 	if (props.channelId == null) return;
-
 	const { canceled } = await os.confirm({
 		type: 'warning',
-		title: `Archive ${name.value}?`,
-		text: 'This community will become read-only and will no longer accept new posts.',
+		title: communityI18n.archiveTitle(name.value),
+		text: communityI18n.archiveDescription,
 	});
 	if (canceled) return;
-
-	misskeyApi('channels/update', {
-		channelId: props.channelId,
-		isArchived: true,
-	}).then(() => {
-		os.success();
-	});
+	misskeyApi('channels/update', { channelId: props.channelId, isArchived: true }).then(() => os.success());
 }
 
 function setBannerImage(evt: PointerEvent) {
-	selectFile({
-		anchorElement: evt.currentTarget ?? evt.target,
-		multiple: false,
-	}).then(file => {
+	selectFile({ anchorElement: evt.currentTarget ?? evt.target, multiple: false }).then(file => {
 		bannerId.value = file.id;
 	});
 }
@@ -206,11 +179,10 @@ function removeBannerImage() {
 }
 
 const headerActions = computed(() => []);
-
 const headerTabs = computed(() => []);
 
 definePage(() => ({
-	title: props.channelId ? 'Edit Community' : 'Create Community',
+	title: props.channelId ? communityI18n.editCommunity : communityI18n.createCommunity,
 	icon: 'ti ti-users-group',
 }));
 </script>
