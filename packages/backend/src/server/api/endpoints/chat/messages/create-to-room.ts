@@ -10,7 +10,9 @@ import { GetterService } from '@/server/api/GetterService.js';
 import { DI } from '@/di-symbols.js';
 import { ApiError } from '@/server/api/error.js';
 import { ChatService } from '@/core/ChatService.js';
-import type { DriveFilesRepository } from '@/models/_.js';
+import { UserFollowingService } from '@/core/UserFollowingService.js';
+import type { ChatRoomMembershipsRepository, DriveFilesRepository } from '@/models/_.js';
+import type { MiLocalUser } from '@/models/User.js';
 import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 
 export const meta = {
@@ -86,8 +88,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.driveFilesRepository)
 		private driveFilesRepository: DriveFilesRepository,
 
+		@Inject(DI.chatRoomMembershipsRepository)
+		private chatRoomMembershipsRepository: ChatRoomMembershipsRepository,
+
 		private getterService: GetterService,
 		private chatService: ChatService,
+		private userFollowingService: UserFollowingService,
 		private nookAccessService: NookAccessService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
@@ -103,6 +109,27 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const room = await this.chatService.findRoomById(ps.toRoomId);
 			if (room == null) {
 				throw new ApiError(meta.errors.noSuchRoom);
+			}
+
+			const memberships = await this.chatRoomMembershipsRepository.findBy({ roomId: room.id });
+			const participantIds = new Set([room.ownerId, ...memberships.map(membership => membership.userId)]);
+			for (const participantId of participantIds) {
+				if (participantId === me.id) continue;
+
+				const participant = await this.getterService.getUser(participantId);
+				const participantLocal = participant.host == null ? participant as MiLocalUser : null;
+				const policyEvaluation = await this.nookAccessService.evaluateDirectChat(
+					me,
+					participantLocal,
+					() => this.userFollowingService.isMutual(me.id, participant.id),
+				);
+				if (
+					policyEvaluation.sender.some(decision => !decision.allowed) ||
+					policyEvaluation.senderTargetSensitive.some(decision => !decision.allowed) ||
+					policyEvaluation.recipient?.some(decision => !decision.allowed)
+				) {
+					throw new ApiError(meta.errors.restrictedByNookPolicy);
+				}
 			}
 
 			let file = null;
