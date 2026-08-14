@@ -6,11 +6,17 @@
 import { Module } from '@nestjs/common';
 
 import { CoreModule } from '@/core/CoreModule.js';
-import * as endpointsObject from './endpoint-list.js';
+import { NookTranslationService } from '@/nook/translation/NookTranslationService.js';
+import * as upstreamEndpointsObject from './endpoint-list.js';
+import * as nookEndpointsObject from './nook-endpoint-list.js';
 import { GetterService } from './GetterService.js';
 import { ApiLoggerService } from './ApiLoggerService.js';
 import type { Provider } from '@nestjs/common';
 
+const endpointsObject = {
+	...upstreamEndpointsObject,
+	...nookEndpointsObject,
+};
 const endpoints = Object.entries(endpointsObject);
 const endpointProviders = endpoints.map(([path, endpoint]): Provider => ({ provide: `ep:${path}`, useClass: endpoint.default }));
 
@@ -21,6 +27,7 @@ const endpointProviders = endpoints.map(([path, endpoint]): Provider => ({ provi
 	providers: [
 		GetterService,
 		ApiLoggerService,
+		NookTranslationService,
 		...endpointProviders,
 	],
 	exports: [
