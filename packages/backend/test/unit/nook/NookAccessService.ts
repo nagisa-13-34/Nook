@@ -36,7 +36,12 @@ function createService(profile: Record<string, unknown> | null, permissions: Noo
 		findOneBy: vi.fn().mockResolvedValue({ name: 'policy_enforcement', enabled: enforcementEnabled }),
 	};
 
-	return new NookAccessService(nookPoliciesRepository as never, userProfilesRepository as never, nookFeatureFlagsRepository as never);
+	return {
+		service: new NookAccessService(nookPoliciesRepository as never, userProfilesRepository as never, nookFeatureFlagsRepository as never),
+		nookPoliciesRepository,
+		userProfilesRepository,
+		nookFeatureFlagsRepository,
+	};
 }
 
 const user = {
@@ -47,7 +52,7 @@ const user = {
 
 describe('NookAccessService', () => {
 	test('allows existing behavior while policy enforcement is disabled', async () => {
-		const service = createService(null, deniedPermissions, false);
+		const { service } = createService(null, deniedPermissions, false);
 
 		await expect(service.evaluate(user, 'create_post')).resolves.toMatchObject({
 			allowed: true,
@@ -58,7 +63,7 @@ describe('NookAccessService', () => {
 
 	test('uses the verified age group and country instead of a date of birth', async () => {
 		const permissions = createPermissions({ create_post: true });
-		const service = createService({
+		const { service } = createService({
 			userId: user.id,
 			nookCountryCode: 'JP',
 			nookVerifiedAgeGroup: '13_15',
@@ -72,12 +77,35 @@ describe('NookAccessService', () => {
 	});
 
 	test('denies access when no verified user context matches a policy', async () => {
-		const service = createService(null);
+		const { service } = createService(null);
 
 		await expect(service.evaluate(user, 'create_post')).resolves.toMatchObject({
 			allowed: false,
 			policyId: null,
 			reason: 'policy_not_found',
 		});
+	});
+
+	test('evaluates multiple media permissions with one policy and profile lookup', async () => {
+		const permissions = createPermissions({
+			create_post: true,
+			create_image_post: true,
+			create_video_post: false,
+		});
+		const { service, nookPoliciesRepository, userProfilesRepository, nookFeatureFlagsRepository } = createService({
+			userId: user.id,
+			nookCountryCode: 'JP',
+			nookVerifiedAgeGroup: '13_15',
+			nookPolicyId: null,
+		}, permissions);
+
+		await expect(service.evaluateMany(user, ['create_post', 'create_image_post', 'create_video_post'])).resolves.toEqual([
+			expect.objectContaining({ permission: 'create_post', allowed: true }),
+			expect.objectContaining({ permission: 'create_image_post', allowed: true }),
+			expect.objectContaining({ permission: 'create_video_post', allowed: false }),
+		]);
+		expect(nookFeatureFlagsRepository.findOneBy).toHaveBeenCalledOnce();
+		expect(nookPoliciesRepository.find).toHaveBeenCalledOnce();
+		expect(userProfilesRepository.findOne).toHaveBeenCalledOnce();
 	});
 });
