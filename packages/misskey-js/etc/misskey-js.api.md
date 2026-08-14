@@ -263,6 +263,21 @@ type AdminInviteListResponse = operations['admin___invite___list']['responses'][
 type AdminMetaResponse = operations['admin___meta']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
+type AdminNookGetSettingsResponse = operations['admin___nook___get-settings']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type AdminNookUpdateFeatureFlagRequest = operations['admin___nook___update-feature-flag']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type AdminNookUpdateFeatureFlagResponse = operations['admin___nook___update-feature-flag']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type AdminNookUpsertPolicyRequest = operations['admin___nook___upsert-policy']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type AdminNookUpsertPolicyResponse = operations['admin___nook___upsert-policy']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
 type AdminPromoCreateRequest = operations['admin___promo___create']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -1610,6 +1625,11 @@ declare namespace entities {
         AdminInviteListRequest,
         AdminInviteListResponse,
         AdminMetaResponse,
+        AdminNookGetSettingsResponse,
+        AdminNookUpdateFeatureFlagRequest,
+        AdminNookUpdateFeatureFlagResponse,
+        AdminNookUpsertPolicyRequest,
+        AdminNookUpsertPolicyResponse,
         AdminPromoCreateRequest,
         AdminQueueClearRequest,
         AdminQueueDeliverDelayedResponse,
