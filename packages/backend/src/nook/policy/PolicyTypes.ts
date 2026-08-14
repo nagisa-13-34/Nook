@@ -42,6 +42,18 @@ export const nookAgeGroups = [
 
 export type NookAgeGroup = typeof nookAgeGroups[number];
 
+export const nookAgeGroupClasses = {
+	U13: 'protected',
+	'13_15': 'protected',
+	'16_17': 'protected',
+	'18_PLUS': 'adult',
+	UNKNOWN: 'unknown',
+} as const satisfies Record<NookAgeGroup, 'protected' | 'adult' | 'unknown'>;
+
+export function isNookAdultAgeGroup(ageGroup: NookAgeGroup): boolean {
+	return nookAgeGroupClasses[ageGroup] === 'adult';
+}
+
 export const nookAccountStates = [
 	'active',
 	'limited',
