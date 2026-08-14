@@ -4,60 +4,75 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<nav :class="$style.root" aria-label="Nook">
+<nav :class="$style.root" :aria-label="i18n.ts.menu">
 	<div :class="$style.brandRow">
-		<button class="_button" :class="$style.brand" aria-label="Nook" @click="mainRouter.push('/')">Nook</button>
+		<button v-tooltip.noDelay.right="'Nook'" class="_button" :class="$style.brand" aria-label="Nook" @click="mainRouter.push('/')">Nook</button>
 	</div>
 
 	<div :class="$style.primary">
-		<button :class="[$style.item, { [$style.active]: currentPath === '/' }]" class="_button" :aria-current="currentPath === '/' ? 'page' : undefined" @click="mainRouter.push('/')">
+		<MkA v-tooltip.noDelay.right="i18n.ts.home" :class="$style.item" :activeClass="$style.active" to="/" exact>
 			<i class="ti ti-home" :class="$style.icon"></i>
 			<span>{{ i18n.ts.home }}</span>
-		</button>
-		<button :class="[$style.item, { [$style.active]: currentPath.startsWith('/explore') }]" class="_button" :aria-current="currentPath.startsWith('/explore') ? 'page' : undefined" @click="mainRouter.push('/explore')">
+		</MkA>
+		<MkA v-tooltip.noDelay.right="i18n.ts.explore" :class="$style.item" :activeClass="$style.active" to="/explore">
 			<i class="ti ti-compass" :class="$style.icon"></i>
 			<span>{{ i18n.ts.explore }}</span>
-		</button>
-		<button :class="[$style.item, { [$style.active]: currentPath.startsWith('/channels') }]" class="_button" :aria-current="currentPath.startsWith('/channels') ? 'page' : undefined" @click="mainRouter.push('/channels')">
+		</MkA>
+		<MkA v-tooltip.noDelay.right="i18n.ts.nookCommunity" :class="$style.item" :activeClass="$style.active" to="/channels">
 			<i class="ti ti-users-group" :class="$style.icon"></i>
 			<span>{{ i18n.ts.nookCommunity }}</span>
-		</button>
-		<button :class="[$style.item, { [$style.active]: currentPath.startsWith('/chat') }]" class="_button" :aria-current="currentPath.startsWith('/chat') ? 'page' : undefined" :disabled="$i == null || $i.policies.chatAvailability === 'unavailable'" @click="mainRouter.push('/chat')">
+		</MkA>
+		<MkA
+			v-if="$i != null && $i.policies.chatAvailability !== 'unavailable'"
+			v-tooltip.noDelay.right="i18n.ts.chat"
+			:class="$style.item"
+			:activeClass="$style.active"
+			to="/chat"
+		>
 			<span :class="$style.iconWrap">
 				<i class="ti ti-messages" :class="$style.icon"></i>
-				<i v-if="$i?.hasUnreadChatMessages" :class="$style.unread" class="_indicatorCircle"></i>
+				<i v-if="$i.hasUnreadChatMessages" :class="$style.unread" class="_indicatorCircle"></i>
 			</span>
+			<span>{{ i18n.ts.chat }}</span>
+		</MkA>
+		<button v-else v-tooltip.noDelay.right="i18n.ts.chat" class="_button" :class="$style.item" disabled>
+			<i class="ti ti-messages" :class="$style.icon"></i>
 			<span>{{ i18n.ts.chat }}</span>
 		</button>
 
-		<button class="_button" :class="$style.create" data-testid="open-post-form" @click="os.post()">
+		<button v-tooltip.noDelay.right="i18n.ts.create" class="_button" :class="$style.create" data-testid="open-post-form" @click="os.post()">
 			<i class="ti ti-plus" :class="$style.createIcon"></i>
 			<span>{{ i18n.ts.create }}</span>
 		</button>
 	</div>
 
 	<div :class="$style.secondary">
-		<button :class="[$style.item, { [$style.active]: currentPath.startsWith('/my/notifications') }]" class="_button" :aria-current="currentPath.startsWith('/my/notifications') ? 'page' : undefined" @click="mainRouter.push('/my/notifications')">
+		<MkA v-if="$i != null" v-tooltip.noDelay.right="i18n.ts.notifications" :class="$style.item" :activeClass="$style.active" to="/my/notifications">
 			<span :class="$style.iconWrap">
 				<i class="ti ti-bell" :class="$style.icon"></i>
-				<i v-if="$i?.hasUnreadNotification" :class="$style.unread" class="_indicatorCircle"></i>
+				<i v-if="$i.hasUnreadNotification" :class="$style.unread" class="_indicatorCircle"></i>
 			</span>
 			<span>{{ i18n.ts.notifications }}</span>
-		</button>
-		<button v-if="showWidgetButton" class="_button" :class="$style.item" @click="emit('widgetButtonClick')">
+		</MkA>
+		<button v-if="showWidgetButton" v-tooltip.noDelay.right="i18n.ts.widgets" class="_button" :class="$style.item" @click="emit('widgetButtonClick')">
 			<i class="ti ti-apps" :class="$style.icon"></i>
 			<span>{{ i18n.ts.widgets }}</span>
 		</button>
-		<button class="_button" :class="$style.item" @click="more">
+		<MkA v-if="$i != null && ($i.isAdmin || $i.isModerator)" v-tooltip.noDelay.right="i18n.ts.controlPanel" :class="$style.item" :activeClass="$style.active" to="/admin">
+			<i class="ti ti-dashboard" :class="$style.icon"></i>
+			<span>{{ i18n.ts.controlPanel }}</span>
+		</MkA>
+		<button v-tooltip.noDelay.right="i18n.ts.more" class="_button" :class="$style.item" @click="more">
 			<i class="ti ti-grid-dots" :class="$style.icon"></i>
 			<span>{{ i18n.ts.more }}</span>
+			<i v-if="otherMenuItemIndicated" :class="$style.menuUnread" class="_indicatorCircle"></i>
 		</button>
-		<button :class="[$style.item, { [$style.active]: currentPath.startsWith('/settings') }]" class="_button" :aria-current="currentPath.startsWith('/settings') ? 'page' : undefined" @click="mainRouter.push('/settings')">
+		<MkA v-tooltip.noDelay.right="i18n.ts.settings" :class="$style.item" :activeClass="$style.active" to="/settings">
 			<i class="ti ti-settings" :class="$style.icon"></i>
 			<span>{{ i18n.ts.settings }}</span>
-		</button>
+		</MkA>
 
-		<button v-if="$i" class="_button" :class="$style.account" @click="openAccountMenu">
+		<button v-if="$i" v-tooltip.noDelay.right="`${i18n.ts.account}: @${$i.username}`" class="_button" :class="$style.account" @click="openAccountMenu">
 			<MkAvatar :user="$i" :class="$style.avatar"/>
 			<span :class="$style.accountText">
 				<strong :class="$style.accountName">{{ $i.name || $i.username }}</strong>
@@ -75,6 +90,7 @@ import { $i } from '@/i.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { mainRouter } from '@/router.js';
+import { navbarItemDef } from '@/navbar.js';
 import { getAccountMenu } from '@/accounts.js';
 import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
 
@@ -86,8 +102,15 @@ const emit = defineEmits<{
 	(ev: 'widgetButtonClick'): void;
 }>();
 
-const currentPath = computed(() => mainRouter.currentRoute.value.path);
 const showWidgetButton = computed(() => props.showWidgetButton !== false);
+
+const otherMenuItemIndicated = computed(() => {
+	for (const def in navbarItemDef) {
+		if (['notifications', 'chat'].includes(def)) continue;
+		if (navbarItemDef[def].indicated) return true;
+	}
+	return false;
+});
 
 async function openAccountMenu(ev: PointerEvent) {
 	const menuItems = await getAccountMenu({ withExtraOperation: true });
@@ -159,6 +182,7 @@ async function more(ev: PointerEvent) {
 	font-size: 15px;
 	font-weight: 650;
 	text-align: left;
+	text-decoration: none;
 	color: var(--MI_THEME-navFg);
 	transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
 
@@ -197,6 +221,13 @@ async function more(ev: PointerEvent) {
 	position: absolute;
 	top: -2px;
 	right: -5px;
+	color: var(--MI_THEME-indicator);
+}
+
+.menuUnread {
+	position: absolute;
+	top: 10px;
+	right: 10px;
 	color: var(--MI_THEME-indicator);
 }
 
@@ -311,6 +342,11 @@ async function more(ev: PointerEvent) {
 		> span:last-child {
 			display: none;
 		}
+	}
+
+	.menuUnread {
+		top: 8px;
+		right: 8px;
 	}
 
 	.create {

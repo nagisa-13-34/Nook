@@ -10,8 +10,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<template #empty>
 				<div :class="$style.empty">
 					<i class="ti ti-bookmark" :class="$style.emptyIcon"></i>
-					<strong>Bookmarks</strong>
-					<span>保存した投稿はここに表示されます。</span>
+					<strong>{{ i18n.ts.nookBookmarks }}</strong>
+					<span>{{ i18n.ts.nookBookmarksEmpty }}</span>
 				</div>
 			</template>
 
@@ -27,6 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { markRaw } from 'vue';
 import MkPagination from '@/components/MkPagination.vue';
 import MkNote from '@/components/MkNote.vue';
+import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { Paginator } from '@/utility/paginator.js';
 
@@ -35,7 +36,7 @@ const paginator = markRaw(new Paginator('i/favorites', {
 }));
 
 definePage(() => ({
-	title: 'Bookmarks',
+	title: i18n.ts.nookBookmarks,
 	icon: 'ti ti-bookmark',
 }));
 </script>
