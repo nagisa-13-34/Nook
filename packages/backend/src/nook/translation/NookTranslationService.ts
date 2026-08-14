@@ -11,6 +11,8 @@ import type { MiMeta } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
 
+export type NookTranslationKind = 'note' | 'communityMessage' | 'communityAnnouncement' | 'communityEvent';
+
 export class NookTranslationUnavailableError extends Error {}
 
 @Injectable()
@@ -21,7 +23,7 @@ export class NookTranslationService {
 		private httpRequestService: HttpRequestService,
 	) {}
 
-	public async translate(kind: 'note' | 'communityMessage', objectId: string, text: string, targetLanguage: string): Promise<{ sourceLang: string; text: string }> {
+	public async translate(kind: NookTranslationKind, objectId: string, text: string, targetLanguage: string): Promise<{ sourceLang: string; text: string }> {
 		if (this.serverSettings.deeplAuthKey == null) throw new NookTranslationUnavailableError();
 		const sourceHash = createHash('sha256').update(text).digest('hex');
 		let targetLang = targetLanguage.trim();
