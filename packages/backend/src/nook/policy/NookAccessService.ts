@@ -107,7 +107,7 @@ export class NookAccessService {
 	public async evaluateDirectChat(sender: MiLocalUser, recipient: MiLocalUser | null, resolveIsMutual: () => Promise<boolean>): Promise<NookDirectChatEvaluation> {
 		const enforcementFlag = await this.nookFeatureFlagsRepository.findOneBy({ name: 'policy_enforcement' });
 		if (!(enforcementFlag?.enabled ?? defaultNookFeatureFlags.policy_enforcement)) {
-			return this.allowDirectChatDisabled(sender, recipient);
+			return this.allowDirectChatDisabled(recipient);
 		}
 
 		const isMutual = await resolveIsMutual();
@@ -132,7 +132,7 @@ export class NookAccessService {
 
 		const enforcementFlag = await this.nookFeatureFlagsRepository.findOneBy({ name: 'policy_enforcement' });
 		if (!(enforcementFlag?.enabled ?? defaultNookFeatureFlags.policy_enforcement)) {
-			return pairs.map(pair => this.allowDirectChatDisabled(pair.sender, pair.recipient));
+			return pairs.map(pair => this.allowDirectChatDisabled(pair.recipient));
 		}
 
 		return await this.evaluateDirectChatPairsEnabled(pairs);
@@ -214,8 +214,7 @@ export class NookAccessService {
 		};
 	}
 
-	private allowDirectChatDisabled(sender: MiLocalUser, recipient: MiLocalUser | null): NookDirectChatEvaluation {
-		void sender;
+	private allowDirectChatDisabled(recipient: MiLocalUser | null): NookDirectChatEvaluation {
 		return {
 			sender: this.allowDisabled(['send_chat']),
 			senderTargetSensitive: [],
