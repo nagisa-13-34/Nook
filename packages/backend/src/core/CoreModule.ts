@@ -16,6 +16,7 @@ import { UserSearchService } from '@/core/UserSearchService.js';
 import { WebhookTestService } from '@/core/WebhookTestService.js';
 import { FlashService } from '@/core/FlashService.js';
 import { ChannelMutingService } from '@/core/ChannelMutingService.js';
+import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 import { AccountMoveService } from './AccountMoveService.js';
 import { AccountUpdateService } from './AccountUpdateService.js';
 import { AiService } from './AiService.js';
@@ -339,6 +340,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		MetaService,
 		MfmService,
 		ModerationLogService,
+		NookAccessService,
 		NoteCreateService,
 		NoteDeleteService,
 		NotePiningService,
@@ -641,6 +643,7 @@ const $ApQuestionService: Provider = { provide: 'ApQuestionService', useExisting
 		MetaService,
 		MfmService,
 		ModerationLogService,
+		NookAccessService,
 		NoteCreateService,
 		NoteDeleteService,
 		NotePiningService,
