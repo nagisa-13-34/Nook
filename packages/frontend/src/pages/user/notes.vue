@@ -5,62 +5,35 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div class="_spacer" style="--MI_SPACER-w: 800px;">
-	<div>
-		<MkStickyContainer>
-			<template #header>
-				<MkTab
-					v-model="tab"
-					:tabs="[
-						{ key: 'posts', label: i18n.ts.nookPosts },
-						{ key: 'media', label: i18n.ts.nookMedia },
-						{ key: 'videos', label: i18n.ts.nookVideos },
-						{ key: 'works', label: i18n.ts.nookWorks },
-					]"
-					:class="$style.tab"
-				>
-				</MkTab>
-			</template>
-			<XGallery v-if="tab === 'works'" :user="user"/>
-			<MkNotesTimeline v-else :noGap="true" :paginator="notesPaginator" :class="$style.tl"/>
-		</MkStickyContainer>
-	</div>
+	<MkNotesTimeline :noGap="true" :paginator="notesPaginator" :class="$style.tl"/>
 </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, defineAsyncComponent, markRaw } from 'vue';
+import { computed, markRaw } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkNotesTimeline from '@/components/MkNotesTimeline.vue';
-import MkTab from '@/components/MkTab.vue';
-import { i18n } from '@/i18n.js';
 import { Paginator } from '@/utility/paginator.js';
 
 const props = defineProps<{
 	user: Misskey.entities.UserDetailed;
+	filter: 'posts' | 'media' | 'videos';
 }>();
-
-const XGallery = defineAsyncComponent(() => import('./gallery.vue'));
-const tab = ref<'posts' | 'media' | 'videos' | 'works'>('posts');
 
 const notesPaginator = markRaw(new Paginator('users/notes', {
 	limit: 10,
 	computedParams: computed(() => ({
 		userId: props.user.id,
-		withRenotes: tab.value === 'posts',
-		withReplies: tab.value === 'posts',
-		withChannelNotes: tab.value === 'posts',
-		...(tab.value === 'media' ? { fileType: 'image' as const } : {}),
-		...(tab.value === 'videos' ? { fileType: 'video' as const } : {}),
+		withRenotes: props.filter === 'posts',
+		withReplies: props.filter === 'posts',
+		withChannelNotes: props.filter === 'posts',
+		...(props.filter === 'media' ? { fileType: 'image' as const } : {}),
+		...(props.filter === 'videos' ? { fileType: 'video' as const } : {}),
 	})),
 }));
 </script>
 
 <style lang="scss" module>
-.tab {
-	padding: calc(var(--MI-margin) / 2) 0;
-	background: var(--MI_THEME-bg);
-}
-
 .tl {
 	background: var(--MI_THEME-bg);
 	border-radius: var(--MI-radius);
