@@ -5469,6 +5469,18 @@ export interface Locale extends ILocale {
      */
     "nookUnreadNotifications": ParameterizedString<"count">;
     /**
+     * フォロー中
+     */
+    "nookFollowing": string;
+    /**
+     * みつける
+     */
+    "nookDiscover": string;
+    /**
+     * メディア
+     */
+    "nookMedia": string;
+    /**
      * ダイレクトメッセージ
      */
     "directMessage": string;
