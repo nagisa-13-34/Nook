@@ -19,6 +19,11 @@ export type NookDirectChatEvaluation = Readonly<{
 	recipient: NookPolicyDecision[] | null;
 }>;
 
+export type NookDirectChatTarget = Readonly<{
+	recipient: MiLocalUser | null;
+	isMutual: boolean;
+}>;
+
 @Injectable()
 export class NookAccessService {
 	constructor(
@@ -134,6 +139,67 @@ export class NookAccessService {
 			senderTargetSensitive: senderTargetSensitivePermissions.map(permission => engine.evaluate(this.getSubject(sender, senderProfile), permission)),
 			recipient: recipient == null ? null : recipientPermissions.map(permission => engine.evaluate(this.getSubject(recipient, recipientProfile), permission)),
 		};
+	}
+
+	public async evaluateDirectChats(sender: MiLocalUser, targets: readonly NookDirectChatTarget[]): Promise<NookDirectChatEvaluation[]> {
+		if (targets.length === 0) return [];
+
+		const enforcementFlag = await this.nookFeatureFlagsRepository.findOneBy({ name: 'policy_enforcement' });
+		if (!(enforcementFlag?.enabled ?? defaultNookFeatureFlags.policy_enforcement)) {
+			return targets.map(target => ({
+				sender: this.allowDisabled(['send_chat']),
+				senderTargetSensitive: [],
+				recipient: target.recipient == null ? null : this.allowDisabled(['receive_chat']),
+			}));
+		}
+
+		const localRecipientIds = targets.flatMap(target => target.recipient == null ? [] : [target.recipient.id]);
+		const userIds = [...new Set([sender.id, ...localRecipientIds])];
+		const [policies, profiles] = await Promise.all([
+			this.nookPoliciesRepository.find(),
+			this.userProfilesRepository.find({
+				where: userIds.map(userId => ({ userId })),
+				select: {
+					userId: true,
+					nookCountryCode: true,
+					nookVerifiedAgeGroup: true,
+					nookPolicyId: true,
+				},
+			}),
+		]);
+
+		const engine = new NookPolicyEngine(policies);
+		const profileByUserId = new Map(profiles.map(profile => [profile.userId, profile]));
+		const senderProfile = profileByUserId.get(sender.id);
+		const senderAgeGroup = senderProfile?.nookVerifiedAgeGroup ?? 'UNKNOWN';
+		const senderSubject = this.getSubject(sender, senderProfile);
+
+		return targets.map(target => {
+			const senderPermissions: NookPermission[] = ['send_chat'];
+			const recipientPermissions: NookPermission[] = target.recipient == null ? [] : ['receive_chat'];
+			const senderTargetSensitivePermissions: NookPermission[] = [];
+
+			if (!target.isMutual) {
+				senderPermissions.push('chat_with_stranger');
+				if (target.recipient != null) recipientPermissions.push('chat_with_stranger');
+			}
+
+			const recipientProfile = target.recipient == null ? null : profileByUserId.get(target.recipient.id);
+			const recipientAgeGroup = recipientProfile?.nookVerifiedAgeGroup ?? 'UNKNOWN';
+
+			if (!isNookAdultAgeGroup(senderAgeGroup) && (target.recipient == null || recipientAgeGroup === 'UNKNOWN' || isNookAdultAgeGroup(recipientAgeGroup))) {
+				senderTargetSensitivePermissions.push('chat_with_adult');
+			}
+			if (target.recipient != null && !isNookAdultAgeGroup(recipientAgeGroup) && (senderAgeGroup === 'UNKNOWN' || isNookAdultAgeGroup(senderAgeGroup))) {
+				recipientPermissions.push('chat_with_adult');
+			}
+
+			return {
+				sender: senderPermissions.map(permission => engine.evaluate(senderSubject, permission)),
+				senderTargetSensitive: senderTargetSensitivePermissions.map(permission => engine.evaluate(senderSubject, permission)),
+				recipient: target.recipient == null ? null : recipientPermissions.map(permission => engine.evaluate(this.getSubject(target.recipient, recipientProfile), permission)),
+			};
+		});
 	}
 
 	private allowDisabled(permissions: readonly NookPermission[]): NookPolicyDecision[] {

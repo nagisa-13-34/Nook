@@ -4,14 +4,13 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
+import { Brackets, In } from 'typeorm';
 import ms from 'ms';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { GetterService } from '@/server/api/GetterService.js';
 import { DI } from '@/di-symbols.js';
 import { ApiError } from '@/server/api/error.js';
 import { ChatService } from '@/core/ChatService.js';
-import { UserFollowingService } from '@/core/UserFollowingService.js';
-import type { ChatRoomMembershipsRepository, DriveFilesRepository } from '@/models/_.js';
+import type { ChatRoomMembershipsRepository, DriveFilesRepository, FollowingsRepository, UsersRepository } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 
@@ -91,9 +90,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.chatRoomMembershipsRepository)
 		private chatRoomMembershipsRepository: ChatRoomMembershipsRepository,
 
-		private getterService: GetterService,
+		@Inject(DI.usersRepository)
+		private usersRepository: UsersRepository,
+
+		@Inject(DI.followingsRepository)
+		private followingsRepository: FollowingsRepository,
+
 		private chatService: ChatService,
-		private userFollowingService: UserFollowingService,
 		private nookAccessService: NookAccessService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
@@ -101,10 +104,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.chatDisabled);
 			}
 			await this.chatService.checkChatAvailability(me.id, 'write');
-			const senderDecision = await this.nookAccessService.evaluate(me, 'send_chat');
-			if (!senderDecision.allowed) {
-				throw new ApiError(meta.errors.restrictedByNookPolicy);
-			}
 
 			const room = await this.chatService.findRoomById(ps.toRoomId);
 			if (room == null) {
@@ -112,22 +111,53 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			const memberships = await this.chatRoomMembershipsRepository.findBy({ roomId: room.id });
-			const participantIds = new Set([room.ownerId, ...memberships.map(membership => membership.userId)]);
-			for (const participantId of participantIds) {
-				if (participantId === me.id) continue;
+			const participantIds = [...new Set([room.ownerId, ...memberships.map(membership => membership.userId)])]
+				.filter(participantId => participantId !== me.id);
 
-				const participant = await this.getterService.getUser(participantId);
-				const participantLocal = participant.host == null ? participant as MiLocalUser : null;
-				const policyEvaluation = await this.nookAccessService.evaluateDirectChat(
+			if (participantIds.length > 0) {
+				const [participants, followings] = await Promise.all([
+					this.usersRepository.findBy({ id: In(participantIds) }),
+					this.followingsRepository.createQueryBuilder('following')
+						.select(['following.followerId', 'following.followeeId'])
+						.where(new Brackets(qb => {
+							qb.where('following.followerId = :meId', { meId: me.id })
+								.andWhere('following.followeeId IN (:...participantIds)', { participantIds });
+						}))
+						.orWhere(new Brackets(qb => {
+							qb.where('following.followeeId = :meId', { meId: me.id })
+								.andWhere('following.followerId IN (:...participantIds)', { participantIds });
+						}))
+						.getMany(),
+				]);
+
+				if (participants.length !== participantIds.length) {
+					throw new ApiError(meta.errors.noSuchRoom);
+				}
+
+				const followDirectionCount = new Map<string, number>();
+				for (const following of followings) {
+					const otherId = following.followerId === me.id ? following.followeeId : following.followerId;
+					followDirectionCount.set(otherId, (followDirectionCount.get(otherId) ?? 0) + 1);
+				}
+
+				const policyEvaluations = await this.nookAccessService.evaluateDirectChats(
 					me,
-					participantLocal,
-					() => this.userFollowingService.isMutual(me.id, participant.id),
+					participants.map(participant => ({
+						recipient: participant.host == null ? participant as MiLocalUser : null,
+						isMutual: followDirectionCount.get(participant.id) === 2,
+					})),
 				);
-				if (
+
+				if (policyEvaluations.some(policyEvaluation =>
 					policyEvaluation.sender.some(decision => !decision.allowed) ||
 					policyEvaluation.senderTargetSensitive.some(decision => !decision.allowed) ||
-					policyEvaluation.recipient?.some(decision => !decision.allowed)
-				) {
+					policyEvaluation.recipient?.some(decision => !decision.allowed),
+				)) {
+					throw new ApiError(meta.errors.restrictedByNookPolicy);
+				}
+			} else {
+				const senderDecision = await this.nookAccessService.evaluate(me, 'send_chat');
+				if (!senderDecision.allowed) {
 					throw new ApiError(meta.errors.restrictedByNookPolicy);
 				}
 			}
