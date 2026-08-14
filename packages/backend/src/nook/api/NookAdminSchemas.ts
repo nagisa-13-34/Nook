@@ -82,3 +82,15 @@ export const nookUpdatedFeatureFlagSchema = {
 		updatedAt: { type: 'string', format: 'date-time', optional: false, nullable: false },
 	},
 } as const;
+
+export const nookUserPolicyContextSchema = {
+	type: 'object',
+	optional: false,
+	nullable: false,
+	properties: {
+		userId: { type: 'string', format: 'id', optional: false, nullable: false },
+		country: { type: 'string', optional: false, nullable: true },
+		verifiedAgeGroup: { type: 'string', enum: nookAgeGroups, optional: false, nullable: true },
+		policyId: { type: 'string', optional: false, nullable: true },
+	},
+} as const;
