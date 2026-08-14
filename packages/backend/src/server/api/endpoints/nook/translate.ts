@@ -11,7 +11,7 @@ import { GetterService } from '@/server/api/GetterService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { RoleService } from '@/core/RoleService.js';
 import { requireNookCommunityChannelAccess, NookCommunityChannelError } from '@/nook/community/channels.js';
-import { NookCommunityAccessError } from '@/nook/community/access.js';
+import { requireNookCommunityMember, NookCommunityAccessError } from '@/nook/community/access.js';
 import { NookTranslationService, NookTranslationUnavailableError } from '@/nook/translation/NookTranslationService.js';
 import { ApiError } from '../../error.js';
 
@@ -25,7 +25,7 @@ export const meta = {
 	},
 } as const;
 export const paramDef = { type: 'object', properties: {
-	kind: { type: 'string', enum: ['note','communityMessage'] }, id: { type: 'string', minLength: 1, maxLength: 64 }, targetLang: { type: 'string', minLength: 2, maxLength: 24 },
+	kind: { type: 'string', enum: ['note','communityMessage','communityAnnouncement','communityEvent'] }, id: { type: 'string', minLength: 1, maxLength: 64 }, targetLang: { type: 'string', minLength: 2, maxLength: 24 },
 }, required: ['kind','id','targetLang'] } as const;
 
 @Injectable()
@@ -41,12 +41,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const policies = await this.roleService.getUserPolicies(me.id);
 			if (!policies.canUseTranslator) throw new ApiError(meta.errors.unavailable);
 			let text: string | null = null;
+
 			if (ps.kind === 'note') {
 				const note = await this.getterService.getNote(ps.id).catch(() => null);
 				if (note == null) throw new ApiError(meta.errors.noSuchObject);
 				if (!(await this.noteEntityService.isVisibleForMe(note, me.id))) throw new ApiError(meta.errors.forbidden);
 				text = note.text;
-			} else {
+			} else if (ps.kind === 'communityMessage') {
 				const rows = await this.db.query<Array<{ communityId: string; channelId: string; body: string }>>(
 					`SELECT "communityId","channelId","body" FROM "nook_community_message" WHERE "id"=$1 AND "deletedAt" IS NULL LIMIT 1`, [ps.id]);
 				const message = rows[0];
@@ -56,7 +57,28 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					throw error;
 				}
 				text = message.body;
+			} else if (ps.kind === 'communityAnnouncement') {
+				const rows = await this.db.query<Array<{ communityId: string; body: string }>>(
+					'SELECT "communityId","body" FROM "nook_community_announcement" WHERE "id"=$1 LIMIT 1', [ps.id]);
+				const announcement = rows[0];
+				if (announcement == null) throw new ApiError(meta.errors.noSuchObject);
+				try { await requireNookCommunityMember(this.db, announcement.communityId, me.id); } catch (error) {
+					if (error instanceof NookCommunityAccessError) throw new ApiError(meta.errors.forbidden);
+					throw error;
+				}
+				text = announcement.body;
+			} else {
+				const rows = await this.db.query<Array<{ communityId: string; description: string | null }>>(
+					'SELECT "communityId","description" FROM "nook_community_event" WHERE "id"=$1 LIMIT 1', [ps.id]);
+				const event = rows[0];
+				if (event == null) throw new ApiError(meta.errors.noSuchObject);
+				try { await requireNookCommunityMember(this.db, event.communityId, me.id); } catch (error) {
+					if (error instanceof NookCommunityAccessError) throw new ApiError(meta.errors.forbidden);
+					throw error;
+				}
+				text = event.description;
 			}
+
 			if (text == null || text.length === 0) throw new ApiError(meta.errors.noSuchObject);
 			try { return await this.translationService.translate(ps.kind, ps.id, text, ps.targetLang); } catch (error) { if (error instanceof NookTranslationUnavailableError) throw new ApiError(meta.errors.unavailable); throw error; }
 		});
