@@ -7,11 +7,13 @@ import ms from 'ms';
 import { In } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
+import { DI } from '@/di-symbols.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { NoteCreateService } from '@/core/NoteCreateService.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { NookAccessService } from '@/nook/policy/NookAccessService.js';
+import type { DriveFilesRepository } from '@/models/_.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -225,20 +227,39 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
+		@Inject(DI.driveFilesRepository)
+		private driveFilesRepository: DriveFilesRepository,
+
 		private noteEntityService: NoteEntityService,
 		private noteCreateService: NoteCreateService,
 		private nookAccessService: NookAccessService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			try {
-				const policyDecision = await this.nookAccessService.evaluate(me, 'create_post');
-				if (!policyDecision.allowed) {
+				const fileIds = ps.fileIds ?? ps.mediaIds ?? [];
+				const files = fileIds.length === 0 ? [] : await this.driveFilesRepository.find({
+					where: {
+						id: In(fileIds),
+						userId: me.id,
+					},
+					select: {
+						id: true,
+						type: true,
+					},
+				});
+				const requiredPermissions = ['create_post'] as const;
+				const mediaPermissions = [
+					...(files.some(file => file.type.startsWith('image/')) ? ['create_image_post'] as const : []),
+					...(files.some(file => file.type.startsWith('video/')) ? ['create_video_post'] as const : []),
+				];
+				const policyDecisions = await this.nookAccessService.evaluateMany(me, [...requiredPermissions, ...mediaPermissions]);
+				if (policyDecisions.some(decision => !decision.allowed)) {
 					throw new ApiError(meta.errors.restrictedByNookPolicy);
 				}
 
 				const note = await this.noteCreateService.fetchAndCreate(me, {
 					createdAt: new Date(),
-					fileIds: ps.fileIds ?? ps.mediaIds ?? [],
+					fileIds,
 					poll: ps.poll ? {
 						choices: ps.poll.choices,
 						multiple: ps.poll.multiple ?? false,
