@@ -12,15 +12,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div :class="$style.primary">
 		<MkA v-tooltip.noDelay.right="i18n.ts.home" :class="$style.item" :activeClass="$style.active" to="/" exact>
 			<i class="ti ti-home" :class="$style.icon"></i>
-			<span>{{ i18n.ts.home }}</span>
+			<span :class="$style.itemText">{{ i18n.ts.home }}</span>
 		</MkA>
 		<MkA v-tooltip.noDelay.right="i18n.ts.explore" :class="$style.item" :activeClass="$style.active" to="/explore">
 			<i class="ti ti-compass" :class="$style.icon"></i>
-			<span>{{ i18n.ts.explore }}</span>
+			<span :class="$style.itemText">{{ i18n.ts.explore }}</span>
 		</MkA>
 		<MkA v-tooltip.noDelay.right="i18n.ts.nookCommunity" :class="$style.item" :activeClass="$style.active" to="/channels">
 			<i class="ti ti-users-group" :class="$style.icon"></i>
-			<span>{{ i18n.ts.nookCommunity }}</span>
+			<span :class="$style.itemText">{{ i18n.ts.nookCommunity }}</span>
 		</MkA>
 		<MkA
 			v-if="$i != null && $i.policies.chatAvailability !== 'unavailable'"
@@ -33,16 +33,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<i class="ti ti-messages" :class="$style.icon"></i>
 				<i v-if="$i.hasUnreadChatMessages" :class="$style.unread" class="_indicatorCircle"></i>
 			</span>
-			<span>{{ i18n.ts.chat }}</span>
+			<span :class="$style.itemText">{{ i18n.ts.chat }}</span>
 		</MkA>
 		<button v-else v-tooltip.noDelay.right="i18n.ts.chat" class="_button" :class="$style.item" disabled>
 			<i class="ti ti-messages" :class="$style.icon"></i>
-			<span>{{ i18n.ts.chat }}</span>
+			<span :class="$style.itemText">{{ i18n.ts.chat }}</span>
 		</button>
 
 		<button v-tooltip.noDelay.right="i18n.ts.create" class="_button" :class="$style.create" data-testid="open-post-form" @click="os.post()">
 			<i class="ti ti-plus" :class="$style.createIcon"></i>
-			<span>{{ i18n.ts.create }}</span>
+			<span :class="$style.itemText">{{ i18n.ts.create }}</span>
 		</button>
 	</div>
 
@@ -52,24 +52,24 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<i class="ti ti-bell" :class="$style.icon"></i>
 				<i v-if="$i.hasUnreadNotification" :class="$style.unread" class="_indicatorCircle"></i>
 			</span>
-			<span>{{ i18n.ts.notifications }}</span>
+			<span :class="$style.itemText">{{ i18n.ts.notifications }}</span>
 		</MkA>
 		<button v-if="showWidgetButton" v-tooltip.noDelay.right="i18n.ts.widgets" class="_button" :class="$style.item" @click="emit('widgetButtonClick')">
 			<i class="ti ti-apps" :class="$style.icon"></i>
-			<span>{{ i18n.ts.widgets }}</span>
+			<span :class="$style.itemText">{{ i18n.ts.widgets }}</span>
 		</button>
 		<MkA v-if="$i != null && ($i.isAdmin || $i.isModerator)" v-tooltip.noDelay.right="i18n.ts.controlPanel" :class="$style.item" :activeClass="$style.active" to="/admin">
 			<i class="ti ti-dashboard" :class="$style.icon"></i>
-			<span>{{ i18n.ts.controlPanel }}</span>
+			<span :class="$style.itemText">{{ i18n.ts.controlPanel }}</span>
 		</MkA>
 		<button v-tooltip.noDelay.right="i18n.ts.more" class="_button" :class="$style.item" @click="more">
 			<i class="ti ti-grid-dots" :class="$style.icon"></i>
-			<span>{{ i18n.ts.more }}</span>
+			<span :class="$style.itemText">{{ i18n.ts.more }}</span>
 			<i v-if="otherMenuItemIndicated" :class="$style.menuUnread" class="_indicatorCircle"></i>
 		</button>
 		<MkA v-tooltip.noDelay.right="i18n.ts.settings" :class="$style.item" :activeClass="$style.active" to="/settings">
 			<i class="ti ti-settings" :class="$style.icon"></i>
-			<span>{{ i18n.ts.settings }}</span>
+			<span :class="$style.itemText">{{ i18n.ts.settings }}</span>
 		</MkA>
 
 		<button v-if="$i" v-tooltip.noDelay.right="`${i18n.ts.account}: @${$i.username}`" class="_button" :class="$style.account" @click="openAccountMenu">
@@ -198,6 +198,12 @@ async function more(ev: PointerEvent) {
 		opacity: 0.42;
 		cursor: default;
 	}
+}
+
+.itemText {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .active {
@@ -338,10 +344,10 @@ async function more(ev: PointerEvent) {
 	.item {
 		justify-content: center;
 		padding: 0;
+	}
 
-		> span:last-child {
-			display: none;
-		}
+	.itemText {
+		display: none;
 	}
 
 	.menuUnread {
@@ -351,10 +357,6 @@ async function more(ev: PointerEvent) {
 
 	.create {
 		padding: 0;
-
-		> span {
-			display: none;
-		}
 	}
 
 	.account {
