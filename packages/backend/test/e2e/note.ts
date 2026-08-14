@@ -3,19 +3,20 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { Repository } from "typeorm";
-
 process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
 import { describe, beforeAll, afterAll, test } from 'vitest';
 import { MiNote } from '@/models/Note.js';
+import { MiNookFeatureFlag } from '@/models/NookFeatureFlag.js';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import { api, castAsError, initTestDb, post, role, signup, uploadFile, uploadUrl } from '../utils.js';
 import type * as misskey from 'misskey-js';
+import type { Repository } from 'typeorm';
 
 describe('Note', () => {
 	let Notes: Repository<MiNote>;
+	let NookFeatureFlags: Repository<MiNookFeatureFlag>;
 
 	let root: misskey.entities.SignupResponse;
 	let alice: misskey.entities.SignupResponse;
@@ -25,6 +26,7 @@ describe('Note', () => {
 	beforeAll(async () => {
 		const connection = await initTestDb(true);
 		Notes = connection.getRepository(MiNote);
+		NookFeatureFlags = connection.getRepository(MiNookFeatureFlag);
 		root = await signup({ username: 'root' });
 		alice = await signup({ username: 'alice' });
 		bob = await signup({ username: 'bob' });
@@ -41,6 +43,24 @@ describe('Note', () => {
 		assert.strictEqual(res.status, 200);
 		assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
 		assert.strictEqual(res.body.createdNote.text, post.text);
+	});
+
+	test('Policy強制が有効で適合Policyがない場合は投稿を拒否する', async () => {
+		await NookFeatureFlags.save({
+			name: 'policy_enforcement',
+			enabled: true,
+			updatedAt: new Date(),
+		});
+
+		try {
+			const res = await api('notes/create', { text: 'restricted' }, alice);
+
+			assert.strictEqual(res.status, 403);
+			assert.strictEqual(castAsError(res.body).error.code, 'RESTRICTED_BY_NOOK_POLICY');
+			assert.strictEqual(castAsError(res.body).error.id, '3f7d5276-5ed0-412c-a146-c4c65c74888c');
+		} finally {
+			await NookFeatureFlags.delete({ name: 'policy_enforcement' });
+		}
 	});
 
 	test('ファイルを添付できる', async () => {
