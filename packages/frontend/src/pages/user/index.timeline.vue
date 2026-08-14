@@ -9,22 +9,22 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkTab
 			v-model="tab"
 			:tabs="[
-				{ key: 'featured', label: i18n.ts.featured },
-				{ key: 'notes', label: i18n.ts.notes },
-				{ key: 'all', label: i18n.ts.all },
-				{ key: 'files', label: i18n.ts.withFiles },
+				{ key: 'posts', label: i18n.ts.nookPosts },
+				{ key: 'media', label: i18n.ts.nookMedia },
+				{ key: 'videos', label: i18n.ts.nookVideos },
+				{ key: 'works', label: i18n.ts.nookWorks },
 			]"
 			:class="$style.tab"
 		>
 		</MkTab>
 	</template>
-	<MkNotesTimeline v-if="tab === 'featured'" :noGap="true" :paginator="featuredPaginator" :pullToRefresh="false" :class="$style.tl"/>
+	<XGallery v-if="tab === 'works'" :user="user"/>
 	<MkNotesTimeline v-else :noGap="true" :paginator="notesPaginator" :pullToRefresh="false" :class="$style.tl"/>
 </MkStickyContainer>
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, markRaw } from 'vue';
+import { ref, computed, defineAsyncComponent, markRaw } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkNotesTimeline from '@/components/MkNotesTimeline.vue';
 import MkTab from '@/components/MkTab.vue';
@@ -35,23 +35,18 @@ const props = defineProps<{
 	user: Misskey.entities.UserDetailed;
 }>();
 
-const tab = ref<'featured' | 'notes' | 'all' | 'files'>('all');
-
-const featuredPaginator = markRaw(new Paginator('users/featured-notes', {
-	limit: 10,
-	params: {
-		userId: props.user.id,
-	},
-}));
+const XGallery = defineAsyncComponent(() => import('./gallery.vue'));
+const tab = ref<'posts' | 'media' | 'videos' | 'works'>('posts');
 
 const notesPaginator = markRaw(new Paginator('users/notes', {
 	limit: 10,
 	computedParams: computed(() => ({
 		userId: props.user.id,
-		withRenotes: tab.value === 'all',
-		withReplies: tab.value === 'all',
-		withChannelNotes: tab.value === 'all',
-		withFiles: tab.value === 'files',
+		withRenotes: tab.value === 'posts',
+		withReplies: tab.value === 'posts',
+		withChannelNotes: tab.value === 'posts',
+		...(tab.value === 'media' ? { fileType: 'image' as const } : {}),
+		...(tab.value === 'videos' ? { fileType: 'video' as const } : {}),
 	})),
 }));
 </script>
