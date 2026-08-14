@@ -31,6 +31,14 @@ function decision(permission: string, allowed: boolean) {
 	};
 }
 
+function directEvaluation(senderAllowed: boolean, recipientAllowed: boolean | null = null, targetSensitiveAllowed = true) {
+	return {
+		sender: [decision('send_chat', senderAllowed)],
+		senderTargetSensitive: targetSensitiveAllowed ? [] : [decision('chat_with_adult', false)],
+		recipient: recipientAllowed == null ? null : [decision('receive_chat', recipientAllowed)],
+	};
+}
+
 describe('chat create endpoints Nook policy enforcement', () => {
 	test('does not create a direct message when the sender cannot send chat', async () => {
 		const chatService = {
@@ -38,13 +46,14 @@ describe('chat create endpoints Nook policy enforcement', () => {
 			createMessageToUser: vi.fn(),
 		};
 		const nookAccessService = {
-			evaluate: vi.fn().mockResolvedValue(decision('send_chat', false)),
+			evaluateDirectChat: vi.fn().mockResolvedValue(directEvaluation(false, true)),
 		};
 		const endpoint = new CreateToUserEndpoint(
 			{ findOneBy: vi.fn() } as never,
-			{ getUser: vi.fn() } as never,
+			{ getUser: vi.fn().mockResolvedValue(recipient) } as never,
 			chatService as never,
 			nookAccessService as never,
+			{ isMutual: vi.fn().mockResolvedValue(false) } as never,
 		);
 
 		await expect(endpoint.exec({ toUserId: recipient.id, text: 'hello' }, sender, null)).rejects.toMatchObject({
@@ -60,21 +69,20 @@ describe('chat create endpoints Nook policy enforcement', () => {
 			createMessageToUser: vi.fn(),
 		};
 		const nookAccessService = {
-			evaluate: vi.fn()
-				.mockResolvedValueOnce(decision('send_chat', true))
-				.mockResolvedValueOnce(decision('receive_chat', false)),
+			evaluateDirectChat: vi.fn().mockResolvedValue(directEvaluation(true, false)),
 		};
 		const endpoint = new CreateToUserEndpoint(
 			{ findOneBy: vi.fn() } as never,
 			{ getUser: vi.fn().mockResolvedValue(recipient) } as never,
 			chatService as never,
 			nookAccessService as never,
+			{ isMutual: vi.fn().mockResolvedValue(false) } as never,
 		);
 
 		await expect(endpoint.exec({ toUserId: recipient.id, text: 'hello' }, sender, null)).rejects.toMatchObject({
 			code: userMeta.errors.noSuchUser.code,
 		});
-		expect(nookAccessService.evaluate).toHaveBeenNthCalledWith(2, recipient, 'receive_chat');
+		expect(nookAccessService.evaluateDirectChat).toHaveBeenCalledWith(sender, recipient, expect.any(Function));
 		expect(chatService.createMessageToUser).not.toHaveBeenCalled();
 	});
 
@@ -85,15 +93,14 @@ describe('chat create endpoints Nook policy enforcement', () => {
 			createMessageToUser: vi.fn().mockResolvedValue(packedMessage),
 		};
 		const nookAccessService = {
-			evaluate: vi.fn()
-				.mockResolvedValueOnce(decision('send_chat', true))
-				.mockResolvedValueOnce(decision('receive_chat', true)),
+			evaluateDirectChat: vi.fn().mockResolvedValue(directEvaluation(true, true)),
 		};
 		const endpoint = new CreateToUserEndpoint(
 			{ findOneBy: vi.fn() } as never,
 			{ getUser: vi.fn().mockResolvedValue(recipient) } as never,
 			chatService as never,
 			nookAccessService as never,
+			{ isMutual: vi.fn().mockResolvedValue(true) } as never,
 		);
 
 		await expect(endpoint.exec({ toUserId: recipient.id, text: 'hello' }, sender, null)).resolves.toEqual(packedMessage);
@@ -107,18 +114,37 @@ describe('chat create endpoints Nook policy enforcement', () => {
 			createMessageToUser: vi.fn().mockResolvedValue({ id: 'message' }),
 		};
 		const nookAccessService = {
-			evaluate: vi.fn().mockResolvedValue(decision('send_chat', true)),
+			evaluateDirectChat: vi.fn().mockResolvedValue(directEvaluation(true)),
 		};
 		const endpoint = new CreateToUserEndpoint(
 			{ findOneBy: vi.fn() } as never,
 			{ getUser: vi.fn().mockResolvedValue(remoteRecipient) } as never,
 			chatService as never,
 			nookAccessService as never,
+			{ isMutual: vi.fn().mockResolvedValue(false) } as never,
 		);
 
 		await endpoint.exec({ toUserId: remoteRecipient.id, text: 'hello' }, sender, null);
-		expect(nookAccessService.evaluate).toHaveBeenCalledTimes(1);
-		expect(nookAccessService.evaluate).toHaveBeenCalledWith(sender, 'send_chat');
+		expect(nookAccessService.evaluateDirectChat).toHaveBeenCalledWith(sender, null, expect.any(Function));
+	});
+
+	test('hides a sender denial that depends on the recipient age class', async () => {
+		const chatService = {
+			checkChatAvailability: vi.fn().mockResolvedValue(undefined),
+			createMessageToUser: vi.fn(),
+		};
+		const endpoint = new CreateToUserEndpoint(
+			{ findOneBy: vi.fn() } as never,
+			{ getUser: vi.fn().mockResolvedValue(recipient) } as never,
+			chatService as never,
+			{ evaluateDirectChat: vi.fn().mockResolvedValue(directEvaluation(true, true, false)) } as never,
+			{ isMutual: vi.fn().mockResolvedValue(false) } as never,
+		);
+
+		await expect(endpoint.exec({ toUserId: recipient.id, text: 'hello' }, sender, null)).rejects.toMatchObject({
+			code: userMeta.errors.noSuchUser.code,
+		});
+		expect(chatService.createMessageToUser).not.toHaveBeenCalled();
 	});
 
 	test('does not create a room message when the sender cannot send chat', async () => {
