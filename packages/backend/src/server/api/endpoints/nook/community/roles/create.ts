@@ -20,9 +20,8 @@ export const paramDef = { type: 'object', properties: { communityId: { type: 'st
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(@Inject(DI.db) private db: DataSource, private idService: IdService) { super(meta, paramDef, async (ps, me) => {
-		let actor;
 		try {
-			actor = await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'roles.manage');
+			const actor = await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'roles.manage');
 			assertCanGrantNookCommunityPermissions(actor, ps.permissions);
 		} catch (error) {
 			if (error instanceof NookCommunityAccessError || error instanceof NookCommunityAuthorizationError) throw new ApiError(meta.errors.forbidden);
