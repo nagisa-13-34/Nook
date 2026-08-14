@@ -7,7 +7,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { DataSource } from 'typeorm';
 import type { IdService } from '@/core/IdService.js';
 
-export const nookCommunityBotScopes = ['read:messages', 'write:messages', 'read:members', 'manage:events', 'join:voice'] as const;
+export const nookCommunityBotScopes = ['read:messages', 'write:messages'] as const;
 export type NookCommunityBotScope = typeof nookCommunityBotScopes[number];
 
 export interface NookCommunityBotRecord {
