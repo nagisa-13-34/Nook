@@ -25,7 +25,6 @@ jobs:
           TARGET_BRANCH: agent/phase-1-policy-foundation
           EXPECTED_HEAD: 6a93f20c33a0a82cde61370e043562ba773c5b71
           UPSTREAM_COMMIT: 00f66349766dc61298c66129ded5fdeb29e93f41
-          GITHUB_TOKEN: ${{ github.token }}
         run: |
           git fetch origin "$TARGET_BRANCH"
           git clone --filter=blob:none https://github.com/misskey-dev/misskey.git imported
@@ -35,5 +34,6 @@ jobs:
           git -C imported config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git -C imported add --all
           git -C imported commit -m "Add Nook Phase 1 foundation"
-          git -C imported remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git -C imported push origin "HEAD:refs/heads/$TARGET_BRANCH" --force-with-lease="refs/heads/$TARGET_BRANCH:$EXPECTED_HEAD"
+          AUTH_HEADER="$(git config --local --get http.https://github.com/.extraheader)"
+          git -C imported remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git -C imported -c http.https://github.com/.extraheader="$AUTH_HEADER" push origin "HEAD:refs/heads/$TARGET_BRANCH" --force-with-lease="refs/heads/$TARGET_BRANCH:$EXPECTED_HEAD"
