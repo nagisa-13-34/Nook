@@ -20,6 +20,7 @@ export const meta = {
 		noSuchInvite: { message: 'No such invite.', code: 'NO_SUCH_INVITE', id: '81f90c95-12ac-4f06-b854-e5e95bef141b' },
 		inviteExpired: { message: 'The invite has expired.', code: 'INVITE_EXPIRED', id: '9ad4c4d5-a97d-4025-8314-92a451d08b64' },
 		inviteExhausted: { message: 'The invite has reached its use limit.', code: 'INVITE_EXHAUSTED', id: '297c1dfe-639b-4145-b0b9-d6c2869b0439' },
+		banned: { message: 'You are banned from this community.', code: 'BANNED', id: '4fa781bd-7628-451c-8320-6a0d0e3e3832' },
 	},
 } as const;
 export const paramDef = { type: 'object', properties: { token: { type: 'string', minLength: 16, maxLength: 256 } }, required: ['token'] } as const;
@@ -34,6 +35,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					if (error.code === 'INVITE_EXPIRED') throw new ApiError(meta.errors.inviteExpired);
 					if (error.code === 'INVITE_EXHAUSTED') throw new ApiError(meta.errors.inviteExhausted);
 					if (error.code === 'NO_SUCH_INVITE') throw new ApiError(meta.errors.noSuchInvite);
+					if (error.code === 'BANNED') throw new ApiError(meta.errors.banned);
 				}
 				throw error;
 			}
