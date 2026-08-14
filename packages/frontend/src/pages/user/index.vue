@@ -7,7 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <PageWithHeader v-model:tab="tab" :tabs="headerTabs" :actions="headerActions" :swipable="true">
 	<div v-if="user">
 		<XHome v-if="tab === 'home'" :user="user" @showMoreFiles="() => { tab = 'files'; }"/>
-		<XNotes v-else-if="tab === 'notes'" :user="user"/>
+		<XNotes v-else-if="tab === 'posts' || tab === 'media' || tab === 'videos'" :user="user" :filter="tab"/>
+		<XGallery v-else-if="tab === 'works'" :user="user"/>
 		<XFiles v-else-if="tab === 'files'" :user="user"/>
 		<XActivity v-else-if="tab === 'activity'" :user="user"/>
 		<XAchievements v-else-if="tab === 'achievements'" :user="user"/>
@@ -16,7 +17,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<XLists v-else-if="tab === 'lists'" :user="user"/>
 		<XPages v-else-if="tab === 'pages'" :user="user"/>
 		<XFlashs v-else-if="tab === 'flashs'" :user="user"/>
-		<XGallery v-else-if="tab === 'gallery'" :user="user"/>
 		<XRaw v-else-if="tab === 'raw'" :user="user"/>
 	</div>
 	<MkError v-else-if="error" @retry="fetchUser()"/>
@@ -57,7 +57,13 @@ const props = withDefaults(defineProps<{
 	page: 'home',
 });
 
-const tab = ref(props.page);
+function normalizeTab(page: string): string {
+	if (page === 'notes') return 'posts';
+	if (page === 'gallery') return 'works';
+	return page;
+}
+
+const tab = ref(normalizeTab(props.page));
 
 const user = ref<null | Misskey.entities.UserDetailed>(CTX_USER);
 const error = ref<any>(null);
@@ -87,6 +93,10 @@ watch(() => props.acct, fetchUser, {
 	immediate: true,
 });
 
+watch(() => props.page, (page) => {
+	tab.value = normalizeTab(page);
+});
+
 const headerActions = computed(() => []);
 
 const headerTabs = computed(() => user.value ? [{
@@ -94,13 +104,25 @@ const headerTabs = computed(() => user.value ? [{
 	title: i18n.ts.overview,
 	icon: 'ti ti-home',
 }, {
-	key: 'notes',
+	key: 'posts',
 	title: i18n.ts.nookPosts,
 	icon: 'ti ti-pencil',
 }, {
+	key: 'media',
+	title: i18n.ts.nookMedia,
+	icon: 'ti ti-photo',
+}, {
+	key: 'videos',
+	title: i18n.ts.nookVideos,
+	icon: 'ti ti-video',
+}, {
+	key: 'works',
+	title: i18n.ts.nookWorks,
+	icon: 'ti ti-icons',
+}, {
 	key: 'files',
 	title: i18n.ts.files,
-	icon: 'ti ti-photo',
+	icon: 'ti ti-file',
 }, {
 	key: 'activity',
 	title: i18n.ts.activity,
@@ -129,10 +151,6 @@ const headerTabs = computed(() => user.value ? [{
 	key: 'flashs',
 	title: 'Play',
 	icon: 'ti ti-player-play',
-}, {
-	key: 'gallery',
-	title: i18n.ts.nookWorks,
-	icon: 'ti ti-icons',
 }, {
 	key: 'raw',
 	title: 'Raw',
