@@ -96,8 +96,8 @@ export const navbarItemDef = reactive<{
 		to: '/my/antennas',
 	},
 	favorites: {
-		title: i18n.ts.favorites,
-		icon: 'ti ti-star',
+		title: 'Bookmarks',
+		icon: 'ti ti-bookmark',
 		show: computed(() => $i != null),
 		to: '/my/favorites',
 	},
