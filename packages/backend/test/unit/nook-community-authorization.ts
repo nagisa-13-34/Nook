@@ -11,6 +11,7 @@ import {
 	NookCommunityAuthorizationError,
 } from '@/nook/community/authorization.js';
 import { ensureBotChannelAllowed, NookCommunityBotError } from '@/nook/community/bots.js';
+import type { NookCommunityBotRecord } from '@/nook/community/bots.js';
 import { getNookVoiceIceTransportPolicy } from '@/nook/community/voice.js';
 import type { NookCommunityMembership, NookCommunityPermission } from '@/nook/community/types.js';
 
@@ -21,6 +22,23 @@ function membership(baseRole: NookCommunityMembership['baseRole'], permissions: 
 		baseRole,
 		state: 'active',
 		permissions: new Set(permissions),
+	};
+}
+
+function botRecord(scopes: NookCommunityBotRecord['scopes'], allowedChannelIds: string[]): NookCommunityBotRecord {
+	return {
+		id: 'bot',
+		communityId: 'community',
+		creatorId: null,
+		name: 'bot',
+		description: null,
+		kind: 'integration',
+		scopes,
+		allowedChannelIds,
+		enabled: true,
+		createdAt: new Date(),
+		updatedAt: new Date(),
+		lastUsedAt: null,
 	};
 }
 
@@ -60,11 +78,7 @@ describe('Nook Community authorization boundaries', () => {
 	});
 
 	test('empty bot allowlist denies every channel', () => {
-		const bot = {
-			id: 'bot', communityId: 'community', creatorId: null, name: 'bot', description: null, kind: 'integration' as const,
-			scopes: ['read:messages'] as const, allowedChannelIds: [], enabled: true,
-			createdAt: new Date(), updatedAt: new Date(), lastUsedAt: null,
-		};
+		const bot = botRecord(['read:messages'], []);
 		assert.throws(
 			() => ensureBotChannelAllowed(bot, 'channel'),
 			(error: unknown) => error instanceof NookCommunityBotError && error.code === 'CHANNEL_FORBIDDEN',
@@ -72,11 +86,7 @@ describe('Nook Community authorization boundaries', () => {
 	});
 
 	test('bot allowlist permits only explicitly listed channels', () => {
-		const bot = {
-			id: 'bot', communityId: 'community', creatorId: null, name: 'bot', description: null, kind: 'integration' as const,
-			scopes: ['write:messages'] as const, allowedChannelIds: ['allowed'], enabled: true,
-			createdAt: new Date(), updatedAt: new Date(), lastUsedAt: null,
-		};
+		const bot = botRecord(['write:messages'], ['allowed']);
 		assert.doesNotThrow(() => ensureBotChannelAllowed(bot, 'allowed'));
 		assert.throws(() => ensureBotChannelAllowed(bot, 'other'));
 	});
