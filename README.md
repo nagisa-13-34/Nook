@@ -99,7 +99,7 @@ Compatibility rules are more important than full CommonMark compliance:
 - no Markdown-to-HTML-to-DOM reparse pipeline is used
 - no large Markdown dependency is required
 
-This feature is still being validated before it is merged into the main branch.
+Hybrid Markdown + MFM is an experimental Nook feature and may evolve as compatibility testing continues.
 
 ## Compatibility principles
 
