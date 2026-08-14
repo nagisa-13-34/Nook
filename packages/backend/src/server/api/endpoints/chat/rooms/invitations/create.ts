@@ -10,6 +10,7 @@ import { DI } from '@/di-symbols.js';
 import { ApiError } from '@/server/api/error.js';
 import { ChatService } from '@/core/ChatService.js';
 import { ChatEntityService } from '@/core/entities/ChatEntityService.js';
+import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 
 export const meta = {
 	tags: ['chat'],
@@ -37,6 +38,13 @@ export const meta = {
 			code: 'NO_SUCH_ROOM',
 			id: '916f9507-49ba-4e90-b57f-1fd4deaa47a5',
 		},
+		chatDisabled: {
+			message: 'Chat is currently disabled by the Nook feature flag.',
+			code: 'NOOK_CHAT_DISABLED',
+			id: 'a62542b0-b1ac-4f25-b1d4-cd72059b5f43',
+			kind: 'permission',
+			httpStatusCode: 403,
+		},
 	},
 } as const;
 
@@ -54,8 +62,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	constructor(
 		private chatService: ChatService,
 		private chatEntityService: ChatEntityService,
+		private nookAccessService: NookAccessService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
+			if (!(await this.nookAccessService.isFeatureEnabled('chat'))) {
+				throw new ApiError(meta.errors.chatDisabled);
+			}
 			await this.chatService.checkChatAvailability(me.id, 'write');
 
 			const room = await this.chatService.findMyRoomById(me.id, ps.roomId);
