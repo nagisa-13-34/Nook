@@ -30,8 +30,8 @@ const paginator = markRaw(new Paginator('i/favorites', {
 }));
 
 definePage(() => ({
-	title: i18n.ts.favorites,
-	icon: 'ti ti-star',
+	title: 'Bookmarks',
+	icon: 'ti ti-bookmark',
 }));
 </script>
 
