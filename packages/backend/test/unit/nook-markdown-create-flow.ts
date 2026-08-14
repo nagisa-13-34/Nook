@@ -5,14 +5,25 @@
 
 import { describe, expect, test } from 'vitest';
 import { NoteCreateService } from '@/core/NoteCreateService.js';
-import { resolveNookMarkdownForNote } from '@/misc/resolve-nook-markdown.js';
 import type { MiNote } from '@/models/Note.js';
 
-function createInsertHarness() {
+function createServiceHarness() {
 	const inserted: MiNote[] = [];
 	const service = Object.create(NoteCreateService.prototype) as NoteCreateService & Record<string, unknown>;
 
 	Object.assign(service, {
+		meta: {
+			sensitiveWords: [],
+			prohibitedWords: [],
+			silencedHosts: [],
+			mediaSilencedHosts: [],
+		},
+		utilityService: {
+			isKeyWordIncluded: () => false,
+			concatNoteContentsForKeyWordCheck: () => '',
+			isSilencedHost: () => false,
+			isMediaSilencedHost: () => false,
+		},
 		idService: {
 			gen: () => 'test-note-id',
 		},
@@ -21,18 +32,13 @@ function createInsertHarness() {
 				inserted.push(note);
 			},
 		},
-		userProfilesRepository: {
-			findBy: async () => [],
-		},
-		userEntityService: {
-			isRemoteUser: () => false,
-		},
+		postNoteCreated: async () => undefined,
 	});
 
 	return { service, inserted };
 }
 
-function noteData(nookMarkdown: boolean) {
+function noteData(nookMarkdown?: boolean) {
 	return {
 		createdAt: new Date(0),
 		files: [],
@@ -46,45 +52,37 @@ function noteData(nookMarkdown: boolean) {
 		cw: null,
 		localOnly: false,
 		reactionAcceptance: null,
-		visibility: 'public',
+		visibility: 'home',
 		visibleUsers: [],
 		uri: null,
 		url: null,
 	};
 }
 
+const localUser = {
+	id: 'local-user-id',
+	username: 'local-user',
+	host: null,
+	isBot: false,
+	isCat: false,
+};
+
 describe('nookMarkdown note creation flow', () => {
-	test('a normal new local note reaches the repository with nookMarkdown=true', async () => {
-		const { service, inserted } = createInsertHarness();
-		const nookMarkdown = resolveNookMarkdownForNote(null, null, undefined);
+	test('NoteCreateService.create opts a normal new local note into hybrid parsing before insert', async () => {
+		const { service, inserted } = createServiceHarness();
 
-		const result = await (service as any).insertNote(
-			{ id: 'local-user-id', host: null },
-			noteData(nookMarkdown),
-			[],
-			[],
-			[],
-		);
+		const result = await service.create(localUser, noteData() as any, true);
 
-		expect(nookMarkdown).toBe(true);
 		expect(inserted).toHaveLength(1);
 		expect(inserted[0]?.nookMarkdown).toBe(true);
 		expect(result.nookMarkdown).toBe(true);
 	});
 
-	test('an explicit local false reaches the repository unchanged', async () => {
-		const { service, inserted } = createInsertHarness();
-		const nookMarkdown = resolveNookMarkdownForNote(null, null, false);
+	test('NoteCreateService.create preserves an explicit local false through insert', async () => {
+		const { service, inserted } = createServiceHarness();
 
-		const result = await (service as any).insertNote(
-			{ id: 'local-user-id', host: null },
-			noteData(nookMarkdown),
-			[],
-			[],
-			[],
-		);
+		const result = await service.create(localUser, noteData(false) as any, true);
 
-		expect(nookMarkdown).toBe(false);
 		expect(inserted).toHaveLength(1);
 		expect(inserted[0]?.nookMarkdown).toBe(false);
 		expect(result.nookMarkdown).toBe(false);
