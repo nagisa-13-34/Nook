@@ -34,7 +34,7 @@ jobs:
           git -C imported checkout --detach FETCH_HEAD
           git -C imported checkout --orphan nook-import
           git archive "origin/$TARGET_BRANCH" | tar -x -C imported
-          git -C imported rm -r --ignore-unmatch .github/workflows
+          git -C imported rm -r -f --ignore-unmatch .github/workflows
           git -C imported config user.name "github-actions[bot]"
           git -C imported config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git -C imported add --all
