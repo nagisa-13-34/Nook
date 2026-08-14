@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 50092)
-Total output lines: 3500
-
 _lang_: "日本語"
 
 headlineMisskey: "ノートでつながるネットワーク"
@@ -1719,7 +1716,9 @@ _initialTutorial:
     home: "あなたがフォローしているアカウントの投稿を見られます。"
     local: "このサーバーにいるユーザー全員の投稿を見られます。"
     social: "ホームタイムラインとローカルタイムラインの投稿が両方表示されます。"
-    globa…92 tokens truncated…。"
+    global: "接続している他のすべてのサーバーからの投稿を見られます。"
+    description2: "それぞれのタイムラインは、画面上部でいつでも切り替えられます。"
+    description3: "その他にも、リストタイムラインやチャンネルタイムラインなどがあります。詳しくは{link}をご覧ください。"
   _postNote:
     title: "ノートの投稿設定"
     description1: "Misskeyにノートを投稿する際には、様々なオプションの設定が可能です。投稿フォームはこのようになっています。"
