@@ -66,6 +66,14 @@ export const meta = {
 			id: 'c15a5199-7422-4968-941a-2a462c478f7d',
 		},
 
+		chatDisabled: {
+			message: 'Chat is currently disabled by the Nook feature flag.',
+			code: 'NOOK_CHAT_DISABLED',
+			id: 'f461524b-1679-4ee0-97d7-90d13b54c50a',
+			kind: 'permission',
+			httpStatusCode: 403,
+		},
+
 		restrictedByNookPolicy: {
 			message: 'You are not allowed to send or receive chat messages under the current Nook policy.',
 			code: 'RESTRICTED_BY_NOOK_POLICY',
@@ -98,6 +106,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private userFollowingService: UserFollowingService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
+			if (!(await this.nookAccessService.isFeatureEnabled('chat'))) {
+				throw new ApiError(meta.errors.chatDisabled);
+			}
 			await this.chatService.checkChatAvailability(me.id, 'write');
 
 			let file = null;
@@ -112,12 +123,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 			}
 
-			// テキストが無いかつ添付ファイルも無かったらエラー
 			if (ps.text == null && file == null) {
 				throw new ApiError(meta.errors.contentRequired);
 			}
 
-			// Myself
 			if (ps.toUserId === me.id) {
 				throw new ApiError(meta.errors.recipientIsYourself);
 			}
@@ -135,7 +144,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.restrictedByNookPolicy);
 			}
 			if (policyEvaluation.senderTargetSensitive.some(decision => !decision.allowed) || policyEvaluation.recipient?.some(decision => !decision.allowed)) {
-				// Do not expose whether a recipient is unavailable because of an age or account policy.
 				throw new ApiError(meta.errors.noSuchUser);
 			}
 
