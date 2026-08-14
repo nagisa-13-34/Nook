@@ -23,8 +23,11 @@ Nook-specific high-impact features start disabled. `NookFeatureFlags` accepts a 
 
 Policies are stored in `nook_policy` and emergency feature switches are stored in `nook_feature_flag`. Both are registered with TypeORM and NestJS repository injection. Age groups remain varchar values rather than a PostgreSQL enum so policy categories can evolve without hard-coding legal thresholds into the database schema.
 
+## Administration
+
+Administrator-only APIs can list the current settings, upsert a complete policy, and update one emergency feature flag. Every write records its before/after state in the existing Misskey moderation audit log.
+
 ## Next small changes
 
-1. Add administrator APIs and audit logging.
-2. Add a shared authorization guard used by posting and chat entry points.
-3. Add the mobile-first Nook navigation and branding.
+1. Add a shared authorization guard used by posting and chat entry points.
+2. Add the mobile-first Nook navigation and branding.
