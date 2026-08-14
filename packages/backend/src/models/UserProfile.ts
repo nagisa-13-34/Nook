@@ -5,6 +5,7 @@
 
 import { Entity, Column, Index, OneToOne, JoinColumn, PrimaryColumn } from 'typeorm';
 import { obsoleteNotificationTypes, followingVisibilities, followersVisibilities, notificationTypes } from '@/types.js';
+import type { NookAgeGroup } from '@/nook/policy/PolicyTypes.js';
 import { id } from './util/id.js';
 import { MiUser } from './User.js';
 import { MiPage } from './Page.js';
@@ -35,6 +36,24 @@ export class MiUserProfile {
 		comment: 'The birthday (YYYY-MM-DD) of the User.',
 	})
 	public birthday: string | null;
+
+	@Column('varchar', {
+		length: 2, nullable: true,
+		comment: 'ISO 3166-1 alpha-2 country code used by the Nook policy engine.',
+	})
+	public nookCountryCode: string | null;
+
+	@Column('varchar', {
+		length: 32, nullable: true,
+		comment: 'Verified age group used by the Nook policy engine. The date of birth is not required.',
+	})
+	public nookVerifiedAgeGroup: NookAgeGroup | null;
+
+	@Column('varchar', {
+		length: 64, nullable: true,
+		comment: 'Explicitly assigned Nook policy ID.',
+	})
+	public nookPolicyId: string | null;
 
 	@Column('varchar', {
 		length: 2048, nullable: true,
