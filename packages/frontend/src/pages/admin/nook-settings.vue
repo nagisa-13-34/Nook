@@ -76,6 +76,7 @@ const updatingFlags = reactive(new Set<FeatureFlag['name']>());
 const dateTimeFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
 const featureLabels: Record<FeatureFlag['name'], string> = {
+	policy_enforcement: i18n.ts._nookAdmin.features.policyEnforcement,
 	video: i18n.ts._nookAdmin.features.video,
 	chat: i18n.ts._nookAdmin.features.chat,
 	voice_call: i18n.ts._nookAdmin.features.voiceCall,
