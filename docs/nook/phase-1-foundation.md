@@ -31,10 +31,9 @@ Note creation now asks `NookAccessService` for the `create_post` permission befo
 
 ## Administration
 
-Administrator-only APIs can list the current settings, upsert a complete policy, and update one emergency feature flag. Every write records its before/after state in the existing Misskey moderation audit log.
+Administrator-only APIs can list the current settings, upsert a complete policy, update one emergency feature flag, and assign a local user's country, verified age group, or explicit policy. Every write records its before/after state in the existing Misskey moderation audit log. The user safety settings are available from the existing administrator user detail page and do not require storing a date of birth.
 
 ## Next small changes
 
-1. Add administrator controls for assigning a user's country, verified age group, and policy.
-2. Reuse the shared policy access service at chat and media entry points.
-3. Add the mobile-first Nook navigation and branding.
+1. Reuse the shared policy access service at chat and media entry points.
+2. Add the mobile-first Nook navigation and branding.
