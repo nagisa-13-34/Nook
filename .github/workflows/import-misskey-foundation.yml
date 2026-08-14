@@ -20,25 +20,25 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Import Misskey and overlay Nook foundation
+      - name: Create PR-ready integration branch
         env:
-          TARGET_BRANCH: agent/phase-1-policy-foundation
-          EXPECTED_HEAD: 6a93f20c33a0a82cde61370e043562ba773c5b71
+          SOURCE_BRANCH: agent/phase-1-policy-foundation
+          INTEGRATION_BRANCH: agent/phase-1-integration
           UPSTREAM_COMMIT: 00f66349766dc61298c66129ded5fdeb29e93f41
         run: |
-          git fetch origin "$TARGET_BRANCH"
-          mkdir imported
-          git -C imported init
-          git -C imported remote add upstream https://github.com/misskey-dev/misskey.git
-          git -C imported fetch --depth 1 upstream "$UPSTREAM_COMMIT"
-          git -C imported checkout --detach FETCH_HEAD
-          git -C imported checkout --orphan nook-import
-          git archive "origin/$TARGET_BRANCH" | tar -x -C imported
-          git -C imported rm -r -f --ignore-unmatch .github/workflows
-          git -C imported config user.name "github-actions[bot]"
-          git -C imported config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C imported add --all
-          git -C imported commit -m "Import Misskey and add Nook Phase 1 foundation"
-          AUTH_HEADER="$(git config --local --get http.https://github.com/.extraheader)"
-          git -C imported remote add target "https://github.com/${GITHUB_REPOSITORY}.git"
-          git -C imported -c http.https://github.com/.extraheader="$AUTH_HEADER" push --no-thin target "HEAD:refs/heads/$TARGET_BRANCH" --force-with-lease="refs/heads/$TARGET_BRANCH:$EXPECTED_HEAD"
+          git fetch origin "$SOURCE_BRANCH"
+          git switch -c "$INTEGRATION_BRANCH"
+          IMPORT_DIR="$(mktemp -d)"
+          git -C "$IMPORT_DIR" init
+          git -C "$IMPORT_DIR" remote add upstream https://github.com/misskey-dev/misskey.git
+          git -C "$IMPORT_DIR" fetch --depth 1 upstream "$UPSTREAM_COMMIT"
+          git -C "$IMPORT_DIR" checkout --detach FETCH_HEAD
+          git -C "$IMPORT_DIR" checkout --orphan nook-import
+          git -C "$IMPORT_DIR" rm -r -f --ignore-unmatch .github/workflows
+          git archive "origin/$SOURCE_BRANCH" | tar -x -C "$IMPORT_DIR"
+          tar --exclude=.git -C "$IMPORT_DIR" -cf - . | tar -xf -
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          git commit -m "Import Misskey and add Nook Phase 1 foundation"
+          git push origin "$INTEGRATION_BRANCH"
