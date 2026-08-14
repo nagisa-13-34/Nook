@@ -70,12 +70,15 @@ const DESKTOP_THRESHOLD = 1100;
 const MOBILE_THRESHOLD = 500;
 
 // デスクトップでウィンドウを狭くしたときモバイルUIが表示されて欲しいことはあるので deviceKind === 'desktop' の判定は行わない
-const showWidgetsSide = window.innerWidth >= DESKTOP_THRESHOLD;
-
+const showWidgetsSide = ref(window.innerWidth >= DESKTOP_THRESHOLD);
 const isMobile = ref(deviceKind === 'smartphone' || window.innerWidth <= MOBILE_THRESHOLD);
-window.addEventListener('resize', () => {
+
+function updateResponsiveLayout() {
+	showWidgetsSide.value = window.innerWidth >= DESKTOP_THRESHOLD;
 	isMobile.value = deviceKind === 'smartphone' || window.innerWidth <= MOBILE_THRESHOLD;
-});
+}
+
+window.addEventListener('resize', updateResponsiveLayout);
 
 const pageMetadata = ref<null | PageMetadata>(null);
 const widgetsShowing = ref(false);
