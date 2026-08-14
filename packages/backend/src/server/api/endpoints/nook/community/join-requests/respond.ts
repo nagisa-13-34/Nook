@@ -20,6 +20,7 @@ export const meta = {
 	errors: {
 		forbidden: { message: 'You cannot manage members.', code: 'FORBIDDEN', id: 'b694e638-afb8-4ddd-a7ec-23e0b33d542d' },
 		noSuchRequest: { message: 'No such pending request.', code: 'NO_SUCH_REQUEST', id: 'e4eeab0e-d3e6-4ed8-a78a-c0a5e560ce2c' },
+		banned: { message: 'The requested user is banned from this community.', code: 'BANNED', id: 'd2432c91-d535-42d9-9a38-b47e41017dd0' },
 	},
 } as const;
 export const paramDef = { type: 'object', properties: {
@@ -40,11 +41,11 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw error;
 			}
 			let result: { communityId: string; userId: string };
-			try { result = await respondNookCommunityJoinRequest(this.db, ps.requestId, me.id, ps.approve); } catch (error) {
+			try { result = await respondNookCommunityJoinRequest(this.db, ps.communityId, ps.requestId, me.id, ps.approve); } catch (error) {
 				if (error instanceof NookCommunityMembershipError && error.code === 'NO_SUCH_REQUEST') throw new ApiError(meta.errors.noSuchRequest);
+				if (error instanceof NookCommunityMembershipError && error.code === 'BANNED') throw new ApiError(meta.errors.banned);
 				throw error;
 			}
-			if (result.communityId !== ps.communityId) throw new ApiError(meta.errors.noSuchRequest);
 			if (ps.approve) {
 				const [channel, user] = await Promise.all([
 					this.channelsRepository.findOneBy({ id: result.communityId }),
