@@ -13370,4 +13370,282 @@ export interface Locale extends ILocale {
          */
         "mfm": string;
     };
+    "_nookAdmin": {
+        /**
+         * Nook安全設定
+         */
+        "title": string;
+        /**
+         * 年齢・国・アカウント状態に応じた利用ルールと、機能の緊急停止を管理します。
+         */
+        "description": string;
+        /**
+         * 機能スイッチ
+         */
+        "featureFlags": string;
+        /**
+         * OFFにすると、その機能をサービス全体ですぐに停止できます。
+         */
+        "featureFlagsDescription": string;
+        /**
+         * 年齢ポリシー
+         */
+        "policies": string;
+        /**
+         * ポリシーは優先度が高い順に評価されます。
+         */
+        "policiesDescription": string;
+        /**
+         * ポリシーを作成
+         */
+        "newPolicy": string;
+        /**
+         * ポリシーを編集
+         */
+        "editPolicy": string;
+        /**
+         * 登録済みのポリシーはありません。
+         */
+        "noPolicies": string;
+        /**
+         * ポリシーID
+         */
+        "policyId": string;
+        /**
+         * 国コード
+         */
+        "country": string;
+        /**
+         * 日本はJP、すべての国は*を指定します。
+         */
+        "countryCaption": string;
+        /**
+         * 年齢区分
+         */
+        "ageGroup": string;
+        /**
+         * 対象アカウント状態
+         */
+        "accountStates": string;
+        /**
+         * 許可する機能
+         */
+        "permissions": string;
+        /**
+         * 優先度
+         */
+        "priority": string;
+        /**
+         * 有効
+         */
+        "enabled": string;
+        /**
+         * 停止中
+         */
+        "disabled": string;
+        /**
+         * 初期値
+         */
+        "defaultValue": string;
+        /**
+         * 入力内容を確認してください。
+         */
+        "validationError": string;
+        /**
+         * Nook安全設定を保存しました。
+         */
+        "saved": string;
+        /**
+         * {name}を有効にしますか？
+         */
+        "enableFeatureConfirm": ParameterizedString<"name">;
+        /**
+         * {name}を停止しますか？
+         */
+        "disableFeatureConfirm": ParameterizedString<"name">;
+        /**
+         * 指定されたポリシーが見つかりません。
+         */
+        "policyNotFound": string;
+        "features": {
+            /**
+             * 動画投稿
+             */
+            "video": string;
+            /**
+             * チャット
+             */
+            "chat": string;
+            /**
+             * 音声通話
+             */
+            "voiceCall": string;
+            /**
+             * ビデオ通話
+             */
+            "videoCall": string;
+            /**
+             * コミュニティ
+             */
+            "community": string;
+            /**
+             * スペース
+             */
+            "spaces": string;
+            /**
+             * おすすめ
+             */
+            "recommendations": string;
+            /**
+             * 外部リンク
+             */
+            "externalLinks": string;
+            /**
+             * SNS移行
+             */
+            "migration": string;
+            /**
+             * 連合
+             */
+            "federation": string;
+        };
+        "ageGroups": {
+            /**
+             * 13歳未満
+             */
+            "u13": string;
+            /**
+             * 13〜15歳
+             */
+            "age13To15": string;
+            /**
+             * 16〜17歳
+             */
+            "age16To17": string;
+            /**
+             * 18歳以上
+             */
+            "adult": string;
+            /**
+             * 未確認
+             */
+            "unknown": string;
+        };
+        "states": {
+            /**
+             * 通常
+             */
+            "active": string;
+            /**
+             * 制限中
+             */
+            "limited": string;
+            /**
+             * 一時停止
+             */
+            "suspended": string;
+            /**
+             * 利用禁止
+             */
+            "banned": string;
+        };
+        "permissionLabels": {
+            /**
+             * テキスト投稿
+             */
+            "createPost": string;
+            /**
+             * 画像投稿
+             */
+            "createImagePost": string;
+            /**
+             * 動画投稿
+             */
+            "createVideoPost": string;
+            /**
+             * プロフィール公開
+             */
+            "publicProfile": string;
+            /**
+             * プロフィール検索表示
+             */
+            "discoverableProfile": string;
+            /**
+             * フォロー
+             */
+            "followUser": string;
+            /**
+             * フォローされる
+             */
+            "receiveFollow": string;
+            /**
+             * チャット送信
+             */
+            "sendChat": string;
+            /**
+             * チャット受信
+             */
+            "receiveChat": string;
+            /**
+             * 知らない人とのチャット
+             */
+            "chatWithStranger": string;
+            /**
+             * 成人とのチャット
+             */
+            "chatWithAdult": string;
+            /**
+             * 音声通話
+             */
+            "voiceCall": string;
+            /**
+             * ビデオ通話
+             */
+            "videoCall": string;
+            /**
+             * 知らない人との通話
+             */
+            "callWithStranger": string;
+            /**
+             * 成人との通話
+             */
+            "callWithAdult": string;
+            /**
+             * コミュニティ参加
+             */
+            "joinCommunity": string;
+            /**
+             * コミュニティ作成
+             */
+            "createCommunity": string;
+            /**
+             * スペース参加
+             */
+            "joinSpace": string;
+            /**
+             * スペースで発言
+             */
+            "speakInSpace": string;
+            /**
+             * スペース作成
+             */
+            "createSpace": string;
+            /**
+             * 外部リンク
+             */
+            "externalLink": string;
+            /**
+             * 位置情報共有
+             */
+            "locationShare": string;
+            /**
+             * おすすめ表示
+             */
+            "recommendation": string;
+            /**
+             * 個人向け広告
+             */
+            "personalizedAds": string;
+        };
+    };
 }
