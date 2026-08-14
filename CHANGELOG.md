@@ -6,6 +6,7 @@
 - Feat: NookのPolicyとFeature Flagを管理する画面を追加
 - Feat: 管理画面からユーザーの国・確認済み年齢区分・Policyを設定できるように
 - Feat: Nookブランド表示とスマートフォン向けBottom Navigationを追加
+- Feat: TimelineにFollowing・Discover・MediaのNookタブを追加
 
 ### Server
 - Feat: NookのPolicyとFeature Flagを管理する管理者APIを追加
