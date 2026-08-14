@@ -6,11 +6,12 @@
 process.env.NODE_ENV = 'test';
 
 import * as assert from 'assert';
-import { beforeAll, beforeEach, describe, test } from 'vitest';
 import { inspect } from 'node:util';
-import { api, post, role, signup, successfulApiCall, uploadFile } from '../utils.js';
-import type * as misskey from 'misskey-js';
+import { beforeAll, beforeEach, describe, test } from 'vitest';
 import { DEFAULT_POLICIES } from '@/core/RoleService.js';
+import { nookPermissions } from '@/nook/policy/PolicyTypes.js';
+import { api, castAsError, post, role, signup, successfulApiCall, uploadFile } from '../utils.js';
+import type * as misskey from 'misskey-js';
 
 describe('ユーザー', () => {
 	// エンティティとしてのユーザーを主眼においたテストを記述する
@@ -291,6 +292,105 @@ describe('ユーザー', () => {
 		aliceNote = await successfulApiCall({ endpoint: 'notes/show', parameters: { noteId: aliceNote.id }, user: alice });
 	});
 
+	describe('Nookユーザー安全設定', () => {
+		test('管理者が国と確認済み年齢区分を更新できる', async () => {
+			const update = await api('admin/nook/update-user-policy-context', {
+				userId: alice.id,
+				country: 'JP',
+				verifiedAgeGroup: '13_15',
+				policyId: null,
+			}, root);
+
+			assert.strictEqual(update.status, 200);
+			assert.deepStrictEqual(update.body, {
+				userId: alice.id,
+				country: 'JP',
+				verifiedAgeGroup: '13_15',
+				policyId: null,
+			});
+
+			const get = await api('admin/nook/get-user-policy-context', { userId: alice.id }, root);
+			assert.strictEqual(get.status, 200);
+			assert.deepStrictEqual(get.body, update.body);
+
+			await api('admin/nook/update-user-policy-context', {
+				userId: alice.id,
+				country: null,
+				verifiedAgeGroup: null,
+				policyId: null,
+			}, root);
+		});
+
+		test('一般ユーザーは安全設定を参照できない', async () => {
+			const response = await api('admin/nook/get-user-policy-context', { userId: bob.id }, alice);
+			assert.strictEqual(response.status, 403);
+		});
+
+		test('一般ユーザーは安全設定を更新できない', async () => {
+			const response = await api('admin/nook/update-user-policy-context', {
+				userId: bob.id,
+				country: 'JP',
+				verifiedAgeGroup: '13_15',
+				policyId: null,
+			}, alice);
+			assert.strictEqual(response.status, 403);
+		});
+
+		test('有効なPolicyだけを割り当て、変更を監査ログへ記録する', async () => {
+			const permissions = Object.fromEntries(nookPermissions.map(permission => [permission, false])) as Record<typeof nookPermissions[number], boolean>;
+			const policy = {
+				id: 'TEST_USER_CONTEXT',
+				country: 'JP',
+				ageGroup: '13_15' as const,
+				accountStates: ['active'] as Array<'active'>,
+				permissions,
+				priority: 0,
+				enabled: false,
+			};
+			await api('admin/nook/upsert-policy', policy, root);
+
+			const rejected = await api('admin/nook/update-user-policy-context', {
+				userId: bob.id,
+				country: 'JP',
+				verifiedAgeGroup: '13_15',
+				policyId: policy.id,
+			}, root);
+			assert.strictEqual(rejected.status, 400);
+			assert.strictEqual(castAsError(rejected.body).error.code, 'NO_SUCH_NOOK_POLICY');
+
+			const unchanged = await api('admin/nook/get-user-policy-context', { userId: bob.id }, root);
+			assert.strictEqual(unchanged.body.policyId, null);
+
+			await api('admin/nook/upsert-policy', { ...policy, enabled: true }, root);
+			const assigned = await api('admin/nook/update-user-policy-context', {
+				userId: bob.id,
+				country: 'JP',
+				verifiedAgeGroup: '13_15',
+				policyId: policy.id,
+			}, root);
+			assert.strictEqual(assigned.status, 200);
+			assert.strictEqual(assigned.body.policyId, policy.id);
+
+			const logs = await api('admin/show-moderation-logs', {
+				type: 'updateServerSettings',
+				search: bob.id,
+				limit: 100,
+			}, root);
+			assert.strictEqual(logs.status, 200);
+			assert.ok(logs.body.some(log => {
+				const info = log.info as { after?: { nookUserPolicyContext?: { userId?: string } } };
+				return info.after?.nookUserPolicyContext?.userId === bob.id;
+			}));
+
+			await api('admin/nook/update-user-policy-context', {
+				userId: bob.id,
+				country: null,
+				verifiedAgeGroup: null,
+				policyId: null,
+			}, root);
+		});
+	});
+
 	//#region サインアップ(signup)
 
 	test('が作れる。（作りたての状態で自分のユーザー情報が取れる）', async () => {
@@ -309,7 +409,7 @@ describe('ユーザー', () => {
 		assert.strictEqual(response.name, null);
 		assert.strictEqual(response.username, 'zoe');
 		assert.strictEqual(response.host, null);
-		response.avatarUrl && assert.match(response.avatarUrl, /^[-a-zA-Z0-9@:%._\+~#&?=\/]+$/);
+		if (response.avatarUrl) assert.match(response.avatarUrl, /^[-a-zA-Z0-9@:%._\+~#&?=\/]+$/);
 		assert.strictEqual(response.avatarBlurhash, null);
 		assert.deepStrictEqual(response.avatarDecorations, []);
 		assert.strictEqual(response.isBot, false);
