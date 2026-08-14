@@ -12,10 +12,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 >
 	<template v-if="!wait">
 		<template v-if="isFollowing">
-			<span v-if="full" :class="$style.text">{{ communityI18n.leave }}</span><i class="ti ti-logout"></i>
+			<span v-if="full" :class="$style.text">{{ i18n.ts.unfollow }}</span><i class="ti ti-logout"></i>
 		</template>
 		<template v-else>
-			<span v-if="full" :class="$style.text">{{ communityI18n.join }}</span><i class="ti ti-user-plus"></i>
+			<span v-if="full" :class="$style.text">{{ i18n.ts.follow }}</span><i class="ti ti-user-plus"></i>
 		</template>
 	</template>
 	<template v-else>
@@ -29,7 +29,6 @@ import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
-import { communityI18n } from '@/nook/community-i18n.js';
 
 const props = withDefaults(defineProps<{
 	channel: Misskey.entities.Channel;
