@@ -494,6 +494,15 @@ export type paths = {
          */
         post: operations['admin___nook___get-settings'];
     };
+    '/admin/nook/get-user-policy-context': {
+        /**
+         * admin/nook/get-user-policy-context
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *read:admin:roles*
+         */
+        post: operations['admin___nook___get-user-policy-context'];
+    };
     '/admin/nook/update-feature-flag': {
         /**
          * admin/nook/update-feature-flag
@@ -502,6 +511,15 @@ export type paths = {
          *     **Credential required**: *Yes* / **Permission**: *write:admin:meta*
          */
         post: operations['admin___nook___update-feature-flag'];
+    };
+    '/admin/nook/update-user-policy-context': {
+        /**
+         * admin/nook/update-user-policy-context
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:admin:roles*
+         */
+        post: operations['admin___nook___update-user-policy-context'];
     };
     '/admin/nook/upsert-policy': {
         /**
@@ -9757,6 +9775,79 @@ export interface operations {
             };
         };
     };
+    'admin___nook___get-user-policy-context': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    /** Format: misskey:id */
+                    userId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': {
+                        /** Format: id */
+                        userId: string;
+                        country: string | null;
+                        /** @enum {string|null} */
+                        verifiedAgeGroup: 'U13' | '13_15' | '16_17' | '18_PLUS' | 'UNKNOWN' | null;
+                        policyId: string | null;
+                    };
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
     'admin___nook___update-feature-flag': {
         requestBody: {
             content: {
@@ -9780,6 +9871,83 @@ export interface operations {
                         enabled: boolean;
                         /** Format: date-time */
                         updatedAt: string;
+                    };
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    'admin___nook___update-user-policy-context': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    /** Format: misskey:id */
+                    userId: string;
+                    country: string | null;
+                    /** @enum {string|null} */
+                    verifiedAgeGroup: null | 'U13' | '13_15' | '16_17' | '18_PLUS' | 'UNKNOWN';
+                    policyId: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': {
+                        /** Format: id */
+                        userId: string;
+                        country: string | null;
+                        /** @enum {string|null} */
+                        verifiedAgeGroup: 'U13' | '13_15' | '16_17' | '18_PLUS' | 'UNKNOWN' | null;
+                        policyId: string | null;
                     };
                 };
             };
