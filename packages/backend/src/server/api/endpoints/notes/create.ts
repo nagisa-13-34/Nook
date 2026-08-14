@@ -11,6 +11,7 @@ import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { NoteCreateService } from '@/core/NoteCreateService.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
+import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -123,6 +124,14 @@ export const meta = {
 			code: 'CONTAINS_TOO_MANY_MENTIONS',
 			id: '4de0363a-3046-481b-9b0f-feff3e211025',
 		},
+
+		restrictedByNookPolicy: {
+			message: 'You are not allowed to create a note under the current Nook policy.',
+			code: 'RESTRICTED_BY_NOOK_POLICY',
+			id: '3f7d5276-5ed0-412c-a146-c4c65c74888c',
+			kind: 'permission',
+			httpStatusCode: 403,
+		},
 	},
 } as const;
 
@@ -218,9 +227,15 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	constructor(
 		private noteEntityService: NoteEntityService,
 		private noteCreateService: NoteCreateService,
+		private nookAccessService: NookAccessService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			try {
+				const policyDecision = await this.nookAccessService.evaluate(me, 'create_post');
+				if (!policyDecision.allowed) {
+					throw new ApiError(meta.errors.restrictedByNookPolicy);
+				}
+
 				const note = await this.noteCreateService.fetchAndCreate(me, {
 					createdAt: new Date(),
 					fileIds: ps.fileIds ?? ps.mediaIds ?? [],
