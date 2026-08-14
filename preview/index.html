@@ -4,15 +4,12 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="theme-color" content="#111111">
-	<title>Nook UI Preview</title>
+	<title>Nook Interactive Demo</title>
 	<link rel="stylesheet" href="./style.css">
 </head>
 <body>
 	<header class="previewHeader">
-		<div>
-			<strong>Nook UI Preview</strong>
-			<span>GitHub Pages</span>
-		</div>
+		<div><strong>Nook Interactive Demo</strong><span>GitHub Pages</span></div>
 		<div class="previewControls" role="group" aria-label="Preview size">
 			<button class="previewMode active" data-mode="desktop">Desktop</button>
 			<button class="previewMode" data-mode="mobile">Mobile</button>
@@ -23,34 +20,34 @@
 		<div id="device" class="device desktop">
 			<div class="appShell">
 				<aside class="sidebar">
-					<div class="brand">Nook</div>
+					<button class="brand buttonReset" data-route="home">Nook</button>
 					<nav class="primary">
-						<a class="navItem active" href="#"><span class="icon">⌂</span><span>Home</span></a>
-						<a class="navItem" href="#"><span class="icon">⌖</span><span>Explore</span></a>
-						<a class="navItem" href="#"><span class="icon">◉</span><span>Community</span></a>
-						<a class="navItem" href="#"><span class="icon">◌</span><span>Chat</span><i class="dot"></i></a>
-						<button class="create">＋ <span>Create</span></button>
+						<button class="navItem active" data-route="home"><span class="icon">⌂</span><span>Home</span></button>
+						<button class="navItem" data-route="explore"><span class="icon">⌖</span><span>Explore</span></button>
+						<button class="navItem" data-route="community"><span class="icon">◉</span><span>Community</span></button>
+						<button class="navItem" data-route="chat"><span class="icon">◌</span><span>Chat</span><i class="dot"></i></button>
+						<button class="create" id="openComposer">＋ <span>Create</span></button>
 					</nav>
 					<nav class="secondary">
-						<a class="navItem" href="#"><span class="icon">♢</span><span>Notifications</span><i class="dot"></i></a>
-						<a class="navItem" href="#"><span class="icon">▦</span><span>Widgets</span></a>
-						<a class="navItem" href="#"><span class="icon">•••</span><span>More</span></a>
-						<a class="navItem" href="#"><span class="icon">⚙</span><span>Settings</span></a>
-						<button class="account"><span class="avatar">N</span><span class="accountText"><b>Nagisa</b><small>@nagisa</small></span><span>•••</span></button>
+						<button class="navItem" data-route="notifications"><span class="icon">♢</span><span>Notifications</span><i class="dot"></i></button>
+						<button class="navItem" data-route="settings"><span class="icon">⚙</span><span>Settings</span></button>
+						<button class="account" data-route="profile"><span class="avatar">N</span><span class="accountText"><b>Nagisa</b><small>@nagisa</small></span><span>•••</span></button>
 					</nav>
 				</aside>
 
 				<section class="content">
-					<div class="timelineHeader">
-						<div class="timelineTabs"><button class="selected">Following</button><button>Discover</button><button>Media</button></div>
-					</div>
-					<div class="feed">
-						<article class="post"><div class="postAvatar"></div><div><b>Nook Preview</b> <span>@nook · 2m</span><p>デスクトップ版のNook UIプレビューです。</p><div class="mediaCard">Preview media</div><div class="actions">♡ 12　↻ 4　☵ 3</div></div></article>
-						<article class="post"><div class="postAvatar alt"></div><div><b>Community</b> <span>@community · 8m</span><p>Home / Explore / Community / Chatを中心にしたナビゲーション。</p><div class="actions">♡ 8　↻ 2　☵ 1</div></div></article>
-					</div>
+					<div id="mobileTop" class="mobileTop"><button class="brand buttonReset" data-route="home">Nook</button><button class="iconButton" data-route="notifications">♢</button></div>
+					<div id="page"></div>
+					<nav class="mobileNav">
+						<button data-route="home">⌂<span>Home</span></button>
+						<button data-route="explore">⌖<span>Explore</span></button>
+						<button id="mobileCreate">＋<span>Create</span></button>
+						<button data-route="community">◉<span>Community</span></button>
+						<button data-route="chat">◌<span>Chat</span></button>
+					</nav>
 				</section>
 
-				<aside class="rightRail">
+				<aside class="rightRail" id="rightRail">
 					<div class="panel"><b>What's happening</b><p>#Nook</p><p>#Creative</p><p>#Community</p></div>
 					<div class="panel"><b>Suggested</b><p>@motion</p><p>@design</p></div>
 				</aside>
@@ -58,17 +55,15 @@
 		</div>
 	</main>
 
-	<p class="notice">これはUI確認用モックです。投稿・ログイン・チャットなどの実機能は動きません。</p>
+	<div class="modalBackdrop" id="composerBackdrop" hidden>
+		<section class="composer" role="dialog" aria-modal="true" aria-label="Create post">
+			<div class="composerHead"><b>Create post</b><button id="closeComposer">×</button></div>
+			<textarea id="composerText" maxlength="280" placeholder="いまどうしてる？"></textarea>
+			<div class="composerFoot"><span id="charCount">0 / 280</span><button id="submitPost">Post</button></div>
+		</section>
+	</div>
 
-	<script>
-		const device = document.querySelector('#device');
-		for (const button of document.querySelectorAll('.previewMode')) {
-			button.addEventListener('click', () => {
-				document.querySelectorAll('.previewMode').forEach(x => x.classList.remove('active'));
-				button.classList.add('active');
-				device.className = `device ${button.dataset.mode}`;
-			});
-		}
-	</script>
+	<p class="notice">操作できるUIデモです。内容はブラウザ内だけのダミーデータで、実際のNookサーバーには保存されません。</p>
+	<script src="./app.js"></script>
 </body>
 </html>
