@@ -95,7 +95,7 @@ const headerTabs = computed(() => user.value ? [{
 	icon: 'ti ti-home',
 }, {
 	key: 'notes',
-	title: i18n.ts.notes,
+	title: i18n.ts.nookPosts,
 	icon: 'ti ti-pencil',
 }, {
 	key: 'files',
@@ -131,7 +131,7 @@ const headerTabs = computed(() => user.value ? [{
 	icon: 'ti ti-player-play',
 }, {
 	key: 'gallery',
-	title: i18n.ts.gallery,
+	title: i18n.ts.nookWorks,
 	icon: 'ti ti-icons',
 }, {
 	key: 'raw',
