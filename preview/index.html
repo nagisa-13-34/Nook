@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ja">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#111111">
+	<title>Nook UI Preview</title>
+	<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+	<header class="previewHeader">
+		<div>
+			<strong>Nook UI Preview</strong>
+			<span>GitHub Pages</span>
+		</div>
+		<div class="previewControls" role="group" aria-label="Preview size">
+			<button class="previewMode active" data-mode="desktop">Desktop</button>
+			<button class="previewMode" data-mode="mobile">Mobile</button>
+		</div>
+	</header>
+
+	<main class="stage">
+		<div id="device" class="device desktop">
+			<div class="appShell">
+				<aside class="sidebar">
+					<div class="brand">Nook</div>
+					<nav class="primary">
+						<a class="navItem active" href="#"><span class="icon">⌂</span><span>Home</span></a>
+						<a class="navItem" href="#"><span class="icon">⌖</span><span>Explore</span></a>
+						<a class="navItem" href="#"><span class="icon">◉</span><span>Community</span></a>
+						<a class="navItem" href="#"><span class="icon">◌</span><span>Chat</span><i class="dot"></i></a>
+						<button class="create">＋ <span>Create</span></button>
+					</nav>
+					<nav class="secondary">
+						<a class="navItem" href="#"><span class="icon">♢</span><span>Notifications</span><i class="dot"></i></a>
+						<a class="navItem" href="#"><span class="icon">▦</span><span>Widgets</span></a>
+						<a class="navItem" href="#"><span class="icon">•••</span><span>More</span></a>
+						<a class="navItem" href="#"><span class="icon">⚙</span><span>Settings</span></a>
+						<button class="account"><span class="avatar">N</span><span class="accountText"><b>Nagisa</b><small>@nagisa</small></span><span>•••</span></button>
+					</nav>
+				</aside>
+
+				<section class="content">
+					<div class="timelineHeader">
+						<div class="timelineTabs"><button class="selected">Following</button><button>Discover</button><button>Media</button></div>
+					</div>
+					<div class="feed">
+						<article class="post"><div class="postAvatar"></div><div><b>Nook Preview</b> <span>@nook · 2m</span><p>デスクトップ版のNook UIプレビューです。</p><div class="mediaCard">Preview media</div><div class="actions">♡ 12　↻ 4　☵ 3</div></div></article>
+						<article class="post"><div class="postAvatar alt"></div><div><b>Community</b> <span>@community · 8m</span><p>Home / Explore / Community / Chatを中心にしたナビゲーション。</p><div class="actions">♡ 8　↻ 2　☵ 1</div></div></article>
+					</div>
+				</section>
+
+				<aside class="rightRail">
+					<div class="panel"><b>What's happening</b><p>#Nook</p><p>#Creative</p><p>#Community</p></div>
+					<div class="panel"><b>Suggested</b><p>@motion</p><p>@design</p></div>
+				</aside>
+			</div>
+		</div>
+	</main>
+
+	<p class="notice">これはUI確認用モックです。投稿・ログイン・チャットなどの実機能は動きません。</p>
+
+	<script>
+		const device = document.querySelector('#device');
+		for (const button of document.querySelectorAll('.previewMode')) {
+			button.addEventListener('click', () => {
+				document.querySelectorAll('.previewMode').forEach(x => x.classList.remove('active'));
+				button.classList.add('active');
+				device.className = `device ${button.dataset.mode}`;
+			});
+		}
+	</script>
+</body>
+</html>
