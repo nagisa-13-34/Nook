@@ -27,7 +27,7 @@ The user profile stores an optional ISO country code, verified age group, and ex
 
 ## Runtime enforcement
 
-Note creation now asks `NookAccessService` for the `create_post` permission before any note is written. Runtime enforcement is protected by the `policy_enforcement` feature flag, which starts disabled so an upgrade cannot unexpectedly block every existing user. Administrators must configure policies that cover the intended country and verified-age combinations before enabling it. Once enabled, a user without a matching policy is denied by default. Profiles without verification data are evaluated as country `*` and age group `UNKNOWN`, so access for those users must be granted deliberately through an appropriate fallback policy.
+Note creation now asks `NookAccessService` for the `create_post` permission before any note is written. Attachments also require `create_image_post` and/or `create_video_post` according to their validated MIME types. One-to-one chat checks `send_chat` for the sender and `receive_chat` for a local recipient before writing the message; room chat checks `send_chat` for the sender. Runtime enforcement is protected by the `policy_enforcement` feature flag, which starts disabled so an upgrade cannot unexpectedly block every existing user. Administrators must configure policies that cover the intended country and verified-age combinations before enabling it. Once enabled, a user without a matching policy is denied by default. Profiles without verification data are evaluated as country `*` and age group `UNKNOWN`, so access for those users must be granted deliberately through an appropriate fallback policy.
 
 ## Administration
 
@@ -35,5 +35,5 @@ Administrator-only APIs can list the current settings, upsert a complete policy,
 
 ## Next small changes
 
-1. Reuse the shared policy access service at chat and media entry points.
+1. Add relationship-aware chat rules such as stranger and adult/minor communication.
 2. Add the mobile-first Nook navigation and branding.
