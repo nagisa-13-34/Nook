@@ -40,4 +40,4 @@ jobs:
           git -C imported commit -m "Import Misskey and add Nook Phase 1 foundation"
           AUTH_HEADER="$(git config --local --get http.https://github.com/.extraheader)"
           git -C imported remote add target "https://github.com/${GITHUB_REPOSITORY}.git"
-          git -C imported -c http.https://github.com/.extraheader="$AUTH_HEADER" push target "HEAD:refs/heads/$TARGET_BRANCH" --force-with-lease="refs/heads/$TARGET_BRANCH:$EXPECTED_HEAD"
+          git -C imported -c http.https://github.com/.extraheader="$AUTH_HEADER" push --no-thin target "HEAD:refs/heads/$TARGET_BRANCH" --force-with-lease="refs/heads/$TARGET_BRANCH:$EXPECTED_HEAD"
