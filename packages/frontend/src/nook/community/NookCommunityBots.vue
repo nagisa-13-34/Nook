@@ -16,7 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'; import { nookApi } from './nook-api.js'; import { communityLabels as l } from './labels.js'; import type { CommunityBot, CommunityChannel } from './types.js';
-const props=defineProps<{communityId:string;canManage:boolean}>(); const bots=ref<CommunityBot[]>([]); const channels=ref<CommunityChannel[]>([]); const name=ref(''); const description=ref(''); const scopes=['read:messages','write:messages','read:members','manage:events','join:voice']; const selectedScopes=ref<string[]>(['read:messages','write:messages']); const selectedChannelIds=ref<string[]>([]); const lastSecret=ref('');
+const props=defineProps<{communityId:string;canManage:boolean}>(); const bots=ref<CommunityBot[]>([]); const channels=ref<CommunityChannel[]>([]); const name=ref(''); const description=ref(''); const scopes=['read:messages','write:messages']; const selectedScopes=ref<string[]>(['read:messages','write:messages']); const selectedChannelIds=ref<string[]>([]); const lastSecret=ref('');
 const messageChannels=computed(()=>channels.value.filter(channel=>channel.kind!=='voice'&&channel.archivedAt==null));
 function channelName(id:string){return channels.value.find(channel=>channel.id===id)?.name??id;}
 async function load(){const [loadedBots,loadedChannels]=await Promise.all([nookApi<CommunityBot[]>('nook/community/bots/list',{communityId:props.communityId}),nookApi<CommunityChannel[]>('nook/community/channels/list',{communityId:props.communityId})]);bots.value=loadedBots;channels.value=loadedChannels;}
