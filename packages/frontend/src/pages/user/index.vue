@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <PageWithHeader v-model:tab="tab" :tabs="headerTabs" :actions="headerActions" :swipable="true">
 	<div v-if="user">
 		<XHome v-if="tab === 'home'" :user="user" @showMoreFiles="() => { tab = 'files'; }"/>
-		<XNotes v-else-if="tab === 'posts' || tab === 'media' || tab === 'videos'" :user="user" :filter="tab"/>
+		<XNotes v-else-if="tab === 'posts' || tab === 'media' || tab === 'videos'" :user="user" :filter="noteFilter"/>
 		<XGallery v-else-if="tab === 'works'" :user="user"/>
 		<XFiles v-else-if="tab === 'files'" :user="user"/>
 		<XActivity v-else-if="tab === 'activity'" :user="user"/>
@@ -64,6 +64,7 @@ function normalizeTab(page: string): string {
 }
 
 const tab = ref(normalizeTab(props.page));
+const noteFilter = computed<'posts' | 'media' | 'videos'>(() => tab.value === 'media' ? 'media' : tab.value === 'videos' ? 'videos' : 'posts');
 
 const user = ref<null | Misskey.entities.UserDetailed>(CTX_USER);
 const error = ref<any>(null);
