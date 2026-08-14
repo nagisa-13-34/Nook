@@ -17,11 +17,14 @@ No matching policy means denied. Birth-date verification and conversion to an ag
 
 ## Feature flags
 
-Nook-specific high-impact features start disabled. `NookFeatureFlags` accepts a complete settings snapshot so a database-backed administrator setting can replace the in-memory source later without changing feature callers.
+Nook-specific high-impact features start disabled. `NookFeatureFlags` accepts a complete settings snapshot so an administrator setting can replace the in-memory source without changing feature callers.
+
+## Persistence
+
+Policies are stored in `nook_policy` and emergency feature switches are stored in `nook_feature_flag`. Both are registered with TypeORM and NestJS repository injection. Age groups remain varchar values rather than a PostgreSQL enum so policy categories can evolve without hard-coding legal thresholds into the database schema.
 
 ## Next small changes
 
-1. Add persistent policy and feature-flag entities with reversible migrations.
-2. Add administrator APIs and audit logging.
-3. Add a shared authorization guard used by posting and chat entry points.
-4. Add the mobile-first Nook navigation and branding.
+1. Add administrator APIs and audit logging.
+2. Add a shared authorization guard used by posting and chat entry points.
+3. Add the mobile-first Nook navigation and branding.
