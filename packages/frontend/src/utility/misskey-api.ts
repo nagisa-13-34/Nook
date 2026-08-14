@@ -12,6 +12,16 @@ export const pendingApiRequestsCount = ref(0);
 
 const MAX_NOTE_TEXT_LENGTH = 3000;
 
+type NookMarkdownRequest = {
+	text?: string | null;
+	isActuallyScheduled?: boolean;
+};
+
+function shouldNormalizeNookMarkdown(endpoint: string, data: NookMarkdownRequest): boolean {
+	if (endpoint === 'notes/create') return true;
+	return (endpoint === 'notes/drafts/create' || endpoint === 'notes/drafts/update') && data.isActuallyScheduled === true;
+}
+
 // Implements Misskey.api.ApiClient.request
 export function misskeyApi<
 	ResT = void,
@@ -32,14 +42,15 @@ export function misskeyApi<
 	};
 
 	const promise = new Promise<_ResT>((resolve, reject) => {
-		// Nook accepts a small Markdown-like superset in newly submitted local
-		// notes. The result remains ordinary MFM, so storage, federation and the
-		// existing renderer stay unchanged. Do not normalize fetched/remote notes.
-		if (endpoint === 'notes/create' && 'text' in data && typeof data.text === 'string') {
-			const normalized = normalizeNookMarkdownToMfm(data.text);
-			// Conversion can add a few MFM delimiter characters. Never turn a valid
-			// near-limit note into an invalid request just because of normalization.
-			if (Array.from(normalized).length <= MAX_NOTE_TEXT_LENGTH) data.text = normalized;
+		// Only newly submitted local input is normalized. Ordinary saved drafts
+		// stay source-like until posting, while scheduled drafts are normalized at
+		// the point they become an actual future note.
+		const nookMarkdownData = data as P & NookMarkdownRequest;
+		if (shouldNormalizeNookMarkdown(endpoint, nookMarkdownData) && typeof nookMarkdownData.text === 'string') {
+			const normalized = normalizeNookMarkdownToMfm(nookMarkdownData.text);
+			// Normalization can add MFM delimiters for headings/escapes. Do not make
+			// an otherwise-valid near-limit post fail solely because of that.
+			if (Array.from(normalized).length <= MAX_NOTE_TEXT_LENGTH) nookMarkdownData.text = normalized;
 		}
 
 		// Append a credential
