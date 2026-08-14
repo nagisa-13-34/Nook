@@ -37,7 +37,7 @@ export function normalizeNookMarkdownToMfm(text: string): string {
 		if (heading) {
 			// Timeline headings deliberately stay compact: H1-H3 use the existing
 			// MFM bold node instead of introducing large HTML heading elements.
-			return `${heading[1]}**${normalizeInline(heading[3])}**${cr}`;
+			return `${heading[1]}<b>${normalizeInline(heading[3])}</b>${cr}`;
 		}
 
 		const listItem = body.match(/^([\t ]{0,3})-[\t ]+(.+)$/);
@@ -115,6 +115,21 @@ function normalizeInline(text: string): string {
 			}
 		}
 
+		// A hashtag can consume `*` in mfm-js, which makes `**#tag**` ambiguous.
+		// Use the existing tag form only for bold spans containing hashtags; other
+		// bold Markdown stays byte-for-byte unchanged.
+		if (text.startsWith('**', cursor) && text[cursor + 2] !== '*') {
+			const end = findClosingBold(text, cursor + 2);
+			if (end !== -1) {
+				const inner = text.slice(cursor + 2, end);
+				if (/(^|[\s([>])#[^\s#]/u.test(inner)) {
+					result += `<b>${normalizeInline(inner)}</b>`;
+					cursor = end + 2;
+					continue;
+				}
+			}
+		}
+
 		// mfm-js's native `*italic*` intentionally accepts only ASCII
 		// alphanumerics/spaces. Convert only the extended Markdown cases (Unicode
 		// text, mentions, hashtags, emoji, nested MFM, punctuation...) to the
@@ -169,6 +184,29 @@ function findMarkdownLinkEnd(text: string, openBracket: number): number {
 		}
 	}
 
+	return -1;
+}
+
+function findClosingBold(text: string, start: number): number {
+	for (let cursor = start; cursor < text.length - 1; cursor++) {
+		if (text[cursor] === '\\') {
+			cursor++;
+			continue;
+		}
+		if (text[cursor] === '`') {
+			const end = findUnescaped(text, '`', cursor + 1);
+			if (end === -1) return -1;
+			cursor = end;
+			continue;
+		}
+		if (text.startsWith('$[', cursor)) {
+			const end = findMfmFunctionEnd(text, cursor);
+			if (end === -1) return -1;
+			cursor = end;
+			continue;
+		}
+		if (text.startsWith('**', cursor) && text[cursor + 2] !== '*') return cursor;
+	}
 	return -1;
 }
 
