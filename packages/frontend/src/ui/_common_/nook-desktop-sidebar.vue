@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <nav :class="$style.root" :aria-label="i18n.ts.menu">
 	<div :class="$style.brandRow">
-		<button v-tooltip.noDelay.right="'Nook'" class="_button" :class="$style.brand" aria-label="Nook" @click="mainRouter.push('/')">Nook</button>
+		<MkA v-tooltip.noDelay.right="'Nook'" :class="$style.brand" aria-label="Nook" to="/" exact>Nook</MkA>
 	</div>
 
 	<div :class="$style.primary">
@@ -89,7 +89,6 @@ import { computed } from 'vue';
 import { $i } from '@/i.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
-import { mainRouter } from '@/router.js';
 import { navbarItemDef } from '@/navbar.js';
 import { getAccountMenu } from '@/accounts.js';
 import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
@@ -150,6 +149,7 @@ async function more(ev: PointerEvent) {
 	font-weight: 850;
 	line-height: 1;
 	letter-spacing: -0.055em;
+	text-decoration: none;
 	color: var(--MI_THEME-accent);
 }
 
