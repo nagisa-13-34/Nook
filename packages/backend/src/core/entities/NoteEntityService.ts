@@ -398,6 +398,7 @@ export class NoteEntityService implements OnModuleInit {
 			userId: note.userId,
 			user: packedUsers?.get(note.userId) ?? this.userEntityService.pack(note.user ?? note.userId, me),
 			text: text,
+			nookMarkdown: note.nookMarkdown,
 			cw: note.cw,
 			visibility: note.visibility,
 			localOnly: note.localOnly,

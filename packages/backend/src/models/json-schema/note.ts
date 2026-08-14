@@ -26,6 +26,10 @@ export const packedNoteSchema = {
 			type: 'string',
 			optional: false, nullable: true,
 		},
+		nookMarkdown: {
+			type: 'boolean',
+			optional: false, nullable: false,
+		},
 		cw: {
 			type: 'string',
 			optional: true, nullable: true,

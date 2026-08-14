@@ -5,11 +5,14 @@
 
 import { Injectable } from '@nestjs/common';
 import * as mfm from 'mfm-js';
+import { parseHybridMfm } from 'misskey-js';
 import { MfmService } from '@/core/MfmService.js';
 import type { MiNote } from '@/models/Note.js';
 import { bindThis } from '@/decorators.js';
 import { extractApHashtagObjects } from './models/tag.js';
 import type { IObject } from './type.js';
+
+type NoteForHtml = Pick<MiNote, 'text' | 'mentionedRemoteUsers'> & Partial<Pick<MiNote, 'nookMarkdown'>>;
 
 @Injectable()
 export class ApMfmService {
@@ -25,11 +28,12 @@ export class ApMfmService {
 	}
 
 	@bindThis
-	public getNoteHtml(note: Pick<MiNote, 'text' | 'mentionedRemoteUsers'>, extraHtml: string | null = null) {
+	public getNoteHtml(note: NoteForHtml, extraHtml: string | null = null) {
 		let noMisskeyContent = false;
 		const srcMfm = (note.text ?? '');
-
-		const parsed = mfm.parse(srcMfm);
+		const parsed = note.nookMarkdown === true
+			? parseHybridMfm(srcMfm, mfm.parse)
+			: mfm.parse(srcMfm);
 
 		if (extraHtml == null && parsed.every(n => ['text', 'unicodeEmoji', 'emojiCode', 'mention', 'hashtag', 'url'].includes(n.type))) {
 			noMisskeyContent = true;

@@ -5,7 +5,6 @@
 
 import { ref, computed } from 'vue';
 import type { Ref } from 'vue';
-import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
 import { isLink } from '@@/js/is-link.js';
 import { shouldCollapsed } from '@@/js/collapsed.js';
@@ -25,6 +24,7 @@ import { useTooltip } from '@/composables/use-tooltip.js';
 import { claimAchievement } from '@/utility/achievements.js';
 import { showMovedDialog } from '@/utility/show-moved-dialog.js';
 import { getAppearNote } from '@/utility/get-appear-note.js';
+import { parseNoteMfm } from '@/utility/parse-note-mfm.js';
 import { prefer } from '@/preferences.js';
 import { getPluginHandlers } from '@/plugin.js';
 import { $i } from '@/i.js';
@@ -150,7 +150,7 @@ export function useNote(
 
 	// 計算プロパティ (Computed)
 	const isMyRenote = computed(() => $i && ($i.id === rawNote.userId));
-	const parsed = computed(() => appearNote.text ? mfm.parse(appearNote.text) : null);
+	const parsed = computed(() => parseNoteMfm(appearNote));
 	const urls = computed(() => parsed.value ? extractUrlFromMfm(parsed.value).filter((url) => appearNote.renote?.url !== url && appearNote.renote?.uri !== url) : null);
 	const isLong = computed(() => shouldCollapsed(appearNote, urls.value ?? []));
 	const collapsed = ref(appearNote.cw == null && isLong.value);

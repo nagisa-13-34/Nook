@@ -67,6 +67,11 @@ export class MiNote {
 	})
 	public text: string | null;
 
+	@Column('boolean', {
+		default: false,
+	})
+	public nookMarkdown: boolean;
+
 	@Column('varchar', {
 		length: 256, nullable: true,
 	})
@@ -258,6 +263,10 @@ export class MiNote {
 
 	constructor(data: Partial<MiNote>) {
 		if (data == null) return;
+
+		if (data.nookMarkdown == null) {
+			this.nookMarkdown = data.userHost === null && data.uri == null;
+		}
 
 		for (const [k, v] of Object.entries(data)) {
 			(this as any)[k] = v;
