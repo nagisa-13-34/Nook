@@ -10,7 +10,8 @@ import { GetterService } from '@/server/api/GetterService.js';
 import { DI } from '@/di-symbols.js';
 import { ApiError } from '@/server/api/error.js';
 import { ChatService } from '@/core/ChatService.js';
-import type { DriveFilesRepository, MiUser } from '@/models/_.js';
+import type { DriveFilesRepository } from '@/models/_.js';
+import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 
 export const meta = {
 	tags: ['chat'],
@@ -50,6 +51,14 @@ export const meta = {
 			code: 'CONTENT_REQUIRED',
 			id: '340517b7-6d04-42c0-bac1-37ee804e3594',
 		},
+
+		restrictedByNookPolicy: {
+			message: 'You are not allowed to send chat messages under the current Nook policy.',
+			code: 'RESTRICTED_BY_NOOK_POLICY',
+			id: '79200258-b80b-43e9-a6f4-9bc707796185',
+			kind: 'permission',
+			httpStatusCode: 403,
+		},
 	},
 } as const;
 
@@ -71,9 +80,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 		private getterService: GetterService,
 		private chatService: ChatService,
+		private nookAccessService: NookAccessService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			await this.chatService.checkChatAvailability(me.id, 'write');
+			const senderDecision = await this.nookAccessService.evaluate(me, 'send_chat');
+			if (!senderDecision.allowed) {
+				throw new ApiError(meta.errors.restrictedByNookPolicy);
+			}
 
 			const room = await this.chatService.findRoomById(ps.toRoomId);
 			if (room == null) {
