@@ -1,0 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+import { Inject, Injectable } from '@nestjs/common'; import { DataSource } from 'typeorm'; import { DI } from '@/di-symbols.js'; import { Endpoint } from '@/server/api/endpoint-base.js'; import { consumeNookCommunityVoiceSignals, NookCommunityVoiceError } from '@/nook/community/voice.js'; import { ApiError } from '../../../../error.js';
+export const meta = { tags: ['channels'], requireCredential: true, kind: 'read:channels', limit: { duration: 60000, max: 240 }, res: { type: 'array', optional: false, nullable: false, items: { type: 'object', properties: { id: { type: 'string' }, fromUserId: { type: 'string' }, type: { type: 'string' }, payload: { type: 'string' }, createdAt: { type: 'string', format: 'date-time' } }, required: ['id','fromUserId','type','payload','createdAt'] } }, errors: { sessionExpired: { message: 'Voice session expired.', code: 'VOICE_SESSION_EXPIRED', id: 'cc898e6d-dd72-4063-922b-6b6ba32fad17' } } } as const;
+export const paramDef = { type: 'object', properties: { channelId: { type: 'string', format: 'misskey:id' }, sessionId: { type: 'string', minLength: 16, maxLength: 64 } }, required: ['channelId','sessionId'] } as const;
+@Injectable() export default class extends Endpoint<typeof meta, typeof paramDef> { constructor(@Inject(DI.db) private db: DataSource) { super(meta, paramDef, async (ps, me) => { try { return await consumeNookCommunityVoiceSignals(this.db, ps.channelId, me.id, ps.sessionId); } catch (error) { if (error instanceof NookCommunityVoiceError) throw new ApiError(meta.errors.sessionExpired); throw error; } }); } }
