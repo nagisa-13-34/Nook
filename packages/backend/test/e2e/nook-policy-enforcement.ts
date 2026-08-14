@@ -30,7 +30,7 @@ describe('Nook runtime policy enforcement', () => {
 	let DriveFiles: Repository<MiDriveFile>;
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
-	const policyIds = ['TEST_IMAGE_DENY', 'TEST_VIDEO_DENY', 'TEST_CHAT_ALLOW', 'TEST_CHAT_DENY'];
+	const policyIds = ['TEST_IMAGE_DENY', 'TEST_VIDEO_DENY', 'TEST_CHAT_ALLOW', 'TEST_CHAT_DENY', 'TEST_ADULT_ALLOW'];
 
 	beforeAll(async () => {
 		const connection = await initTestDb(true);
@@ -57,14 +57,14 @@ describe('Nook runtime policy enforcement', () => {
 		});
 	});
 
-	async function enablePolicy(userId: string, id: string, policyPermissions: NookPermissionSet): Promise<void> {
+	async function enablePolicy(userId: string, id: string, policyPermissions: NookPermissionSet, ageGroup: '13_15' | '18_PLUS' = '13_15'): Promise<void> {
 		const now = new Date();
 		await NookPolicies.save({
 			id,
 			createdAt: now,
 			updatedAt: now,
 			country: 'JP',
-			ageGroup: '13_15',
+			ageGroup,
 			accountStates: ['active'],
 			permissions: policyPermissions,
 			priority: 100,
@@ -72,7 +72,7 @@ describe('Nook runtime policy enforcement', () => {
 		});
 		await UserProfiles.update({ userId }, {
 			nookCountryCode: 'JP',
-			nookVerifiedAgeGroup: '13_15',
+			nookVerifiedAgeGroup: ageGroup,
 			nookPolicyId: id,
 		});
 		await NookFeatureFlags.save({
@@ -114,8 +114,27 @@ describe('Nook runtime policy enforcement', () => {
 		assert.strictEqual(castAsError(response.body).error.code, 'RESTRICTED_BY_NOOK_POLICY');
 	});
 
+	test('相互フォローでない相手とのChat権限がない場合は拒否する', async () => {
+		await enablePolicy(alice.id, 'TEST_CHAT_DENY', permissions({ send_chat: true }));
+
+		const response = await api('chat/messages/create-to-user', { toUserId: bob.id, text: 'hello' }, alice);
+
+		assert.strictEqual(response.status, 403);
+		assert.strictEqual(castAsError(response.body).error.code, 'RESTRICTED_BY_NOOK_POLICY');
+	});
+
+	test('保護対象ユーザーに成人とのChat権限がない場合は拒否する', async () => {
+		await enablePolicy(alice.id, 'TEST_CHAT_DENY', permissions({ send_chat: true, chat_with_stranger: true }));
+		await enablePolicy(bob.id, 'TEST_ADULT_ALLOW', permissions({ receive_chat: true, chat_with_stranger: true }), '18_PLUS');
+
+		const response = await api('chat/messages/create-to-user', { toUserId: bob.id, text: 'hello' }, alice);
+
+		assert.strictEqual(response.status, 400);
+		assert.strictEqual(castAsError(response.body).error.code, 'NO_SUCH_USER');
+	});
+
 	test('受信者のPolicy状態を送信者へ公開しない', async () => {
-		await enablePolicy(alice.id, 'TEST_CHAT_ALLOW', permissions({ send_chat: true }));
+		await enablePolicy(alice.id, 'TEST_CHAT_ALLOW', permissions({ send_chat: true, chat_with_stranger: true }));
 		await enablePolicy(bob.id, 'TEST_CHAT_DENY', permissions({}));
 
 		const response = await api('chat/messages/create-to-user', { toUserId: bob.id, text: 'hello' }, alice);
