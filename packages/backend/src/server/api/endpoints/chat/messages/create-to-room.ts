@@ -52,6 +52,14 @@ export const meta = {
 			id: '340517b7-6d04-42c0-bac1-37ee804e3594',
 		},
 
+		chatDisabled: {
+			message: 'Chat is currently disabled by the Nook feature flag.',
+			code: 'NOOK_CHAT_DISABLED',
+			id: '5166bfc4-c95f-40e0-9301-2513cc678da0',
+			kind: 'permission',
+			httpStatusCode: 403,
+		},
+
 		restrictedByNookPolicy: {
 			message: 'You are not allowed to send chat messages under the current Nook policy.',
 			code: 'RESTRICTED_BY_NOOK_POLICY',
@@ -83,6 +91,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private nookAccessService: NookAccessService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
+			if (!(await this.nookAccessService.isFeatureEnabled('chat'))) {
+				throw new ApiError(meta.errors.chatDisabled);
+			}
 			await this.chatService.checkChatAvailability(me.id, 'write');
 			const senderDecision = await this.nookAccessService.evaluate(me, 'send_chat');
 			if (!senderDecision.allowed) {
@@ -106,7 +117,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 			}
 
-			// テキストが無いかつ添付ファイルも無かったらエラー
 			if (ps.text == null && file == null) {
 				throw new ApiError(meta.errors.contentRequired);
 			}
