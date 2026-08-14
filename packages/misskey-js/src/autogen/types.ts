@@ -9702,7 +9702,7 @@ export interface operations {
                         }[];
                         featureFlags: {
                             /** @enum {string} */
-                            name: 'video' | 'chat' | 'voice_call' | 'video_call' | 'community' | 'spaces' | 'recommendations' | 'external_links' | 'migration' | 'federation';
+                            name: 'policy_enforcement' | 'video' | 'chat' | 'voice_call' | 'video_call' | 'community' | 'spaces' | 'recommendations' | 'external_links' | 'migration' | 'federation';
                             enabled: boolean;
                             /** Format: date-time */
                             updatedAt: string | null;
@@ -9762,7 +9762,7 @@ export interface operations {
             content: {
                 'application/json': {
                     /** @enum {string} */
-                    name: 'video' | 'chat' | 'voice_call' | 'video_call' | 'community' | 'spaces' | 'recommendations' | 'external_links' | 'migration' | 'federation';
+                    name: 'policy_enforcement' | 'video' | 'chat' | 'voice_call' | 'video_call' | 'community' | 'spaces' | 'recommendations' | 'external_links' | 'migration' | 'federation';
                     enabled: boolean;
                 };
             };
@@ -9776,7 +9776,7 @@ export interface operations {
                 content: {
                     'application/json': {
                         /** @enum {string} */
-                        name: 'video' | 'chat' | 'voice_call' | 'video_call' | 'community' | 'spaces' | 'recommendations' | 'external_links' | 'migration' | 'federation';
+                        name: 'policy_enforcement' | 'video' | 'chat' | 'voice_call' | 'video_call' | 'community' | 'spaces' | 'recommendations' | 'external_links' | 'migration' | 'federation';
                         enabled: boolean;
                         /** Format: date-time */
                         updatedAt: string;
