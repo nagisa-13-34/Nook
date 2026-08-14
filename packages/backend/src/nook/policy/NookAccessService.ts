@@ -8,6 +8,7 @@ import { DI } from '@/di-symbols.js';
 import type { NookFeatureFlagsRepository, NookPoliciesRepository, UserProfilesRepository } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { defaultNookFeatureFlags } from '@/nook/feature-flags/NookFeatureFlags.js';
+import type { NookFeatureName } from '@/nook/feature-flags/NookFeatureFlags.js';
 import { NookPolicyEngine } from '@/nook/policy/NookPolicyEngine.js';
 import { isNookAdultAgeGroup } from '@/nook/policy/PolicyTypes.js';
 import type { NookAccountState, NookAgeGroup, NookPermission, NookPolicyDecision, NookPolicySubject } from '@/nook/policy/PolicyTypes.js';
@@ -30,6 +31,11 @@ export class NookAccessService {
 		@Inject(DI.nookFeatureFlagsRepository)
 		private nookFeatureFlagsRepository: NookFeatureFlagsRepository,
 	) {
+	}
+
+	public async isFeatureEnabled(feature: NookFeatureName): Promise<boolean> {
+		const flag = await this.nookFeatureFlagsRepository.findOneBy({ name: feature });
+		return flag?.enabled ?? defaultNookFeatureFlags[feature];
 	}
 
 	public async evaluate(user: MiLocalUser, permission: NookPermission): Promise<NookPolicyDecision> {
