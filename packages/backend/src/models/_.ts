@@ -51,6 +51,8 @@ import { MiNoteDraft } from '@/models/NoteDraft.js';
 import { MiNoteFavorite } from '@/models/NoteFavorite.js';
 import { MiNoteReaction } from '@/models/NoteReaction.js';
 import { MiNoteThreadMuting } from '@/models/NoteThreadMuting.js';
+import { MiNookFeatureFlag } from '@/models/NookFeatureFlag.js';
+import { MiNookPolicy } from '@/models/NookPolicy.js';
 import { MiPage } from '@/models/Page.js';
 import { MiPageLike } from '@/models/PageLike.js';
 import { MiPasswordResetRequest } from '@/models/PasswordResetRequest.js';
@@ -132,6 +134,8 @@ export {
 	MiNoteFavorite,
 	MiNoteReaction,
 	MiNoteThreadMuting,
+	MiNookFeatureFlag,
+	MiNookPolicy,
 	MiPage,
 	MiPageLike,
 	MiPasswordResetRequest,
@@ -212,6 +216,8 @@ export type NoteDraftsRepository = Repository<MiNoteDraft> & MiRepository<MiNote
 export type NoteFavoritesRepository = Repository<MiNoteFavorite> & MiRepository<MiNoteFavorite>;
 export type NoteReactionsRepository = Repository<MiNoteReaction> & MiRepository<MiNoteReaction>;
 export type NoteThreadMutingsRepository = Repository<MiNoteThreadMuting> & MiRepository<MiNoteThreadMuting>;
+export type NookFeatureFlagsRepository = Repository<MiNookFeatureFlag> & MiRepository<MiNookFeatureFlag>;
+export type NookPoliciesRepository = Repository<MiNookPolicy> & MiRepository<MiNookPolicy>;
 export type PagesRepository = Repository<MiPage> & MiRepository<MiPage>;
 export type PageLikesRepository = Repository<MiPageLike> & MiRepository<MiPageLike>;
 export type PasswordResetRequestsRepository = Repository<MiPasswordResetRequest> & MiRepository<MiPasswordResetRequest>;
