@@ -5481,6 +5481,18 @@ export interface Locale extends ILocale {
      */
     "nookMedia": string;
     /**
+     * 投稿
+     */
+    "nookPosts": string;
+    /**
+     * 動画
+     */
+    "nookVideos": string;
+    /**
+     * 作品
+     */
+    "nookWorks": string;
+    /**
      * ダイレクトメッセージ
      */
     "directMessage": string;
