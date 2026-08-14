@@ -104,10 +104,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.chatDisabled);
 			}
 			await this.chatService.checkChatAvailability(me.id, 'write');
-			const senderDecision = await this.nookAccessService.evaluate(me, 'send_chat');
-			if (!senderDecision.allowed) {
-				throw new ApiError(meta.errors.restrictedByNookPolicy);
-			}
 
 			const room = await this.chatService.findRoomById(ps.toRoomId);
 			if (room == null) {
@@ -157,6 +153,11 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					policyEvaluation.senderTargetSensitive.some(decision => !decision.allowed) ||
 					policyEvaluation.recipient?.some(decision => !decision.allowed),
 				)) {
+					throw new ApiError(meta.errors.restrictedByNookPolicy);
+				}
+			} else {
+				const senderDecision = await this.nookAccessService.evaluate(me, 'send_chat');
+				if (!senderDecision.allowed) {
 					throw new ApiError(meta.errors.restrictedByNookPolicy);
 				}
 			}
