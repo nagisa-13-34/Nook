@@ -233,7 +233,7 @@ definePage(() => ({
 	height: 32px;
 	color: #ff2a2a;
 	right: 8px;
-	topacity: 0.8;
+	opacity: 0.8;
 }
 
 .pinnedNoteHandle {
