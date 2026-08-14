@@ -7,7 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 <PageWithHeader>
 	<div class="_spacer" style="--MI_SPACER-w: 800px;">
 		<MkPagination :paginator="paginator">
-			<template #empty><MkResult type="empty" :text="i18n.ts.noNotes"/></template>
+			<template #empty>
+				<div :class="$style.empty">
+					<i class="ti ti-bookmark" :class="$style.emptyIcon"></i>
+					<strong>Bookmarks</strong>
+					<span>保存した投稿はここに表示されます。</span>
+				</div>
+			</template>
 
 			<template #default="{ items }">
 				<MkNote v-for="item in items" :key="item.id" :note="item.note" :class="$style.note"/>
@@ -21,7 +27,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { markRaw } from 'vue';
 import MkPagination from '@/components/MkPagination.vue';
 import MkNote from '@/components/MkNote.vue';
-import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { Paginator } from '@/utility/paginator.js';
 
@@ -39,5 +44,31 @@ definePage(() => ({
 .note {
 	background: var(--MI_THEME-panel);
 	border-radius: var(--MI-radius);
+}
+
+.empty {
+	min-height: 260px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	color: var(--MI_THEME-fg);
+	text-align: center;
+}
+
+.emptyIcon {
+	margin-bottom: 8px;
+	font-size: 42px;
+	color: var(--MI_THEME-accent);
+}
+
+.empty strong {
+	font-size: 18px;
+}
+
+.empty span {
+	color: var(--MI_THEME-fgTransparentWeak);
+	font-size: 13px;
 }
 </style>
