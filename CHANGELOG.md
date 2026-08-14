@@ -4,10 +4,12 @@
 
 ### Client
 - Feat: NookのPolicyとFeature Flagを管理する画面を追加
+- Feat: 管理画面からユーザーの国・確認済み年齢区分・Policyを設定できるように
 
 ### Server
 - Feat: NookのPolicyとFeature Flagを管理する管理者APIを追加
 - Feat: 投稿作成時にNook Policy Engineの権限判定を適用
+- Feat: Nookのユーザー安全設定を管理するAPIを追加
 
 ## 2026.7.0
 
