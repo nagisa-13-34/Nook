@@ -185,6 +185,11 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		to: '/admin/settings',
 		active: currentPage.value?.route.name === 'settings',
 	}, {
+		icon: 'ti ti-shield-cog',
+		text: i18n.ts._nookAdmin.title,
+		to: '/admin/nook-settings',
+		active: currentPage.value?.route.name === 'nookSettings' || currentPage.value?.route.name === 'nookPolicyEdit',
+	}, {
 		icon: 'ti ti-paint',
 		text: i18n.ts.branding,
 		to: '/admin/branding',
