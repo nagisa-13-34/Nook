@@ -145,6 +145,7 @@ export class SignupService {
 			await transactionalEntityManager.save(new MiUserProfile({
 				userId: account.id,
 				autoAcceptFollowed: true,
+				publicReactions: false,
 				password: hash,
 			}));
 
