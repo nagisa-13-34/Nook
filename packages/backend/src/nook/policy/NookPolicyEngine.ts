@@ -22,6 +22,8 @@ export class NookPolicyEngine {
 			return this.policies.find((policy) =>
 				policy.enabled &&
 				policy.id === subject.assignedPolicyId &&
+				(policy.country === subject.country || policy.country === '*') &&
+				policy.ageGroup === subject.ageGroup &&
 				policy.accountStates.includes(subject.accountState)
 			) ?? null;
 		}
