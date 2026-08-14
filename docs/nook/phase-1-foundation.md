@@ -33,11 +33,14 @@ Note creation now asks `NookAccessService` for the `create_post` permission befo
 
 The smartphone layout uses a Nook header with menu and notifications, plus a five-item bottom navigation for Home, Explore, Create, Community, and Chat. Community currently opens the existing Misskey Channels experience so the navigation can remain stable while the dedicated Community model is implemented incrementally. Desktop navigation displays the Nook wordmark while preserving the existing Misskey components and instance menu.
 
+The Timeline adds stable Nook views without duplicating the Misskey API. Following uses the existing home timeline, Discover uses the local timeline with a global fallback, and Media uses the home timeline with its attachment-only filter. Discover does not introduce a recommendation algorithm yet, so the future Recommendations feature flag can switch a dedicated module in without changing the tab contract.
+
 ## Administration
 
 Administrator-only APIs can list the current settings, upsert a complete policy, update one emergency feature flag, and assign a local user's country, verified age group, or explicit policy. Every write records its before/after state in the existing Misskey moderation audit log. The user safety settings are available from the existing administrator user detail page and do not require storing a date of birth.
 
 ## Next small changes
 
-1. Replace the temporary Channels-backed Community destination with the dedicated Community model.
-2. Apply relationship-aware rules to voice/video calls and Spaces token issuance.
+1. Add the Nook profile tabs and bookmark entry points.
+2. Replace the temporary Channels-backed Community destination with the dedicated Community model.
+3. Apply relationship-aware rules to voice/video calls and Spaces token issuance.
