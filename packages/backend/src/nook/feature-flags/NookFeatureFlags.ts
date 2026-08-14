@@ -4,6 +4,7 @@
  */
 
 export const nookFeatureNames = [
+	'policy_enforcement',
 	'video',
 	'chat',
 	'voice_call',
@@ -20,6 +21,7 @@ export type NookFeatureName = typeof nookFeatureNames[number];
 export type NookFeatureFlagSet = Readonly<Record<NookFeatureName, boolean>>;
 
 export const defaultNookFeatureFlags: NookFeatureFlagSet = Object.freeze({
+	policy_enforcement: false,
 	video: false,
 	chat: false,
 	voice_call: false,
