@@ -1,13 +1,12 @@
-Warning: truncated output (original token count: 31011)
+Warning: truncated output (original token count: 31068)
 Total output lines: 1500
 
 ## Unreleased
 
 ### General
--
 
 ### Client
--
+- Feat: NookのPolicyとFeature Flagを管理する画面を追加
 
 ### Server
 - Feat: NookのPolicyとFeature Flagを管理する管理者APIを追加
@@ -762,10 +761,7 @@ v2025.12.0で行われた「configの`trustProxy`のデフォルト値を`false`
 ## 2025.4.1
 
 ### General
-- Feat: bull-boardに代わるジョブキューの管理ツールが実装されました
-- Feat: アップロード可能な最大…1011 tokens truncated…るようになりました。
-  - 管理者がロールの設定でマイグレーション時にコピーするかを指定できるようになります。
-- Enhance: セキュリティを強化するため、ジョブキューのダッシュボード(bull-board)統合が削除されました。
+- Feat: bull-boardに代わるジョブキューの管理ツールが…1068 tokens truncated…nce: セキュリティを強化するため、ジョブキューのダッシュボード(bull-board)統合が削除されました。
   - Misskeyネイティブでダッシュボードを実装予定です
 - Enhance: フロントエンドのエラートラッキングができるように
 	- `.config/default.yml`中の項目`sentryForFrontend`を適宜設定してください。
