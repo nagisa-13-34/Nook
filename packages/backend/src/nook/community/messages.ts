@@ -5,6 +5,7 @@
 
 import type { DataSource } from 'typeorm';
 import type { IdService } from '@/core/IdService.js';
+import { requireNookCommunityReplyReference } from './references.js';
 
 export interface NookCommunityMessageRecord {
 	id: string;
@@ -28,6 +29,7 @@ export async function listNookCommunityMessages(db: DataSource, communityId: str
 }
 
 export async function createNookCommunityMessage(db: DataSource, idService: IdService, input: { communityId: string; channelId: string; userId: string; body: string; replyToId: string | null }): Promise<NookCommunityMessageRecord> {
+	await requireNookCommunityReplyReference(db, input.communityId, input.channelId, input.replyToId);
 	const rows = await db.query<NookCommunityMessageRecord[]>(
 		`INSERT INTO "nook_community_message" ("id", "communityId", "channelId", "userId", "body", "replyToId")
 		 VALUES ($1, $2, $3, $4, $5, $6)
