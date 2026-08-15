@@ -41,8 +41,7 @@ export const meta = {
 export const paramDef = {
 	type: 'object',
 	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 40, default: 20 },
-		offset: { type: 'integer', minimum: 0, maximum: 400, default: 0 },
+		limit: { type: 'integer', minimum: 1, maximum: 400, default: 20 },
 	},
 	required: [],
 } as const;
@@ -63,7 +62,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.restrictedByNookPolicy);
 			}
 
-			return await this.recommendationService.getRecommendations(me, ps.limit, ps.offset);
+			return await this.recommendationService.getRecommendations(me, ps.limit);
 		});
 	}
 }
