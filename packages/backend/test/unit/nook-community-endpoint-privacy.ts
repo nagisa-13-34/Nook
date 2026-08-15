@@ -8,6 +8,7 @@ import { describe, test } from 'vitest';
 import type { DataSource } from 'typeorm';
 import type { IdService } from '@/core/IdService.js';
 import { hideNookVoiceTtsSource } from '@/nook/community/voice.js';
+import { redactApiParamsForLogging } from '@/server/api/ApiCallService.js';
 import { ApiError } from '@/server/api/error.js';
 import { meta as featuresMeta } from '@/server/api/endpoints/nook/features.js';
 import { meta as rolesListMeta } from '@/server/api/endpoints/nook/community/roles/list.js';
@@ -99,6 +100,28 @@ describe('Nook Community endpoint privacy metadata', () => {
 			ttsSourceChannelId: null,
 			ttsLanguage: 'ja-JP',
 			musicEnabled: true,
+		});
+	});
+
+	test('common API error logging redacts credential-shaped parameters recursively', () => {
+		assert.deepEqual(redactApiParamsForLogging({
+			i: 'api-token',
+			token: 'invite-token',
+			nested: {
+				secret: 'bot-secret',
+				credential: 'turn-credential',
+				value: 42,
+			},
+			items: [{ password: 'password', label: 'safe' }],
+		}), {
+			i: '[REDACTED]',
+			token: '[REDACTED]',
+			nested: {
+				secret: '[REDACTED]',
+				credential: '[REDACTED]',
+				value: 42,
+			},
+			items: [{ password: '[REDACTED]', label: 'safe' }],
 		});
 	});
 
