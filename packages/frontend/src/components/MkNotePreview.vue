@@ -13,10 +13,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div>
 			<p v-if="useCw" :class="$style.cw">
 				<Mfm v-if="cw != null && cw != ''" :text="cw" :author="user" :nyaize="'respect'" :i="user" style="margin-right: 8px;"/>
-				<MkCwButton v-model="showContent" :text="text.trim()" :files="files" :poll="poll" style="margin: 4px 0;"/>
+				<MkCwButton v-model="showContent" :text="previewText" :files="files" :poll="poll" style="margin: 4px 0;"/>
 			</p>
 			<div v-show="!useCw || showContent">
-				<Mfm :text="text.trim()" :author="user" :nyaize="'respect'" :i="user"/>
+				<Mfm :text="previewText" :author="user" :nyaize="'respect'" :i="user"/>
 			</div>
 		</div>
 	</div>
@@ -24,11 +24,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import * as Misskey from 'misskey-js';
+import { normalizeNookMarkdownToMfm } from '@@/js/nook-markdown.js';
 import type { PollEditorModelValue } from '@/components/MkPollEditor.vue';
 import MkCwButton from '@/components/MkCwButton.vue';
 
+const MAX_NOTE_TEXT_LENGTH = 3000;
 const showContent = ref(false);
 
 const props = defineProps<{
@@ -39,6 +41,12 @@ const props = defineProps<{
 	cw: string | null;
 	user: Misskey.entities.User;
 }>();
+
+const previewText = computed(() => {
+	const source = props.text.trim();
+	const normalized = normalizeNookMarkdownToMfm(source);
+	return Array.from(normalized).length <= MAX_NOTE_TEXT_LENGTH ? normalized : source;
+});
 </script>
 
 <style lang="scss" module>
