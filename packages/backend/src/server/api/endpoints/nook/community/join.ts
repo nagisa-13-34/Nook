@@ -43,12 +43,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			try {
 				const status = await requestNookCommunityJoin(this.db, this.idService, ps.communityId, me.id, ps.message ?? null);
 				if (status === 'joined') {
-					const channel = await this.channelsRepository.findOneBy({ id: ps.communityId });
-					if (channel != null) {
-						// Community membership is canonical. Following the backing Misskey Channel is only a convenience,
-						// so a follow-side failure must not turn an already-committed join into an API failure.
-						try { await this.channelFollowingService.follow(me, channel); } catch {}
-					}
+					// Community membership is canonical. Following the backing Misskey Channel is only a convenience,
+					// so lookup/follow failures must not turn an already-committed join into an API failure.
+					try {
+						const channel = await this.channelsRepository.findOneBy({ id: ps.communityId });
+						if (channel != null) await this.channelFollowingService.follow(me, channel);
+					} catch {}
 				}
 				return { status };
 			} catch (error) {
