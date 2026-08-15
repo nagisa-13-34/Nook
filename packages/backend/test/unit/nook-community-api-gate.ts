@@ -35,7 +35,7 @@ describe('Nook Community API feature and policy gate', () => {
 	test('Community endpoints are unavailable while the Community feature is disabled', async () => {
 		const service = createService({
 			isFeatureEnabled: async () => false,
-			evaluate: async () => ({ allowed: true, reasonCode: 'default_allow', detail: null }),
+			evaluate: async (_user, permission) => ({ allowed: true, permission, policyId: null, reason: 'allowed' }),
 		});
 		await assert.rejects(
 			() => gate(service, 'nook/community/show', null),
@@ -46,7 +46,7 @@ describe('Nook Community API feature and policy gate', () => {
 	test('Voice endpoints require the voice_call feature in addition to Community', async () => {
 		const service = createService({
 			isFeatureEnabled: async feature => feature === 'community',
-			evaluate: async () => ({ allowed: true, reasonCode: 'default_allow', detail: null }),
+			evaluate: async (_user, permission) => ({ allowed: true, permission, policyId: null, reason: 'allowed' }),
 		});
 		await assert.rejects(
 			() => gate(service, 'nook/community/voice/join', user),
@@ -60,7 +60,7 @@ describe('Nook Community API feature and policy gate', () => {
 			isFeatureEnabled: async () => true,
 			evaluate: async (_user, permission) => {
 				evaluated.push(permission);
-				return { allowed: false, reasonCode: 'deny', detail: null };
+				return { allowed: false, permission, policyId: null, reason: 'denied' };
 			},
 		});
 		await assert.rejects(
@@ -76,7 +76,7 @@ describe('Nook Community API feature and policy gate', () => {
 			isFeatureEnabled: async () => true,
 			evaluate: async (_user, permission) => {
 				evaluated.push(permission);
-				return { allowed: false, reasonCode: 'deny', detail: null };
+				return { allowed: false, permission, policyId: null, reason: 'denied' };
 			},
 		});
 		await assert.rejects(
