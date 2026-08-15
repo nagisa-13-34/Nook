@@ -9,6 +9,8 @@ Nook-specific member-space features are stored in companion tables and exposed t
 
 The implementation is intentionally split into small backend helpers, endpoint files, migrations, and frontend components instead of growing one large Community file.
 
+Public Community reads such as `nook/community/show` and `nook/community/rules/list` use SELECT-only Community lookup and do not initialize or update companion rows. Legacy Channel initialization is separated from normal reads and writes only when the `nook_community` companion row is actually absent. Existing owner membership rows are never rewritten merely because a Community was viewed.
+
 ## Community features
 
 The current Community platform includes:
@@ -41,11 +43,13 @@ Important rules:
 - moderators cannot manage administrators
 - custom-role managers cannot grant permissions that they do not already hold
 - full custom-role configuration and custom-role IDs are exposed only to `roles.manage` users
+- a custom role referenced by a restricted channel cannot be deleted until that channel stops using it
 - bots only access message channels explicitly listed in their allowlist
 - full bot configuration, including channel allowlists, is exposed only to `bots.manage` users
 - restricted Community subchannels are checked before reading messages or translations
 - restricted channel IDs are redacted from Event links and inaccessible message pins
 - active bans take precedence over join and invite flows
+- the frontend treats only `membership.state === 'active'` as member access; banned memberships do not expose member/admin UI
 - an already-active member cannot reuse an invite to change their base role or consume an invite use
 - parent channels, custom roles, replies, pins, event channels, and bot channel allowlists are validated against their owning Community before being stored
 
@@ -69,6 +73,8 @@ A bot must also have an explicit channel allowlist. An empty allowlist grants no
 The current Voice implementation is a small-room WebRTC mesh MVP. The Nook backend handles Community authorization, presence, and signaling; media travels between permitted peers.
 
 The backend revalidates active membership, channel access, and `voice.join` during Voice activity. It also reports which peers currently hold `voice.speak`; the official frontend mutes incoming audio tracks from peers that do not hold that permission and updates this state on heartbeat.
+
+Voice session endpoints that mutate presence or signaling state (`join`, `heartbeat`, `leave`, `signal`, and signal consumption) require the Misskey `write:channels` app/token scope rather than `read:channels`.
 
 Because media is peer-to-peer in the mesh MVP, `voice.speak` is not a cryptographic server-side media gate against mutually modified clients. A future SFU should enforce publish permission at the media server for stronger server-side moderation.
 
@@ -97,6 +103,8 @@ NOOK_VOICE_ICE_TRANSPORT_POLICY=relay
 ### TTS
 
 TTS uses the browser Speech Synthesis API. The server stores only the selected source channel and language settings. A newly joined client does not read the existing backlog aloud; only later messages are spoken.
+
+A Voice heartbeat exposes `ttsSourceChannelId` only when the requesting Voice participant can currently access that source channel. If the configured source is restricted from that participant, their heartbeat response returns TTS as disabled with a null source ID, so hidden-channel metadata is not leaked and the frontend does not poll an inaccessible channel.
 
 ### Music
 
