@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <section :class="$style.layout">
 	<nav class="_panel" :class="$style.sidebar"><button v-for="item in channels" :key="item.id" class="_button" :class="[$style.channel,{[$style.active]:selected?.id===item.id}]" @click="select(item)"><span>{{ item.kind==='voice'?'🔊':'#' }}</span> {{ item.name }}</button></nav>
 	<div :class="$style.main">
-		<NookCommunityVoice v-if="selected?.kind==='voice'" :community-id="communityId" :channel="selected" :channels="channels" :can-manage="canManageVoice"/>
+		<NookCommunityVoice v-if="voiceEnabled&&selected?.kind==='voice'" :community-id="communityId" :channel="selected" :channels="channels" :can-manage="canManageVoice"/>
 		<div v-else-if="selected" class="_gaps">
 			<div class="_panel" :class="$style.toolbar"><strong># {{ selected.name }}</strong><small v-if="selected.topic">{{ selected.topic }}</small></div>
 			<div class="_panel" :class="$style.messages"><article v-for="message in messages" :key="message.id" :class="$style.message"><small>{{ message.botId ? '🤖 '+message.botId : message.userId }} · {{ new Date(message.createdAt).toLocaleTimeString() }}</small><div :class="$style.body">{{ message.body }}</div><NookAutoTranslation kind="communityMessage" :object-id="message.id" :text="message.body"/></article></div>
@@ -19,8 +19,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'; import { nookApi } from './nook-api.js'; import { communityLabels as l } from './labels.js'; import NookAutoTranslation from './NookAutoTranslation.vue'; import NookCommunityVoice from './NookCommunityVoice.vue'; import type { CommunityChannel, CommunityMessage } from './types.js';
-const props=defineProps<{communityId:string;canManageVoice:boolean}>(); const channels=ref<CommunityChannel[]>([]); const selected=ref<CommunityChannel|null>(null); const messages=ref<CommunityMessage[]>([]); const draft=ref(''); const query=ref(''); const searchResults=ref<Array<{id:string;channelId:string;body:string}>>([]); let timer:number|undefined;
-async function loadChannels(){channels.value=await nookApi('nook/community/channels/list',{communityId:props.communityId});if(selected.value==null||!channels.value.some(c=>c.id===selected.value?.id))selected.value=channels.value[0]??null;await loadMessages();}
+const props=defineProps<{communityId:string;canManageVoice:boolean;voiceEnabled:boolean}>(); const channels=ref<CommunityChannel[]>([]); const selected=ref<CommunityChannel|null>(null); const messages=ref<CommunityMessage[]>([]); const draft=ref(''); const query=ref(''); const searchResults=ref<Array<{id:string;channelId:string;body:string}>>([]); let timer:number|undefined;
+async function loadChannels(){const loaded=await nookApi<CommunityChannel[]>('nook/community/channels/list',{communityId:props.communityId});channels.value=props.voiceEnabled?loaded:loaded.filter(channel=>channel.kind!=='voice');if(selected.value==null||!channels.value.some(c=>c.id===selected.value?.id))selected.value=channels.value[0]??null;await loadMessages();}
 async function loadMessages(){if(!selected.value||selected.value.kind==='voice'){messages.value=[];return;}messages.value=await nookApi('nook/community/messages/list',{communityId:props.communityId,channelId:selected.value.id,limit:100});}
 async function select(item:CommunityChannel){selected.value=item;searchResults.value=[];await loadMessages();}
 async function send(){if(!selected.value||!draft.value.trim())return;await nookApi('nook/community/messages/create',{communityId:props.communityId,channelId:selected.value.id,body:draft.value.trim()});draft.value='';await loadMessages();}
