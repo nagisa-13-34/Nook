@@ -6,6 +6,7 @@
 import * as assert from 'node:assert';
 import { describe, test } from 'vitest';
 import { hideNookVoiceTtsSource } from '@/nook/community/voice.js';
+import { meta as featuresMeta } from '@/server/api/endpoints/nook/features.js';
 import { meta as rolesListMeta } from '@/server/api/endpoints/nook/community/roles/list.js';
 import { meta as botsListMeta } from '@/server/api/endpoints/nook/community/bots/list.js';
 import { meta as voiceJoinMeta } from '@/server/api/endpoints/nook/community/voice/join.js';
@@ -15,7 +16,8 @@ import { meta as voiceSignalMeta } from '@/server/api/endpoints/nook/community/v
 import { meta as voiceSignalsMeta } from '@/server/api/endpoints/nook/community/voice/signals.js';
 
 describe('Nook Community endpoint privacy metadata', () => {
-	test('role and bot configuration lists are never anonymous endpoints', () => {
+	test('feature availability is public while role and bot configuration is authenticated', () => {
+		assert.equal(featuresMeta.requireCredential, false);
 		assert.equal(rolesListMeta.requireCredential, true);
 		assert.equal(botsListMeta.requireCredential, true);
 	});
