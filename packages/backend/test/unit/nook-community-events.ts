@@ -23,12 +23,13 @@ describe('Nook Community event membership boundaries', () => {
 		assert.match(sql, /owner_channel\."userId" = r\."userId"/);
 	});
 
-	test('event capacity ignores stale going RSVPs from inactive users', async () => {
+	test('event capacity ignores stale going RSVPs from inactive users and locks active membership', async () => {
 		const calls: string[] = [];
 		const manager = {
 			query: async (sql: string) => {
 				calls.push(sql);
 				if (sql.includes('FROM "nook_community_event" WHERE')) return [{ communityId: 'community', maxAttendees: 1, cancelledAt: null }];
+				if (sql.includes('SELECT "state" FROM "nook_community_member"')) return [{ state: 'active' }];
 				if (sql.includes('SELECT count(*)::text AS count')) return [{ count: '0' }];
 				if (sql.includes('INSERT INTO "nook_community_event_rsvp"')) return [];
 				throw new Error(`Unexpected query: ${sql}`);
@@ -39,6 +40,8 @@ describe('Nook Community event membership boundaries', () => {
 		} as unknown as DataSource;
 
 		await setNookCommunityEventRsvp(db, 'event', 'active-user', 'going');
+		const memberQuery = calls.find(sql => sql.includes('SELECT "state" FROM "nook_community_member"')) ?? '';
+		assert.match(memberQuery, /FOR SHARE/);
 		const countQuery = calls.find(sql => sql.includes('SELECT count(*)::text AS count')) ?? '';
 		assert.match(countQuery, /m\."state"='active'/);
 		assert.match(countQuery, /FROM "channel" c/);
