@@ -10,6 +10,7 @@ import { Endpoint } from '@/server/api/endpoint-base.js';
 import { requireNookCommunityPermission, NookCommunityAccessError } from '@/nook/community/access.js';
 import { listNookCommunityChannels } from '@/nook/community/channels.js';
 import type { NookCommunityBotRecord } from '@/nook/community/bots.js';
+import { serializeNookCommunityBot } from '@/nook/community/serialize.js';
 import { ApiError } from '../../../../error.js';
 
 const botSchema = {
@@ -50,7 +51,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			]);
 			const visibleChannelIds = new Set(visibleChannels.map(channel => channel.id));
 			return bots.map(bot => ({
-				...bot,
+				...serializeNookCommunityBot(bot),
 				allowedChannelIds: Array.isArray(bot.allowedChannelIds)
 					? bot.allowedChannelIds.filter(channelId => visibleChannelIds.has(channelId))
 					: [],
