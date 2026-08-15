@@ -46,6 +46,7 @@ describe('chat create endpoints Nook policy enforcement', () => {
 			createMessageToUser: vi.fn(),
 		};
 		const nookAccessService = {
+			isFeatureEnabled: vi.fn().mockResolvedValue(true),
 			evaluateDirectChat: vi.fn().mockResolvedValue(directEvaluation(false, true)),
 		};
 		const endpoint = new CreateToUserEndpoint(
@@ -69,6 +70,7 @@ describe('chat create endpoints Nook policy enforcement', () => {
 			createMessageToUser: vi.fn(),
 		};
 		const nookAccessService = {
+			isFeatureEnabled: vi.fn().mockResolvedValue(true),
 			evaluateDirectChat: vi.fn().mockResolvedValue(directEvaluation(true, false)),
 		};
 		const endpoint = new CreateToUserEndpoint(
@@ -93,6 +95,7 @@ describe('chat create endpoints Nook policy enforcement', () => {
 			createMessageToUser: vi.fn().mockResolvedValue(packedMessage),
 		};
 		const nookAccessService = {
+			isFeatureEnabled: vi.fn().mockResolvedValue(true),
 			evaluateDirectChat: vi.fn().mockResolvedValue(directEvaluation(true, true)),
 		};
 		const endpoint = new CreateToUserEndpoint(
@@ -114,6 +117,7 @@ describe('chat create endpoints Nook policy enforcement', () => {
 			createMessageToUser: vi.fn().mockResolvedValue({ id: 'message' }),
 		};
 		const nookAccessService = {
+			isFeatureEnabled: vi.fn().mockResolvedValue(true),
 			evaluateDirectChat: vi.fn().mockResolvedValue(directEvaluation(true)),
 		};
 		const endpoint = new CreateToUserEndpoint(
@@ -137,7 +141,10 @@ describe('chat create endpoints Nook policy enforcement', () => {
 			{ findOneBy: vi.fn() } as never,
 			{ getUser: vi.fn().mockResolvedValue(recipient) } as never,
 			chatService as never,
-			{ evaluateDirectChat: vi.fn().mockResolvedValue(directEvaluation(true, true, false)) } as never,
+			{
+				isFeatureEnabled: vi.fn().mockResolvedValue(true),
+				evaluateDirectChat: vi.fn().mockResolvedValue(directEvaluation(true, true, false)),
+			} as never,
 			{ isMutual: vi.fn().mockResolvedValue(false) } as never,
 		);
 
@@ -148,28 +155,33 @@ describe('chat create endpoints Nook policy enforcement', () => {
 	});
 
 	test('does not create a room message when the sender cannot send chat', async () => {
+		const room = { id: 'room', ownerId: sender.id };
 		const chatService = {
 			checkChatAvailability: vi.fn().mockResolvedValue(undefined),
-			findRoomById: vi.fn(),
+			findRoomById: vi.fn().mockResolvedValue(room),
 			createMessageToRoom: vi.fn(),
 		};
 		const endpoint = new CreateToRoomEndpoint(
 			{ findOneBy: vi.fn() } as never,
+			{ findBy: vi.fn().mockResolvedValue([]) } as never,
+			{} as never,
 			{} as never,
 			chatService as never,
-			{ evaluate: vi.fn().mockResolvedValue(decision('send_chat', false)) } as never,
+			{
+				isFeatureEnabled: vi.fn().mockResolvedValue(true),
+				evaluate: vi.fn().mockResolvedValue(decision('send_chat', false)),
+			} as never,
 		);
 
 		await expect(endpoint.exec({ toRoomId: 'room', text: 'hello' }, sender, null)).rejects.toMatchObject({
 			code: roomMeta.errors.restrictedByNookPolicy.code,
 			httpStatusCode: 403,
 		});
-		expect(chatService.findRoomById).not.toHaveBeenCalled();
 		expect(chatService.createMessageToRoom).not.toHaveBeenCalled();
 	});
 
 	test('creates a room message when the sender policy allows it', async () => {
-		const room = { id: 'room' };
+		const room = { id: 'room', ownerId: sender.id };
 		const packedMessage = { id: 'message' };
 		const chatService = {
 			checkChatAvailability: vi.fn().mockResolvedValue(undefined),
@@ -178,9 +190,14 @@ describe('chat create endpoints Nook policy enforcement', () => {
 		};
 		const endpoint = new CreateToRoomEndpoint(
 			{ findOneBy: vi.fn() } as never,
+			{ findBy: vi.fn().mockResolvedValue([]) } as never,
+			{} as never,
 			{} as never,
 			chatService as never,
-			{ evaluate: vi.fn().mockResolvedValue(decision('send_chat', true)) } as never,
+			{
+				isFeatureEnabled: vi.fn().mockResolvedValue(true),
+				evaluate: vi.fn().mockResolvedValue(decision('send_chat', true)),
+			} as never,
 		);
 
 		await expect(endpoint.exec({ toRoomId: 'room', text: 'hello' }, sender, null)).resolves.toEqual(packedMessage);
