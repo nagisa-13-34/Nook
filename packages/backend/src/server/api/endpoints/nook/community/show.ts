@@ -7,7 +7,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
-import { ensureNookCommunity, getNookCommunityMembership, NookCommunityAccessError } from '@/nook/community/access.js';
+import { getNookCommunityContext, getNookCommunityMembership, NookCommunityAccessError } from '@/nook/community/access.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -48,7 +48,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	constructor(@Inject(DI.db) private db: DataSource) {
 		super(meta, paramDef, async (ps, me) => {
 			try {
-				const context = await ensureNookCommunity(this.db, ps.communityId);
+				const context = await getNookCommunityContext(this.db, ps.communityId);
 				const membership = me == null ? null : await getNookCommunityMembership(this.db, ps.communityId, me.id);
 				const countRows = await this.db.query<Array<{ count: string }>>('SELECT count(*)::text AS count FROM "nook_community_member" WHERE "communityId" = $1 AND "state" = \'active\'', [ps.communityId]);
 				return {
