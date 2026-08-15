@@ -11,6 +11,8 @@ import { hideNookVoiceTtsSource } from '@/nook/community/voice.js';
 import { redactApiParamsForLogging } from '@/server/api/ApiCallService.js';
 import { ApiError } from '@/server/api/error.js';
 import { meta as featuresMeta } from '@/server/api/endpoints/nook/features.js';
+import { meta as translateMeta } from '@/server/api/endpoints/nook/translate.js';
+import { meta as communitySearchMeta } from '@/server/api/endpoints/nook/community/search.js';
 import { meta as rolesListMeta } from '@/server/api/endpoints/nook/community/roles/list.js';
 import BotCreateEndpoint from '@/server/api/endpoints/nook/community/bots/create.js';
 import BotsListEndpoint, { meta as botsListMeta } from '@/server/api/endpoints/nook/community/bots/list.js';
@@ -90,6 +92,12 @@ describe('Nook Community endpoint privacy metadata', () => {
 		assert.equal(voiceSignalsMeta.kind, 'write:channels');
 		assert.equal(voiceJoinMeta.limit?.max, 20);
 		assert.equal(voiceHeartbeatMeta.limit?.max, 60);
+		assert.equal(voiceSignalMeta.limit?.max, 600);
+	});
+
+	test('translation and substring search have bounded request rates', () => {
+		assert.equal(translateMeta.limit?.max, 120);
+		assert.equal(communitySearchMeta.limit?.max, 30);
 	});
 
 	test('restricted TTS configuration hides its source channel', () => {
