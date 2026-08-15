@@ -10,6 +10,7 @@ import { NookLikesPrivateByDefault1786694400000 } from '../../migration/17866944
 
 vi.mock('node:crypto', () => ({
 	generateKeyPair: vi.fn((_type: string, _options: unknown, callback: (error: Error | null, publicKey: string, privateKey: string) => void) => callback(null, 'public-key', 'private-key')),
+	randomBytes: vi.fn((size: number) => Buffer.alloc(size, 1)),
 }));
 
 describe('Nook likes privacy', () => {
