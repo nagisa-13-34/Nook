@@ -20,7 +20,11 @@ export function useNookNoteAutoTranslation(
 
 	watch([nookAutoTranslateEnabled, nookAutoTranslateTargetLang], async () => {
 		const id = ++requestId;
-		if (!nookAutoTranslateEnabled.value || mock || $i == null || note.text == null || note.text.length === 0) return;
+		translation.value = null;
+		if (!nookAutoTranslateEnabled.value || mock || $i == null || note.text == null || note.text.length === 0) {
+			translating.value = false;
+			return;
+		}
 		translating.value = true;
 		try {
 			const result = await nookApi<Misskey.entities.NotesTranslateResponse>('nook/translate', {
