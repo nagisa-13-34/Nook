@@ -47,6 +47,16 @@ describe('Nook Community cross-reference boundaries', () => {
 		);
 	});
 
+	test('role references are locked while a restricted channel write is in flight', async () => {
+		let query = '';
+		const db = fakeDb((sql, _params) => {
+			query = sql;
+			return [{ id: 'staff' }];
+		});
+		await assert.doesNotReject(() => requireNookCommunityRoleReferences(db, 'community', ['staff'], { lockForWrite: true }));
+		assert.match(query, /FOR KEY SHARE$/);
+	});
+
 	test('reply target must belong to the same Community and channel', async () => {
 		const db = fakeDb((_sql, params) => params[0] === 'message-a' && params[1] === 'community-a' && params[2] === 'channel-a' ? [{ id: 'message-a' }] : []);
 		await assert.doesNotReject(() => requireNookCommunityReplyReference(db, 'community-a', 'channel-a', 'message-a'));
