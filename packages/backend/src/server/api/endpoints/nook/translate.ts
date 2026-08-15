@@ -10,6 +10,7 @@ import { Endpoint } from '@/server/api/endpoint-base.js';
 import { GetterService } from '@/server/api/GetterService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { RoleService } from '@/core/RoleService.js';
+import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 import { requireNookCommunityChannelAccess, NookCommunityChannelError } from '@/nook/community/channels.js';
 import { requireNookCommunityMember, NookCommunityAccessError } from '@/nook/community/access.js';
 import { NookTranslationService, NookTranslationUnavailableError } from '@/nook/translation/NookTranslationService.js';
@@ -22,6 +23,7 @@ export const meta = {
 		unavailable: { message: 'Translation is unavailable.', code: 'UNAVAILABLE', id: '572273ec-21cd-4560-9537-1709427d74e0' },
 		noSuchObject: { message: 'No such translatable object.', code: 'NO_SUCH_OBJECT', id: '7909dc3c-5a93-4409-b02c-51f1407b56c2' },
 		forbidden: { message: 'You cannot translate this content.', code: 'FORBIDDEN', id: '5098b1bf-c7a6-42d7-ad22-6f528584943f' },
+		communityDisabled: { message: 'Community is currently disabled.', code: 'NOOK_COMMUNITY_DISABLED', id: '59f28094-8444-420a-96f5-64f202a63e65', kind: 'permission', httpStatusCode: 403 },
 	},
 } as const;
 export const paramDef = { type: 'object', properties: {
@@ -36,10 +38,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private noteEntityService: NoteEntityService,
 		private roleService: RoleService,
 		private translationService: NookTranslationService,
+		private nookAccessService: NookAccessService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const policies = await this.roleService.getUserPolicies(me.id);
 			if (!policies.canUseTranslator) throw new ApiError(meta.errors.unavailable);
+			if (ps.kind !== 'note' && !(await this.nookAccessService.isFeatureEnabled('community'))) throw new ApiError(meta.errors.communityDisabled);
 			let text: string | null = null;
 
 			if (ps.kind === 'note') {
