@@ -13,15 +13,30 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkResult type="empty" :text="i18n.ts.noNotes"/>
 	</div>
 
-	<div v-else :class="$style.notes">
-		<MkNote
-			v-for="note in notes"
-			:key="note.id"
-			:class="$style.note"
-			:note="note"
-			:withHardMute="true"
-			:data-scroll-anchor="note.id"
-		/>
+	<div v-else>
+		<div :class="$style.notes">
+			<MkNote
+				v-for="note in notes"
+				:key="note.id"
+				:class="$style.note"
+				:note="note"
+				:withHardMute="true"
+				:data-scroll-anchor="note.id"
+			/>
+		</div>
+
+		<MkError v-if="loadMoreError" @retry="loadMore"/>
+		<button
+			v-else-if="hasMore"
+			v-appear="prefer.s.enableInfiniteScroll ? loadMore : null"
+			class="_button"
+			:class="$style.more"
+			:disabled="loadingMore"
+			@click="loadMore"
+		>
+			<span v-if="!loadingMore">{{ i18n.ts.loadMore }}</span>
+			<MkLoading v-else :inline="true"/>
+		</button>
 	</div>
 </component>
 </template>
@@ -33,9 +48,12 @@ import MkNote from '@/components/MkNote.vue';
 import MkPullToRefresh from '@/components/MkPullToRefresh.vue';
 import { useGlobalEvent } from '@/events.js';
 import { i18n } from '@/i18n.js';
-import { isNookRecommendationUnavailableError } from '@/nook/timeline.js';
+import { isNookRecommendationUnavailableError, mergeNookRecommendationPage } from '@/nook/timeline.js';
 import { prefer } from '@/preferences.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
+
+const PAGE_SIZE = 20;
+const MAX_RECOMMENDATION_LIMIT = 400;
 
 const props = withDefaults(defineProps<{
 	withSensitive?: boolean;
@@ -52,23 +70,61 @@ provide('tl_withSensitive', computed(() => props.withSensitive));
 
 const notes = ref<Misskey.entities.Note[]>([]);
 const loading = ref(true);
+const loadingMore = ref(false);
 const error = ref(false);
+const loadMoreError = ref(false);
+const hasMore = ref(true);
+const requestedLimit = ref(PAGE_SIZE);
 
-async function reload(): Promise<void> {
-	loading.value = true;
-	error.value = false;
+async function fetchWindow(reset: boolean): Promise<void> {
+	const limit = reset
+		? PAGE_SIZE
+		: Math.min(requestedLimit.value + PAGE_SIZE, MAX_RECOMMENDATION_LIMIT);
+
+	if (reset) {
+		loading.value = true;
+		error.value = false;
+		loadMoreError.value = false;
+		hasMore.value = true;
+		requestedLimit.value = PAGE_SIZE;
+		notes.value = [];
+	} else {
+		loadingMore.value = true;
+		loadMoreError.value = false;
+	}
 
 	try {
-		notes.value = await misskeyApi('notes/recommended', { limit: 40 });
+		const windowNotes = await misskeyApi('notes/recommended', { limit });
+
+		notes.value = reset ? windowNotes : mergeNookRecommendationPage(notes.value, windowNotes);
+		requestedLimit.value = limit;
+		hasMore.value = windowNotes.length === limit && limit < MAX_RECOMMENDATION_LIMIT;
 	} catch (err) {
 		if (isNookRecommendationUnavailableError(err)) {
 			emit('unavailable');
 			return;
 		}
-		error.value = true;
+		if (reset) {
+			error.value = true;
+		} else {
+			loadMoreError.value = true;
+		}
 	} finally {
-		loading.value = false;
+		if (reset) {
+			loading.value = false;
+		} else {
+			loadingMore.value = false;
+		}
 	}
+}
+
+async function reload(): Promise<void> {
+	await fetchWindow(true);
+}
+
+async function loadMore(): Promise<void> {
+	if (!hasMore.value || loading.value || loadingMore.value) return;
+	await fetchWindow(false);
 }
 
 useGlobalEvent('noteDeleted', (noteId) => {
@@ -95,5 +151,12 @@ defineExpose({
 	&:last-child {
 		border-bottom: 0;
 	}
+}
+
+.more {
+	display: block;
+	margin: var(--MI-margin) auto;
+	padding: 8px 16px;
+	border-radius: 32px;
 }
 </style>

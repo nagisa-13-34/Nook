@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { detectNookTimelineView, isNookRecommendationUnavailableError, resolveNookTimelineSource } from '@/nook/timeline.js';
+import { detectNookTimelineView, isNookRecommendationUnavailableError, mergeNookRecommendationPage, resolveNookTimelineSource } from '@/nook/timeline.js';
 
 describe('Nook timeline', () => {
 	test('maps Following to the existing home timeline', () => {
@@ -33,5 +33,17 @@ describe('Nook timeline', () => {
 		expect(isNookRecommendationUnavailableError({ code: 'RESTRICTED_BY_NOOK_POLICY' })).toBe(true);
 		expect(isNookRecommendationUnavailableError({ code: 'INTERNAL_ERROR' })).toBe(false);
 		expect(isNookRecommendationUnavailableError(null)).toBe(false);
+	});
+
+	test('merges recommendation pages without duplicate notes', () => {
+		const current = [{ id: 'a' }, { id: 'b' }];
+		const page = [{ id: 'b' }, { id: 'c' }, { id: 'c' }, { id: 'd' }];
+
+		expect(mergeNookRecommendationPage(current, page)).toEqual([
+			{ id: 'a' },
+			{ id: 'b' },
+			{ id: 'c' },
+			{ id: 'd' },
+		]);
 	});
 });

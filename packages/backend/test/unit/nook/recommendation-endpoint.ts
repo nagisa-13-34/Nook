@@ -73,4 +73,24 @@ describe('notes/recommended', () => {
 		expect(evaluate).toHaveBeenCalledWith(me, 'recommendation');
 		expect(getRecommendations).toHaveBeenCalledWith(me, 20);
 	});
+
+	test('accepts a larger recommendation window for infinite scrolling', async () => {
+		const getRecommendations = vi.fn().mockResolvedValue([]);
+		const endpoint = new RecommendedEndpoint(
+			{ getRecommendations } as unknown as RecommendationService,
+			{
+				isFeatureEnabled: vi.fn().mockResolvedValue(true),
+				evaluate: vi.fn().mockResolvedValue({
+					allowed: true,
+					permission: 'recommendation',
+					policyId: 'default',
+					reason: 'allowed',
+				}),
+			} as unknown as NookAccessService,
+		);
+
+		await endpoint.exec({ limit: 80 }, me, null);
+
+		expect(getRecommendations).toHaveBeenCalledWith(me, 80);
+	});
 });

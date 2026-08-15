@@ -41,7 +41,7 @@ export const meta = {
 export const paramDef = {
 	type: 'object',
 	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 40, default: 20 },
+		limit: { type: 'integer', minimum: 1, maximum: 400, default: 20 },
 	},
 	required: [],
 } as const;
