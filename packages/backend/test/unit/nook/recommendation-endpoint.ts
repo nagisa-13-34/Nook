@@ -71,10 +71,10 @@ describe('notes/recommended', () => {
 
 		await expect(endpoint.exec({}, me, null)).resolves.toEqual([]);
 		expect(evaluate).toHaveBeenCalledWith(me, 'recommendation');
-		expect(getRecommendations).toHaveBeenCalledWith(me, 20, 0);
+		expect(getRecommendations).toHaveBeenCalledWith(me, 20);
 	});
 
-	test('forwards explicit recommendation pagination', async () => {
+	test('accepts a larger recommendation window for infinite scrolling', async () => {
 		const getRecommendations = vi.fn().mockResolvedValue([]);
 		const endpoint = new RecommendedEndpoint(
 			{ getRecommendations } as unknown as RecommendationService,
@@ -89,8 +89,8 @@ describe('notes/recommended', () => {
 			} as unknown as NookAccessService,
 		);
 
-		await endpoint.exec({ limit: 12, offset: 24 }, me, null);
+		await endpoint.exec({ limit: 80 }, me, null);
 
-		expect(getRecommendations).toHaveBeenCalledWith(me, 12, 24);
+		expect(getRecommendations).toHaveBeenCalledWith(me, 80);
 	});
 });
