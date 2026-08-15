@@ -2,8 +2,52 @@
  * SPDX-FileCopyrightText: syuilo and misskey-project
  * SPDX-License-Identifier: AGPL-3.0-only
  */
-import { Inject, Injectable } from '@nestjs/common'; import { DataSource } from 'typeorm'; import { DI } from '@/di-symbols.js'; import { IdService } from '@/core/IdService.js'; import { Endpoint } from '@/server/api/endpoint-base.js'; import { requireNookCommunityPermission, NookCommunityAccessError } from '@/nook/community/access.js'; import { createNookCommunityBot, NookCommunityBotError } from '@/nook/community/bots.js'; import { NookCommunityReferenceError } from '@/nook/community/references.js'; import { ApiError } from '../../../../error.js';
+
+import { Inject, Injectable } from '@nestjs/common';
+import { DataSource } from 'typeorm';
+import { DI } from '@/di-symbols.js';
+import { IdService } from '@/core/IdService.js';
+import { Endpoint } from '@/server/api/endpoint-base.js';
+import { requireNookCommunityPermission, NookCommunityAccessError } from '@/nook/community/access.js';
+import { requireNookCommunityChannelAccess, NookCommunityChannelError } from '@/nook/community/channels.js';
+import { createNookCommunityBot, NookCommunityBotError } from '@/nook/community/bots.js';
+import { NookCommunityReferenceError } from '@/nook/community/references.js';
+import { ApiError } from '../../../../error.js';
+
 const botSchema = { type: 'object', properties: { id: { type: 'string' }, communityId: { type: 'string' }, creatorId: { type: 'string', nullable: true }, name: { type: 'string' }, description: { type: 'string', nullable: true }, kind: { type: 'string' }, scopes: { type: 'array', items: { type: 'string' } }, allowedChannelIds: { type: 'array', items: { type: 'string' } }, enabled: { type: 'boolean' }, createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' }, lastUsedAt: { type: 'string', format: 'date-time', nullable: true } }, required: ['id','communityId','creatorId','name','description','kind','scopes','allowedChannelIds','enabled','createdAt','updatedAt','lastUsedAt'] } as const;
-export const meta = { tags: ['channels'], requireCredential: true, kind: 'write:channels', res: { type: 'object', optional: false, nullable: false, properties: { bot: botSchema, secret: { type: 'string' } }, required: ['bot','secret'] }, errors: { forbidden: { message: 'You cannot manage bots.', code: 'FORBIDDEN', id: 'a9db1d27-3c29-4230-967f-57bca0d7cc1b' }, invalidScope: { message: 'Invalid bot scope.', code: 'INVALID_SCOPE', id: 'b5e3d69f-9043-408b-ac85-fcd9538df0b4' }, invalidChannel: { message: 'Bot channels must be non-voice channels in this community.', code: 'INVALID_CHANNEL', id: '4e2784b2-1452-47f3-8707-2c197565c15d' } } } as const;
+export const meta = { tags: ['channels'], requireCredential: true, kind: 'write:channels', res: { type: 'object', optional: false, nullable: false, properties: { bot: botSchema, secret: { type: 'string' } }, required: ['bot','secret'] }, errors: { forbidden: { message: 'You cannot manage bots.', code: 'FORBIDDEN', id: 'a9db1d27-3c29-4230-967f-57bca0d7cc1b' }, invalidScope: { message: 'Invalid bot scope.', code: 'INVALID_SCOPE', id: 'b5e3d69f-9043-408b-ac85-fcd9538df0b4' }, invalidChannel: { message: 'Bot channels must be visible non-voice channels in this community.', code: 'INVALID_CHANNEL', id: '4e2784b2-1452-47f3-8707-2c197565c15d' } } } as const;
 export const paramDef = { type: 'object', properties: { communityId: { type: 'string', format: 'misskey:id' }, name: { type: 'string', minLength: 1, maxLength: 64 }, description: { type: 'string', maxLength: 1024, nullable: true }, scopes: { type: 'array', maxItems: 16, items: { type: 'string', maxLength: 32 } }, allowedChannelIds: { type: 'array', maxItems: 200, items: { type: 'string', format: 'misskey:id' } } }, required: ['communityId','name','scopes'] } as const;
-@Injectable() export default class extends Endpoint<typeof meta, typeof paramDef> { constructor(@Inject(DI.db) private db: DataSource, private idService: IdService) { super(meta, paramDef, async (ps, me) => { try { await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'bots.manage'); } catch (error) { if (error instanceof NookCommunityAccessError) throw new ApiError(meta.errors.forbidden); throw error; } try { return await createNookCommunityBot(this.db, this.idService, { communityId: ps.communityId, creatorId: me.id, name: ps.name, description: ps.description ?? null, scopes: ps.scopes, allowedChannelIds: ps.allowedChannelIds ?? [] }); } catch (error) { if (error instanceof NookCommunityBotError && error.code === 'INVALID_SCOPE') throw new ApiError(meta.errors.invalidScope); if (error instanceof NookCommunityReferenceError) throw new ApiError(meta.errors.invalidChannel); throw error; } }); } }
+
+@Injectable()
+export default class extends Endpoint<typeof meta, typeof paramDef> {
+	constructor(@Inject(DI.db) private db: DataSource, private idService: IdService) {
+		super(meta, paramDef, async (ps, me) => {
+			try {
+				await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'bots.manage');
+				for (const channelId of [...new Set(ps.allowedChannelIds ?? [])]) {
+					const channel = await requireNookCommunityChannelAccess(this.db, ps.communityId, me.id, channelId);
+					if (channel.kind === 'voice') throw new NookCommunityChannelError('CHANNEL_FORBIDDEN');
+				}
+			} catch (error) {
+				if (error instanceof NookCommunityAccessError) throw new ApiError(meta.errors.forbidden);
+				if (error instanceof NookCommunityChannelError) throw new ApiError(meta.errors.invalidChannel);
+				throw error;
+			}
+
+			try {
+				return await createNookCommunityBot(this.db, this.idService, {
+					communityId: ps.communityId,
+					creatorId: me.id,
+					name: ps.name,
+					description: ps.description ?? null,
+					scopes: ps.scopes,
+					allowedChannelIds: ps.allowedChannelIds ?? [],
+				});
+			} catch (error) {
+				if (error instanceof NookCommunityBotError && error.code === 'INVALID_SCOPE') throw new ApiError(meta.errors.invalidScope);
+				if (error instanceof NookCommunityReferenceError) throw new ApiError(meta.errors.invalidChannel);
+				throw error;
+			}
+		});
+	}
+}
