@@ -16,6 +16,7 @@ const props = defineProps<{ kind: 'note' | 'communityMessage' | 'communityAnnoun
 const loading = ref(false);
 const translated = ref<{ sourceLang: string; text: string } | null>(null);
 const enabled = computed(() => nookAutoTranslateEnabled.value && !!props.text);
+
 let requestId = 0;
 async function refresh() {
 	const id = ++requestId;
@@ -33,6 +34,7 @@ async function refresh() {
 		if (id === requestId) loading.value = false;
 	}
 }
+
 watch([enabled, nookAutoTranslateTargetLang, () => props.objectId, () => props.text], refresh, { immediate: true });
 </script>
 <style module>.root{margin-top:8px;padding:8px 10px;border-left:3px solid var(--MI_THEME-accent);background:color(from var(--MI_THEME-accent) srgb r g b / .08);border-radius:6px;white-space:pre-wrap}</style>
