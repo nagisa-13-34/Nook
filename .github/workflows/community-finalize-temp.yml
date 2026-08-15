@@ -35,71 +35,29 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Apply final source fixes
+      - name: Fix users E2E error-response typing
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-
-          def replace(path: str, old: str, new: str) -> None:
-              file = Path(path)
-              text = file.read_text()
-              if old not in text:
-                  raise SystemExit(f'expected text not found in {path}: {old!r}')
-              file.write_text(text.replace(old, new, 1))
-
-          replace(
-              'packages/backend/src/server/api/endpoints/chat/rooms/join.ts',
-              'participants.flatMap(participant => {',
-              'participants.flatMap<NookDirectChatPair>(participant => {',
-          )
-          replace(
-              'packages/backend/src/models/UserProfile.ts',
-              "\t@Column('boolean', {\n\t\tdefault: true,\n\t})\n\tpublic publicReactions: boolean;",
-              "\t@Column('boolean', {\n\t\tdefault: false,\n\t})\n\tpublic publicReactions: boolean;",
-          )
-          replace(
-              'packages/backend/test/unit/NookAccessService.ts',
-              "\t\tconst protected = localUser('protected');",
-              "\t\tconst protectedUser = localUser('protected');",
-          )
-          replace(
-              'packages/backend/test/unit/NookAccessService.ts',
-              'userId: protected.id',
-              'userId: protectedUser.id',
-          )
-          replace(
-              'packages/backend/test/unit/NookAccessService.ts',
-              '{ sender: protected, recipient: null, isMutual: false }',
-              '{ sender: protectedUser, recipient: null, isMutual: false }',
-          )
-          replace(
-              'packages/backend/test/unit/NookAccessService.ts',
-              '{ sender: adultDenied, recipient: protected, isMutual: true }',
-              '{ sender: adultDenied, recipient: protectedUser, isMutual: true }',
-          )
-          replace(
-              'packages/backend/src/server/api/endpoint-base.ts',
-              "ajv.addFormat('misskey:id', /^[a-zA-Z0-9]+$/);",
-              "ajv.addFormat('misskey:id', /^[a-zA-Z0-9]+$/);\najv.addFormat('date-time', value => /^\\d{4}-\\d{2}-\\d{2}T/.test(value) && Number.isFinite(Date.parse(value)));",
-          )
+          path = Path('packages/backend/test/e2e/users.ts')
+          text = path.read_text()
+          old = "castAsError(response.body).error.code, 'BOTH_WITH_REPLIES_AND_WITH_FILES'"
+          new = "castAsError(response.body as any).error.code, 'BOTH_WITH_REPLIES_AND_WITH_FILES'"
+          if old not in text:
+              raise SystemExit('expected users E2E assertion not found')
+          path.write_text(text.replace(old, new, 1))
           PY
+          pnpm --filter backend exec eslint --fix test/e2e/users.ts
 
-          pnpm --filter backend exec eslint --fix \
-            src/server/api/endpoints/chat/rooms/join.ts \
-            src/server/api/endpoints/nook/community/pins/list.ts \
-            src/models/UserProfile.ts \
-            src/server/api/endpoint-base.ts \
-            test/unit/NookAccessService.ts
-
-      - name: Commit source fixes
+      - name: Commit E2E type fix
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add packages/backend/src packages/backend/test
+          git add packages/backend/test/e2e/users.ts
           if ! git diff --cached --quiet; then
-            git commit -m "Fix remaining Community verification failures"
+            git commit -m "Fix users E2E error response typing"
             git push origin HEAD:fix/community-ci-stabilization
           fi
 
