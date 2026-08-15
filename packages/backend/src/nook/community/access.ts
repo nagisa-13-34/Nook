@@ -52,8 +52,9 @@ export async function getNookCommunityContext(db: DataSource, communityId: strin
 }
 
 /**
- * Ensure the Nook companion row exists for a Misskey Channel.
- * Existing Communities are SELECT-only; initialization writes happen only when the companion row is absent.
+ * Materialize the Nook companion row for a Misskey Channel after the caller has
+ * already passed the global create_community policy boundary.
+ * Existing Communities are SELECT-only; writes happen only when the companion row is absent.
  */
 export async function ensureNookCommunity(db: DataSource, communityId: string): Promise<NookCommunityContext> {
 	const row = await readNookCommunityContextRow(db, communityId);
@@ -127,9 +128,6 @@ export async function requireNookCommunityMember(db: DataSource, communityId: st
 }
 
 export async function requireNookCommunityPermission(db: DataSource, communityId: string, userId: string, permission: NookCommunityPermission): Promise<NookCommunityMembership> {
-	// Permission-protected operations may be the first Nook-specific action on a legacy Channel.
-	// Initialization is idempotent and writes only while the companion row is absent.
-	await ensureNookCommunity(db, communityId);
 	const membership = await requireNookCommunityMember(db, communityId, userId);
 	if (!membership.permissions.has('*') && !membership.permissions.has(permission)) throw new NookCommunityAccessError('FORBIDDEN');
 	return membership;
