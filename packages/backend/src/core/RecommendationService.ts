@@ -148,7 +148,8 @@ export class RecommendationService {
 			.leftJoinAndSelect('reply.user', 'replyUser')
 			.leftJoinAndSelect('renote.user', 'renoteUser')
 			.leftJoinAndSelect('note.channel', 'channel')
-			.andWhere('note.userId != :recommendationMeId', { recommendationMeId: me.id });
+			.andWhere('note.userId != :recommendationMeId', { recommendationMeId: me.id })
+			.andWhere('note.visibility != :recommendationDirectVisibility', { recommendationDirectVisibility: 'specified' });
 
 		this.queryService.generateVisibilityQuery(query, me);
 		this.queryService.generateBaseNoteFilteringQuery(query, me);
