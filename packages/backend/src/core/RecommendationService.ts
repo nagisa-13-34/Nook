@@ -90,16 +90,17 @@ export class RecommendationService {
 		}
 
 		const ranked = rankRecommendationCandidates(rankCandidates, me.id, snapshotAt);
-		const selected = selectDiverseRecommendations(ranked, limit);
-		const selectedIds = selected.map(candidate => candidate.noteId);
 
-		// Visibility and mute state can change while ranking is in progress, so refresh mutable
-		// channel state and validate the selected set once more immediately before packing.
+		// Visibility and mute state can change while ranking is in progress. Refresh mutable
+		// channel state and revalidate the full ranked pool before diversity selection so
+		// invalidated top candidates can be replaced by the next eligible candidates.
 		const finalMutedChannels = await this.channelMutingService.mutingChannelsCache.fetch(me.id);
-		const finalNotes = await this.loadEligibleNotes(selectedIds, me, finalMutedChannels);
+		const finalNotes = await this.loadEligibleNotes(ranked.map(candidate => candidate.noteId), me, finalMutedChannels);
 		const finalNoteById = new Map(finalNotes.map(note => [note.id, note]));
-		const orderedNotes = selectedIds
-			.map(id => finalNoteById.get(id))
+		const finalRanked = ranked.filter(candidate => finalNoteById.has(candidate.noteId));
+		const selected = selectDiverseRecommendations(finalRanked, limit);
+		const orderedNotes = selected
+			.map(candidate => finalNoteById.get(candidate.noteId))
 			.filter((note): note is MiNote => note != null);
 
 		return await this.noteEntityService.packMany(orderedNotes, me);
@@ -132,6 +133,8 @@ export class RecommendationService {
 	private async loadRecentEligibleLocalNotes(me: MiLocalUser, mutedChannels: Set<string>, limit: number): Promise<MiNote[]> {
 		const notes = await this.createEligibleQuery(me)
 			.andWhere('note.userHost IS NULL')
+			.andWhere('note.visibility = :recommendationPublicVisibility', { recommendationPublicVisibility: 'public' })
+			.andWhere('note.channelId IS NULL')
 			.andWhere('note.replyId IS NULL')
 			.orderBy('note.id', 'DESC')
 			.take(limit)
