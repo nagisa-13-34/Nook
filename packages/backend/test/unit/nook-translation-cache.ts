@@ -39,10 +39,13 @@ describe('Nook translation cache privacy', () => {
 		} as unknown as DataSource;
 		let sendCount = 0;
 		let releaseResponse: (() => void) | undefined;
+		let markStarted: (() => void) | undefined;
 		const waitForRelease = new Promise<void>(resolve => { releaseResponse = resolve; });
+		const started = new Promise<void>(resolve => { markStarted = resolve; });
 		const http = {
 			send: async () => {
 				sendCount++;
+				markStarted?.();
 				await waitForRelease;
 				return {
 					json: async () => ({ translations: [{ detected_source_language: 'JA', text: 'hello' }] }),
@@ -54,8 +57,7 @@ describe('Nook translation cache privacy', () => {
 
 		const first = service.translate('communityMessage', 'message-id', 'こんにちは', 'en-US');
 		const second = service.translate('communityMessage', 'message-id', 'こんにちは', 'en-US');
-		await Promise.resolve();
-		await Promise.resolve();
+		await started;
 		assert.equal(sendCount, 1);
 		releaseResponse?.();
 		const results = await Promise.all([first, second]);
