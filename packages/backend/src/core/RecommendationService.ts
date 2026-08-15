@@ -45,8 +45,9 @@ export class RecommendationService {
 	}
 
 	@bindThis
-	public async getRecommendations(me: MiLocalUser, limit: number): Promise<Packed<'Note'>[]> {
+	public async getRecommendations(me: MiLocalUser, limit: number, offset = 0): Promise<Packed<'Note'>[]> {
 		const snapshotAt = new Date();
+		const pageEnd = offset + limit;
 		const [homeIds, localIds, followedChannels, mutedChannels] = await Promise.all([
 			this.fanoutTimelineService.get(`homeTimeline:${me.id}`),
 			this.fanoutTimelineService.get('localTimeline'),
@@ -59,7 +60,7 @@ export class RecommendationService {
 		this.addSource(sourcesByNoteId, localIds.slice(0, LOCAL_CANDIDATE_LIMIT), 'local-discovery');
 
 		let notes = await this.loadEligibleNotes([...sourcesByNoteId.keys()], me, mutedChannels);
-		const desiredPoolSize = Math.min(LOCAL_CANDIDATE_LIMIT, limit * MIN_CANDIDATE_MULTIPLIER);
+		const desiredPoolSize = Math.min(LOCAL_CANDIDATE_LIMIT, pageEnd * MIN_CANDIDATE_MULTIPLIER);
 
 		if (notes.length < desiredPoolSize) {
 			const fallbackNotes = await this.loadRecentEligibleLocalNotes(me, mutedChannels, LOCAL_CANDIDATE_LIMIT);
@@ -98,8 +99,13 @@ export class RecommendationService {
 		const finalNotes = await this.loadEligibleNotes(ranked.map(candidate => candidate.noteId), me, finalMutedChannels);
 		const finalNoteById = new Map(finalNotes.map(note => [note.id, note]));
 		const finalRanked = ranked.filter(candidate => finalNoteById.has(candidate.noteId));
-		const selected = selectDiverseRecommendations(finalRanked, limit);
+
+		// Apply diversity to the complete prefix before slicing the requested page. This
+		// keeps author/channel caps consistent across page boundaries instead of resetting
+		// them for every request.
+		const selected = selectDiverseRecommendations(finalRanked, pageEnd);
 		const orderedNotes = selected
+			.slice(offset, pageEnd)
 			.map(candidate => finalNoteById.get(candidate.noteId))
 			.filter((note): note is MiNote => note != null);
 
