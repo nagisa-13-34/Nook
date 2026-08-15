@@ -71,6 +71,26 @@ describe('notes/recommended', () => {
 
 		await expect(endpoint.exec({}, me, null)).resolves.toEqual([]);
 		expect(evaluate).toHaveBeenCalledWith(me, 'recommendation');
-		expect(getRecommendations).toHaveBeenCalledWith(me, 20);
+		expect(getRecommendations).toHaveBeenCalledWith(me, 20, 0);
+	});
+
+	test('forwards explicit recommendation pagination', async () => {
+		const getRecommendations = vi.fn().mockResolvedValue([]);
+		const endpoint = new RecommendedEndpoint(
+			{ getRecommendations } as unknown as RecommendationService,
+			{
+				isFeatureEnabled: vi.fn().mockResolvedValue(true),
+				evaluate: vi.fn().mockResolvedValue({
+					allowed: true,
+					permission: 'recommendation',
+					policyId: 'default',
+					reason: 'allowed',
+				}),
+			} as unknown as NookAccessService,
+		);
+
+		await endpoint.exec({ limit: 12, offset: 24 }, me, null);
+
+		expect(getRecommendations).toHaveBeenCalledWith(me, 12, 24);
 	});
 });
