@@ -15,6 +15,7 @@ import { bindThis } from '@/decorators.js';
 import { ChannelFollowingService } from '@/core/ChannelFollowingService.js';
 import { ChannelMutingService } from '@/core/ChannelMutingService.js';
 import { FanoutTimelineService } from '@/core/FanoutTimelineService.js';
+import { IdService } from '@/core/IdService.js';
 import { QueryService } from '@/core/QueryService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import {
@@ -38,6 +39,7 @@ export class RecommendationService {
 		private queryService: QueryService,
 		private channelFollowingService: ChannelFollowingService,
 		private channelMutingService: ChannelMutingService,
+		private idService: IdService,
 		private noteEntityService: NoteEntityService,
 	) {
 	}
@@ -60,7 +62,7 @@ export class RecommendationService {
 		const desiredPoolSize = Math.min(LOCAL_CANDIDATE_LIMIT, limit * MIN_CANDIDATE_MULTIPLIER);
 
 		if (notes.length < desiredPoolSize) {
-			const fallbackNotes = await this.loadRecentEligibleNotes(me, mutedChannels, LOCAL_CANDIDATE_LIMIT);
+			const fallbackNotes = await this.loadRecentEligibleLocalNotes(me, mutedChannels, LOCAL_CANDIDATE_LIMIT);
 			for (const note of fallbackNotes) {
 				if (!sourcesByNoteId.has(note.id)) {
 					sourcesByNoteId.set(note.id, new Set(['local-discovery']));
@@ -80,7 +82,7 @@ export class RecommendationService {
 				noteId: note.id,
 				userId: note.userId,
 				channelId: note.channelId,
-				createdAt: note.createdAt,
+				createdAt: this.idService.parse(note.id).date,
 				reactionsCount: Object.values(note.reactions).reduce((sum, count) => sum + count, 0),
 				repliesCount: note.repliesCount,
 				renoteCount: note.renoteCount,
@@ -127,8 +129,10 @@ export class RecommendationService {
 		return this.filterEligibleNotes(await query.getMany(), mutedChannels);
 	}
 
-	private async loadRecentEligibleNotes(me: MiLocalUser, mutedChannels: Set<string>, limit: number): Promise<MiNote[]> {
+	private async loadRecentEligibleLocalNotes(me: MiLocalUser, mutedChannels: Set<string>, limit: number): Promise<MiNote[]> {
 		const notes = await this.createEligibleQuery(me)
+			.andWhere('note.userHost IS NULL')
+			.andWhere('note.replyId IS NULL')
 			.orderBy('note.id', 'DESC')
 			.take(limit)
 			.getMany();
@@ -149,6 +153,7 @@ export class RecommendationService {
 		this.queryService.generateVisibilityQuery(query, me);
 		this.queryService.generateBaseNoteFilteringQuery(query, me);
 		this.queryService.generateMutedUserRenotesQueryForNotes(query, me);
+		this.queryService.generateMutedNoteThreadQuery(query, me);
 
 		return query;
 	}
