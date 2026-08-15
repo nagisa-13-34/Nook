@@ -9,7 +9,20 @@ Nook-specific member-space features are stored in companion tables and exposed t
 
 The implementation is intentionally split into small backend helpers, endpoint files, migrations, and frontend components instead of growing one large Community file.
 
-Public Community reads such as `nook/community/show` and `nook/community/rules/list` use SELECT-only Community lookup and do not initialize or update companion rows. Legacy Channel initialization is separated from normal reads and writes only when the `nook_community` companion row is actually absent. Existing owner membership rows are never rewritten merely because a Community was viewed.
+Public Community reads such as `nook/community/show` and `nook/community/rules/list` use SELECT-only Community lookup and do not initialize or update companion rows. Legacy Channel initialization is separated from normal reads and writes only when the `nook_community` companion row is actually absent. Existing owner membership rows are never rewritten merely because a Community was viewed. A legacy Channel owner without a companion member row is represented synthetically both in membership checks and member listings, without turning a read into a database write.
+
+## Feature and global policy gates
+
+Community is controlled by Nook's global feature and policy layer before Community-specific roles are evaluated.
+
+- every `nook/community/*` API requires the `community` feature flag
+- every `nook/community/voice/*` API additionally requires the `voice_call` feature flag and the current user's `voice_call` policy decision
+- direct join and invite use require `join_community`
+- approval of a pending join request rechecks the requested user's current `join_community` policy inside the locked approval flow before activating membership
+- when the Community feature is enabled, creation of the underlying Misskey Channel requires `create_community` and immediately initializes the Nook companion record
+- a Voice subchannel cannot be created while the `voice_call` feature is disabled
+
+The frontend reads only public feature availability (`community` and `voiceCall`). It hides the Community tab when Community is disabled, and hides Voice channels and Voice creation controls when Voice is disabled. Policy details themselves are not exposed by that feature endpoint.
 
 ## Community features
 
@@ -48,12 +61,21 @@ Important rules:
 - full bot configuration, including channel allowlists, is exposed only to `bots.manage` users
 - restricted Community subchannels are checked before reading messages or translations
 - restricted channel IDs are redacted from Event links and inaccessible message pins
-- active bans take precedence over join and invite flows
+- active bans take precedence over join, invite, approval, and leave flows
+- a banned membership row cannot be removed by the banned user through `leave`, so leave-then-rejoin cannot clear a ban
 - the frontend treats only `membership.state === 'active'` as member access; banned memberships do not expose member/admin UI
 - an already-active member cannot reuse an invite to change their base role or consume an invite use
 - parent channels, custom roles, replies, pins, event channels, and bot channel allowlists are validated against their owning Community before being stored
 
 The Nook policy layer remains above Community permissions. A Community permission must never be treated as a way to bypass global safety policy.
+
+## Leaving and Channel follows
+
+Joining a Community may follow the underlying Misskey Channel so the normal Channel timeline remains connected to the Community experience. Community leave does not automatically unfollow that Channel, because the backend does not have ownership metadata proving that the follow was created by the Community join rather than by the user beforehand. Users remain free to unfollow the Channel separately.
+
+When an active member leaves, their Community event RSVPs are removed before their active membership row is deleted. A banned member cannot use leave at all, and banning a member also removes their Community event RSVPs.
+
+Event counts and capacity checks independently count only currently active Community members, plus the underlying Channel owner when represented synthetically. This means stale RSVP rows cannot continue consuming attendance capacity even if cleanup was missed by an older deployment.
 
 ## Bot credentials
 
@@ -72,9 +94,15 @@ A bot must also have an explicit channel allowlist. An empty allowlist grants no
 
 The current Voice implementation is a small-room WebRTC mesh MVP. The Nook backend handles Community authorization, presence, and signaling; media travels between permitted peers.
 
-The backend revalidates active membership, channel access, and `voice.join` during Voice activity. It also reports which peers currently hold `voice.speak`; the official frontend mutes incoming audio tracks from peers that do not hold that permission and updates this state on heartbeat.
+The backend revalidates the `community` and `voice_call` feature flags, the user's Nook `voice_call` policy, active membership, channel access, and `voice.join` during Voice activity. Peer listing reauthorizes other current participants too, so a participant whose policy, membership, or channel access is revoked can be pruned even if that participant stops sending heartbeats themselves.
+
+It also reports which peers currently hold `voice.speak`; the official frontend mutes incoming audio tracks from peers that do not hold that permission and updates this state on heartbeat. When a user's `voice.speak` is revoked, the local microphone tracks are stopped. If the permission is later restored, the official frontend reacquires microphone access and replaces or renegotiates the existing peer audio sender without requiring a full room rejoin.
 
 Voice session endpoints that mutate presence or signaling state (`join`, `heartbeat`, `leave`, `signal`, and signal consumption) require the Misskey `write:channels` app/token scope rather than `read:channels`.
+
+Voice rejoin creates a new session generation. Before replacing presence with the new session ID, the backend clears old queued signals involving that user in the room. A leave from an obsolete session uses `DELETE ... RETURNING` and clears signaling only when that exact session was actually removed, so an old tab cannot erase a newer tab's signaling queue.
+
+Global stale-presence and stale-signal cleanup is throttled to at most once every 30 seconds per backend process rather than being executed by every participant heartbeat. The timestamp cleanup remains opportunistic; a dedicated scheduled cleanup job and timestamp-oriented indexes are still options for larger deployments.
 
 Because media is peer-to-peer in the mesh MVP, `voice.speak` is not a cryptographic server-side media gate against mutually modified clients. A future SFU should enforce publish permission at the media server for stronger server-side moderation.
 
@@ -145,6 +173,7 @@ Do not squash these migrations after they have been deployed to a persistent ins
 - Community messages use polling rather than a dedicated streaming channel.
 - Voice uses peer-to-peer mesh and is intended for small rooms; large rooms should move to an SFU.
 - `voice.speak` is enforced by authorization metadata plus the official mesh client; strong server-side media publish enforcement requires an SFU.
+- Voice stale-row cleanup is throttled but still opportunistic rather than a dedicated scheduled maintenance job.
 - TTS is browser-local rather than a server-side audio bot.
 - Music is synchronized playback state rather than a server-side music relay.
 - Translation-cache expiry is opportunistic; operators that require strict deletion deadlines should add a scheduled database cleanup job.
