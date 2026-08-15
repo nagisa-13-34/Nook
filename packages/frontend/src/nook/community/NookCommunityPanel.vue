@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<section v-else-if="!isActiveMember" class="_panel" :class="$style.box"><h3>{{ l.rules }}</h3><ol><li v-for="rule in rules" :key="rule.id"><strong>{{ rule.title }}</strong> — {{ rule.body }}</li></ol><textarea v-if="detail.joinMode==='approval'" v-model="joinMessage" maxlength="1024" placeholder="Message"></textarea><input v-if="detail.joinMode==='invite'||detail.joinMode==='private'" v-model="inviteToken" placeholder="Invite token"><button class="_button" :class="$style.primary" @click="join">{{ detail.joinMode==='approval'?l.apply:l.join }}</button><div v-if="joinStatus">{{ joinStatus }}</div></section>
 		<template v-else>
 			<nav :class="$style.tabs"><button v-for="item in tabs" :key="item.key" class="_button" :class="{[$style.active]:tab===item.key}" @click="tab=item.key">{{ item.icon }} {{ item.label }}</button></nav>
-			<NookCommunityChannels v-if="tab==='channels'" :community-id="communityId" :can-manage-voice="can('voice.manage')"/>
+			<NookCommunityChannels v-if="tab==='channels'" :community-id="communityId" :can-manage-voice="can('voice.manage')" :voice-enabled="voiceEnabled"/>
 			<NookCommunityAnnouncements v-else-if="tab==='announcements'" :community-id="communityId" :can-manage="can('announcements.manage')"/>
 			<NookCommunityEvents v-else-if="tab==='events'" :community-id="communityId" :can-manage="can('events.manage')"/>
 			<NookCommunityMembers v-else-if="tab==='members'" :community-id="communityId" :can-manage="can('members.manage')" :can-manage-roles="can('roles.manage')"/>
@@ -24,7 +24,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';import { nookApi } from './nook-api.js';import { communityLabels as l } from './labels.js';import { nookAutoTranslateEnabled,nookAutoTranslateTargetLang } from './translation-preferences.js';import NookCommunityChannels from './NookCommunityChannels.vue';import NookCommunityAnnouncements from './NookCommunityAnnouncements.vue';import NookCommunityEvents from './NookCommunityEvents.vue';import NookCommunityMembers from './NookCommunityMembers.vue';import NookCommunityBots from './NookCommunityBots.vue';import NookCommunityAdmin from './NookCommunityAdmin.vue';import type { CommunityDetail,CommunityPin,CommunityRule } from './types.js';
-const props=defineProps<{communityId:string}>();const detail=ref<CommunityDetail|null>(null);const rules=ref<CommunityRule[]>([]);const pins=ref<CommunityPin[]>([]);const loading=ref(true);const tab=ref('home');const joinMessage=ref('');const inviteToken=ref(new URLSearchParams(location.search).get('invite')??'');const joinStatus=ref('');const autoTranslate=nookAutoTranslateEnabled;const targetLang=nookAutoTranslateTargetLang;
+const props=defineProps<{communityId:string;voiceEnabled:boolean}>();const detail=ref<CommunityDetail|null>(null);const rules=ref<CommunityRule[]>([]);const pins=ref<CommunityPin[]>([]);const loading=ref(true);const tab=ref('home');const joinMessage=ref('');const inviteToken=ref(new URLSearchParams(location.search).get('invite')??'');const joinStatus=ref('');const autoTranslate=nookAutoTranslateEnabled;const targetLang=nookAutoTranslateTargetLang;
 const isActiveMember=computed(()=>detail.value?.membership?.state==='active');
 const isBanned=computed(()=>detail.value?.membership?.state==='banned');
 function can(permission:string){if(!isActiveMember.value)return false;const values=detail.value?.membership?.permissions??[];return values.includes('*')||values.includes(permission);}
