@@ -55,6 +55,11 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 const PAGE_SIZE = 20;
 const MAX_RECOMMENDATION_LIMIT = 400;
 
+type RecommendationPageRequest = Misskey.Endpoints['notes/recommended']['req'] & {
+	snapshotAt: number;
+	excludeNoteIds: string[];
+};
+
 const props = withDefaults(defineProps<{
 	withSensitive?: boolean;
 }>(), {
@@ -74,32 +79,52 @@ const loadingMore = ref(false);
 const error = ref(false);
 const loadMoreError = ref(false);
 const hasMore = ref(true);
-const requestedLimit = ref(PAGE_SIZE);
+const snapshotAt = ref<number | null>(null);
+const requestGeneration = ref(0);
 
-async function fetchWindow(reset: boolean): Promise<void> {
-	const limit = reset
-		? PAGE_SIZE
-		: Math.min(requestedLimit.value + PAGE_SIZE, MAX_RECOMMENDATION_LIMIT);
+async function fetchPage(reset: boolean): Promise<void> {
+	if (!reset && (!hasMore.value || loading.value || loadingMore.value)) return;
 
 	if (reset) {
+		requestGeneration.value++;
+		snapshotAt.value = Date.now();
 		loading.value = true;
+		loadingMore.value = false;
 		error.value = false;
 		loadMoreError.value = false;
 		hasMore.value = true;
-		requestedLimit.value = PAGE_SIZE;
 		notes.value = [];
 	} else {
 		loadingMore.value = true;
 		loadMoreError.value = false;
 	}
 
-	try {
-		const windowNotes = await misskeyApi('notes/recommended', { limit });
+	const generation = requestGeneration.value;
+	const currentSnapshotAt = snapshotAt.value ?? Date.now();
+	const remaining = MAX_RECOMMENDATION_LIMIT - notes.value.length;
+	const limit = Math.min(PAGE_SIZE, remaining);
 
-		notes.value = reset ? windowNotes : mergeNookRecommendationPage(notes.value, windowNotes);
-		requestedLimit.value = limit;
-		hasMore.value = windowNotes.length === limit && limit < MAX_RECOMMENDATION_LIMIT;
+	if (limit <= 0) {
+		hasMore.value = false;
+		loading.value = false;
+		loadingMore.value = false;
+		return;
+	}
+
+	const request: RecommendationPageRequest = {
+		limit,
+		snapshotAt: currentSnapshotAt,
+		excludeNoteIds: notes.value.map(note => note.id),
+	};
+
+	try {
+		const pageNotes = await misskeyApi('notes/recommended', request);
+		if (generation !== requestGeneration.value) return;
+
+		notes.value = reset ? pageNotes : mergeNookRecommendationPage(notes.value, pageNotes);
+		hasMore.value = pageNotes.length === limit && notes.value.length < MAX_RECOMMENDATION_LIMIT;
 	} catch (err) {
+		if (generation !== requestGeneration.value) return;
 		if (isNookRecommendationUnavailableError(err)) {
 			emit('unavailable');
 			return;
@@ -110,21 +135,22 @@ async function fetchWindow(reset: boolean): Promise<void> {
 			loadMoreError.value = true;
 		}
 	} finally {
-		if (reset) {
-			loading.value = false;
-		} else {
-			loadingMore.value = false;
+		if (generation === requestGeneration.value) {
+			if (reset) {
+				loading.value = false;
+			} else {
+				loadingMore.value = false;
+			}
 		}
 	}
 }
 
 async function reload(): Promise<void> {
-	await fetchWindow(true);
+	await fetchPage(true);
 }
 
 async function loadMore(): Promise<void> {
-	if (!hasMore.value || loading.value || loadingMore.value) return;
-	await fetchWindow(false);
+	await fetchPage(false);
 }
 
 useGlobalEvent('noteDeleted', (noteId) => {

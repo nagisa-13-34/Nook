@@ -60,10 +60,16 @@ describe('RecommendationService', () => {
 			{} as NoteEntityService,
 		);
 		const internal = service as unknown as {
-			loadRecentEligibleLocalNotes(user: MiLocalUser, mutedChannels: Set<string>, limit: number): Promise<MiNote[]>;
+			loadRecentEligibleLocalNotes(
+				user: MiLocalUser,
+				mutedChannels: Set<string>,
+				limit: number,
+				snapshotAt: Date,
+				excludedNoteIds: ReadonlySet<string>,
+			): Promise<MiNote[]>;
 		};
 
-		await internal.loadRecentEligibleLocalNotes(me, new Set(), 40);
+		await internal.loadRecentEligibleLocalNotes(me, new Set(), 40, new Date(), new Set());
 
 		expect(query.andWhere).toHaveBeenCalledWith('note.userHost IS NULL');
 		expect(query.andWhere).toHaveBeenCalledWith(
@@ -72,6 +78,58 @@ describe('RecommendationService', () => {
 		);
 		expect(query.andWhere).toHaveBeenCalledWith('note.channelId IS NULL');
 		expect(query.andWhere).toHaveBeenCalledWith('note.replyId IS NULL');
+	});
+
+	test('filters displayed and post-snapshot notes before loading recommendation candidates', async () => {
+		const candidates = [
+			note('seen', 'author-1'),
+			note('future', 'author-2'),
+			note('eligible', 'author-3'),
+		];
+		const parsedDates = new Map([
+			['seen', new Date('2026-08-15T10:00:00.000Z')],
+			['future', new Date('2026-08-15T13:00:00.000Z')],
+			['eligible', new Date('2026-08-15T11:00:00.000Z')],
+		]);
+		const service = new RecommendationService(
+			{} as NotesRepository,
+			{
+				get: vi.fn().mockImplementation(async (name: string) => name === `homeTimeline:${me.id}` ? candidates.map(candidate => candidate.id) : []),
+			} as unknown as FanoutTimelineService,
+			{} as QueryService,
+			{
+				userFollowingChannelsCache: { fetch: vi.fn().mockResolvedValue(new Set<string>()) },
+			} as unknown as ChannelFollowingService,
+			{
+				mutingChannelsCache: { fetch: vi.fn().mockResolvedValue(new Set<string>()) },
+			} as unknown as ChannelMutingService,
+			{
+				parse: vi.fn().mockImplementation((id: string) => ({ date: parsedDates.get(id) ?? new Date(0) })),
+			} as unknown as IdService,
+			{
+				packMany: vi.fn().mockImplementation(async (notes: MiNote[]) => notes),
+			} as unknown as NoteEntityService,
+		);
+		const internal = service as unknown as {
+			loadEligibleNotes(noteIds: readonly string[], user: MiLocalUser, mutedChannels: Set<string>): Promise<MiNote[]>;
+			loadRecentEligibleLocalNotes(
+				user: MiLocalUser,
+				mutedChannels: Set<string>,
+				limit: number,
+				snapshotAt: Date,
+				excludedNoteIds: ReadonlySet<string>,
+			): Promise<MiNote[]>;
+		};
+		const loadEligibleNotes = vi.spyOn(internal, 'loadEligibleNotes').mockImplementation(async (ids) => candidates.filter(candidate => ids.includes(candidate.id)));
+		vi.spyOn(internal, 'loadRecentEligibleLocalNotes').mockResolvedValue([]);
+
+		const result = await service.getRecommendations(me, 1, {
+			snapshotAt: new Date('2026-08-15T12:00:00.000Z'),
+			excludeNoteIds: ['seen'],
+		});
+
+		expect(loadEligibleNotes.mock.calls[0]?.[0]).toEqual(['eligible']);
+		expect(result.map(resultNote => resultNote.id)).toEqual(['eligible']);
 	});
 
 	test('revalidates the full ranked pool so invalid top candidates are replaced', async () => {

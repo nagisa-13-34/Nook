@@ -42502,6 +42502,9 @@ export interface operations {
                 'application/json': {
                     /** @default 20 */
                     limit?: number;
+                    snapshotAt?: number;
+                    /** @default [] */
+                    excludeNoteIds?: string[];
                 };
             };
         };

@@ -27,7 +27,13 @@ import {
 
 const HOME_CANDIDATE_LIMIT = 160;
 const LOCAL_CANDIDATE_LIMIT = 240;
+const LOCAL_FALLBACK_SCAN_PAGES = 10;
 const MIN_CANDIDATE_MULTIPLIER = 3;
+
+export type RecommendationPageOptions = {
+	snapshotAt?: Date;
+	excludeNoteIds?: readonly MiNote['id'][];
+};
 
 @Injectable()
 export class RecommendationService {
@@ -45,8 +51,22 @@ export class RecommendationService {
 	}
 
 	@bindThis
-	public async getRecommendations(me: MiLocalUser, limit: number): Promise<Packed<'Note'>[]> {
-		const snapshotAt = new Date();
+	public async getRecommendations(me: MiLocalUser, limit: number, options: RecommendationPageOptions = {}): Promise<Packed<'Note'>[]> {
+		const requestStartedAt = new Date();
+		const requestedSnapshotTime = options.snapshotAt?.getTime();
+		const snapshotAt = requestedSnapshotTime != null && Number.isFinite(requestedSnapshotTime)
+			? new Date(Math.min(requestedSnapshotTime, requestStartedAt.getTime()))
+			: requestStartedAt;
+		const excludedNoteIds = new Set(options.excludeNoteIds ?? []);
+		const isPageCandidate = (noteId: MiNote['id']): boolean => {
+			if (excludedNoteIds.has(noteId)) return false;
+			try {
+				return this.idService.parse(noteId).date.getTime() <= snapshotAt.getTime();
+			} catch {
+				return false;
+			}
+		};
+
 		const [homeIds, localIds, followedChannels, mutedChannels] = await Promise.all([
 			this.fanoutTimelineService.get(`homeTimeline:${me.id}`),
 			this.fanoutTimelineService.get('localTimeline'),
@@ -55,14 +75,14 @@ export class RecommendationService {
 		]);
 
 		const sourcesByNoteId = new Map<MiNote['id'], Set<RecommendationSource>>();
-		this.addSource(sourcesByNoteId, homeIds.slice(0, HOME_CANDIDATE_LIMIT), 'home-network');
-		this.addSource(sourcesByNoteId, localIds.slice(0, LOCAL_CANDIDATE_LIMIT), 'local-discovery');
+		this.addSource(sourcesByNoteId, homeIds.filter(isPageCandidate).slice(0, HOME_CANDIDATE_LIMIT), 'home-network');
+		this.addSource(sourcesByNoteId, localIds.filter(isPageCandidate).slice(0, LOCAL_CANDIDATE_LIMIT), 'local-discovery');
 
 		let notes = await this.loadEligibleNotes([...sourcesByNoteId.keys()], me, mutedChannels);
 		const desiredPoolSize = Math.min(LOCAL_CANDIDATE_LIMIT, limit * MIN_CANDIDATE_MULTIPLIER);
 
 		if (notes.length < desiredPoolSize) {
-			const fallbackNotes = await this.loadRecentEligibleLocalNotes(me, mutedChannels, LOCAL_CANDIDATE_LIMIT);
+			const fallbackNotes = await this.loadRecentEligibleLocalNotes(me, mutedChannels, LOCAL_CANDIDATE_LIMIT, snapshotAt, excludedNoteIds);
 			for (const note of fallbackNotes) {
 				if (!sourcesByNoteId.has(note.id)) {
 					sourcesByNoteId.set(note.id, new Set(['local-discovery']));
@@ -130,17 +150,50 @@ export class RecommendationService {
 		return this.filterEligibleNotes(await query.getMany(), mutedChannels);
 	}
 
-	private async loadRecentEligibleLocalNotes(me: MiLocalUser, mutedChannels: Set<string>, limit: number): Promise<MiNote[]> {
-		const notes = await this.createEligibleQuery(me)
-			.andWhere('note.userHost IS NULL')
-			.andWhere('note.visibility = :recommendationPublicVisibility', { recommendationPublicVisibility: 'public' })
-			.andWhere('note.channelId IS NULL')
-			.andWhere('note.replyId IS NULL')
-			.orderBy('note.id', 'DESC')
-			.take(limit)
-			.getMany();
+	private async loadRecentEligibleLocalNotes(
+		me: MiLocalUser,
+		mutedChannels: Set<string>,
+		limit: number,
+		snapshotAt: Date,
+		excludedNoteIds: ReadonlySet<MiNote['id']>,
+	): Promise<MiNote[]> {
+		const result: MiNote[] = [];
+		let beforeId: MiNote['id'] | null = null;
 
-		return this.filterEligibleNotes(notes, mutedChannels);
+		for (let page = 0; page < LOCAL_FALLBACK_SCAN_PAGES && result.length < limit; page++) {
+			const query = this.createEligibleQuery(me)
+				.andWhere('note.userHost IS NULL')
+				.andWhere('note.visibility = :recommendationPublicVisibility', { recommendationPublicVisibility: 'public' })
+				.andWhere('note.channelId IS NULL')
+				.andWhere('note.replyId IS NULL');
+
+			if (beforeId != null) {
+				query.andWhere('note.id < :recommendationBeforeId', { recommendationBeforeId: beforeId });
+			}
+
+			const notes = await query
+				.orderBy('note.id', 'DESC')
+				.take(LOCAL_CANDIDATE_LIMIT)
+				.getMany();
+
+			if (notes.length === 0) break;
+
+			for (const note of this.filterEligibleNotes(notes, mutedChannels)) {
+				if (excludedNoteIds.has(note.id)) continue;
+				try {
+					if (this.idService.parse(note.id).date.getTime() > snapshotAt.getTime()) continue;
+				} catch {
+					continue;
+				}
+				result.push(note);
+				if (result.length >= limit) break;
+			}
+
+			beforeId = notes.at(-1)?.id ?? null;
+			if (notes.length < LOCAL_CANDIDATE_LIMIT || beforeId == null) break;
+		}
+
+		return result;
 	}
 
 	private createEligibleQuery(me: MiLocalUser) {

@@ -71,10 +71,13 @@ describe('notes/recommended', () => {
 
 		await expect(endpoint.exec({}, me, null)).resolves.toEqual([]);
 		expect(evaluate).toHaveBeenCalledWith(me, 'recommendation');
-		expect(getRecommendations).toHaveBeenCalledWith(me, 20);
+		expect(getRecommendations).toHaveBeenCalledWith(me, 20, {
+			snapshotAt: undefined,
+			excludeNoteIds: [],
+		});
 	});
 
-	test('accepts a larger recommendation window for infinite scrolling', async () => {
+	test('passes snapshot and displayed note ids to the next recommendation page', async () => {
 		const getRecommendations = vi.fn().mockResolvedValue([]);
 		const endpoint = new RecommendedEndpoint(
 			{ getRecommendations } as unknown as RecommendationService,
@@ -88,9 +91,17 @@ describe('notes/recommended', () => {
 				}),
 			} as unknown as NookAccessService,
 		);
+		const snapshotAt = Date.parse('2026-08-15T12:00:00.000Z');
 
-		await endpoint.exec({ limit: 80 }, me, null);
+		await endpoint.exec({
+			limit: 20,
+			snapshotAt,
+			excludeNoteIds: ['n1', 'n2'],
+		}, me, null);
 
-		expect(getRecommendations).toHaveBeenCalledWith(me, 80);
+		expect(getRecommendations).toHaveBeenCalledWith(me, 20, {
+			snapshotAt: new Date(snapshotAt),
+			excludeNoteIds: ['n1', 'n2'],
+		});
 	});
 });
