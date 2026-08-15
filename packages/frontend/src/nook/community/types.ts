@@ -51,4 +51,4 @@ export interface CommunityBot { id: string; communityId: string; creatorId: stri
 
 export interface VoiceConfig { ttsEnabled: boolean; ttsSourceChannelId: string | null; ttsLanguage: string | null; musicEnabled: boolean; }
 export interface VoiceMusic { url: string | null; title: string | null; positionSeconds: number; playing: boolean; updatedAt: string; }
-export interface VoiceHeartbeat { peers: string[]; canSpeak: boolean; config: VoiceConfig; music: VoiceMusic | null; }
+export interface VoiceHeartbeat { peers: string[]; speakingPeerIds: string[]; canSpeak: boolean; config: VoiceConfig; music: VoiceMusic | null; }
