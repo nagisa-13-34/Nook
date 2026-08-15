@@ -45,7 +45,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			}
 
 			const [bots, visibleChannels] = await Promise.all([
-				this.db.query<NookCommunityBotRecord[]>(`SELECT "id","communityId","creatorId","name","description","kind","scopes","allowedChannelIds","enabled","createdAt","updatedAt","lastUsedAt" FROM "nook_community_bot" WHERE "communityId"=$1 ORDER BY "createdAt" ASC`, [ps.communityId]),
+				this.db.query<NookCommunityBotRecord[]>('SELECT "id","communityId","creatorId","name","description","kind","scopes","allowedChannelIds","enabled","createdAt","updatedAt","lastUsedAt" FROM "nook_community_bot" WHERE "communityId"=$1 ORDER BY "createdAt" ASC', [ps.communityId]),
 				listNookCommunityChannels(this.db, ps.communityId, me.id),
 			]);
 			const visibleChannelIds = new Set(visibleChannels.map(channel => channel.id));

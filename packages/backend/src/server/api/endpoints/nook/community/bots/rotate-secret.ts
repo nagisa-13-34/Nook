@@ -13,7 +13,7 @@ import { rotateNookCommunityBotSecret, NookCommunityBotError } from '@/nook/comm
 import { ApiError } from '../../../../error.js';
 
 export const meta = { tags: ['channels'], requireCredential: true, kind: 'write:channels', res: { type: 'object', optional: false, nullable: false, properties: { secret: { type: 'string' } }, required: ['secret'] }, errors: { forbidden: { message: 'You cannot manage this bot.', code: 'FORBIDDEN', id: '522bb34e-6365-4a93-96b8-4a15f0d67fdb' }, noSuchBot: { message: 'No such bot.', code: 'NO_SUCH_BOT', id: '43f2e9a1-760d-4445-b44a-d44f5f998653' } } } as const;
-export const paramDef = { type: 'object', properties: { communityId: { type: 'string', format: 'misskey:id' }, botId: { type: 'string', format: 'misskey:id' } }, required: ['communityId','botId'] } as const;
+export const paramDef = { type: 'object', properties: { communityId: { type: 'string', format: 'misskey:id' }, botId: { type: 'string', format: 'misskey:id' } }, required: ['communityId', 'botId'] } as const;
 
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> {

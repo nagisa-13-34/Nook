@@ -57,7 +57,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 		</div>
 		<div v-if="channel && communityEnabled && tab === 'community'">
-			<NookCommunityPanel :communityId="channelId" :voice-enabled="voiceCallEnabled"/>
+			<NookCommunityPanel :communityId="channelId" :voiceEnabled="voiceCallEnabled"/>
 		</div>
 	</div>
 	<template #footer>

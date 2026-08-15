@@ -18,9 +18,11 @@ export const paramDef = { type: 'object', properties: { communityId: { type: 'st
 
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(@Inject(DI.db) private db: DataSource) { super(meta, paramDef, async (ps, me) => {
-		try { await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'members.invite'); } catch (error) { if (error instanceof NookCommunityAccessError) throw new ApiError(meta.errors.forbidden); throw error; }
-		const rows = await this.db.query<Array<{ id: string }>>('UPDATE "nook_community_invite" SET "revokedAt" = now() WHERE "id" = $1 AND "communityId" = $2 AND "revokedAt" IS NULL RETURNING "id"', [ps.inviteId, ps.communityId]);
-		if (rows[0] == null) throw new ApiError(meta.errors.noSuchInvite);
-	}); }
+	constructor(@Inject(DI.db) private db: DataSource) {
+		super(meta, paramDef, async (ps, me) => {
+			try { await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'members.invite'); } catch (error) { if (error instanceof NookCommunityAccessError) throw new ApiError(meta.errors.forbidden); throw error; }
+			const rows = await this.db.query<Array<{ id: string }>>('UPDATE "nook_community_invite" SET "revokedAt" = now() WHERE "id" = $1 AND "communityId" = $2 AND "revokedAt" IS NULL RETURNING "id"', [ps.inviteId, ps.communityId]);
+			if (rows[0] == null) throw new ApiError(meta.errors.noSuchInvite);
+		}); 
+	}
 }

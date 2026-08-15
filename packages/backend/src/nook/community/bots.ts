@@ -4,9 +4,9 @@
  */
 
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import type { DataSource } from 'typeorm';
 import type { IdService } from '@/core/IdService.js';
 import { requireNookCommunityChannelReference } from './references.js';
+import type { DataSource } from 'typeorm';
 
 export const nookCommunityBotScopes = ['read:messages', 'write:messages'] as const;
 export type NookCommunityBotScope = typeof nookCommunityBotScopes[number];
@@ -71,7 +71,7 @@ export async function createNookCommunityBot(db: DataSource, idService: IdServic
 
 export async function authenticateNookCommunityBot(db: DataSource, botId: string, secret: string, requiredScope: NookCommunityBotScope): Promise<NookCommunityBotRecord> {
 	const rows = await db.query<Array<NookCommunityBotRecord & { secretHash: string }>>(
-		`SELECT "id","communityId","creatorId","name","description","kind","secretHash","scopes","allowedChannelIds","enabled","createdAt","updatedAt","lastUsedAt" FROM "nook_community_bot" WHERE "id"=$1 LIMIT 1`, [botId]);
+		'SELECT "id","communityId","creatorId","name","description","kind","secretHash","scopes","allowedChannelIds","enabled","createdAt","updatedAt","lastUsedAt" FROM "nook_community_bot" WHERE "id"=$1 LIMIT 1', [botId]);
 	const bot = rows[0];
 	if (bot == null || !bot.enabled) throw new NookCommunityBotError('NO_SUCH_BOT');
 	if (!secretMatches(secret, bot.secretHash)) throw new NookCommunityBotError('INVALID_SECRET');

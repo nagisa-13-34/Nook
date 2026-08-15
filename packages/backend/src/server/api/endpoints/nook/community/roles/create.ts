@@ -19,14 +19,16 @@ export const meta = { tags: ['channels'], requireCredential: true, kind: 'write:
 export const paramDef = { type: 'object', properties: { communityId: { type: 'string', format: 'misskey:id' }, name: { type: 'string', minLength: 1, maxLength: 64 }, color: { type: 'string', maxLength: 16, nullable: true }, position: { type: 'integer', minimum: 0, maximum: 10000 }, permissions: { type: 'array', maxItems: 64, items: { type: 'string', maxLength: 64 } } }, required: ['communityId', 'name', 'permissions'] } as const;
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(@Inject(DI.db) private db: DataSource, private idService: IdService) { super(meta, paramDef, async (ps, me) => {
-		try {
-			const actor = await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'roles.manage');
-			assertCanGrantNookCommunityPermissions(actor, ps.permissions);
-		} catch (error) {
-			if (error instanceof NookCommunityAccessError || error instanceof NookCommunityAuthorizationError) throw new ApiError(meta.errors.forbidden);
-			throw error;
-		}
-		try { return await createNookCommunityRole(this.db, this.idService, { communityId: ps.communityId, name: ps.name, color: ps.color ?? null, position: ps.position ?? 0, permissions: ps.permissions }); } catch (error) { if (error instanceof NookCommunityRoleError && error.code === 'INVALID_PERMISSIONS') throw new ApiError(meta.errors.invalidPermissions); throw error; }
-	}); }
+	constructor(@Inject(DI.db) private db: DataSource, private idService: IdService) {
+		super(meta, paramDef, async (ps, me) => {
+			try {
+				const actor = await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'roles.manage');
+				assertCanGrantNookCommunityPermissions(actor, ps.permissions);
+			} catch (error) {
+				if (error instanceof NookCommunityAccessError || error instanceof NookCommunityAuthorizationError) throw new ApiError(meta.errors.forbidden);
+				throw error;
+			}
+			try { return await createNookCommunityRole(this.db, this.idService, { communityId: ps.communityId, name: ps.name, color: ps.color ?? null, position: ps.position ?? 0, permissions: ps.permissions }); } catch (error) { if (error instanceof NookCommunityRoleError && error.code === 'INVALID_PERMISSIONS') throw new ApiError(meta.errors.invalidPermissions); throw error; }
+		}); 
+	}
 }

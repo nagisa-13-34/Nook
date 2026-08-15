@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { DataSource } from 'typeorm';
 import type { IdService } from '@/core/IdService.js';
 import { requireNookCommunityChannelReference } from './references.js';
+import type { DataSource } from 'typeorm';
 
 export interface NookCommunityEventRecord {
 	id: string;
@@ -94,6 +94,6 @@ export async function setNookCommunityEventRsvp(db: DataSource, eventId: string,
 			);
 			if (Number(countRows[0]?.count ?? 0) >= event.maxAttendees) throw new Error('EVENT_FULL');
 		}
-		await manager.query(`INSERT INTO "nook_community_event_rsvp" ("eventId", "userId", "response") VALUES ($1,$2,$3) ON CONFLICT ("eventId","userId") DO UPDATE SET "response"=EXCLUDED."response", "updatedAt"=now()`, [eventId, userId, response]);
+		await manager.query('INSERT INTO "nook_community_event_rsvp" ("eventId", "userId", "response") VALUES ($1,$2,$3) ON CONFLICT ("eventId","userId") DO UPDATE SET "response"=EXCLUDED."response", "updatedAt"=now()', [eventId, userId, response]);
 	});
 }

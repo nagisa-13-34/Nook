@@ -55,7 +55,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 				if (error instanceof NookCommunityReferenceError) throw new ApiError(meta.errors.invalidTarget);
 				throw error;
 			}
-			const rows = await this.db.query(`INSERT INTO "nook_community_pin" ("id", "communityId", "channelId", "kind", "targetId", "url", "label", "createdBy") VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING "id", "communityId", "channelId", "kind", "targetId", "url", "label", "createdBy", "createdAt"`, [this.idService.gen(), ps.communityId, ps.channelId ?? null, ps.kind, ps.targetId ?? null, ps.url ?? null, ps.label ?? null, me.id]);
+			const rows = await this.db.query('INSERT INTO "nook_community_pin" ("id", "communityId", "channelId", "kind", "targetId", "url", "label", "createdBy") VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING "id", "communityId", "channelId", "kind", "targetId", "url", "label", "createdBy", "createdAt"', [this.idService.gen(), ps.communityId, ps.channelId ?? null, ps.kind, ps.targetId ?? null, ps.url ?? null, ps.label ?? null, me.id]);
 			return rows[0];
 		});
 	}

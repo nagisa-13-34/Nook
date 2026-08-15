@@ -4,9 +4,9 @@
  */
 
 import { createHash, randomBytes } from 'node:crypto';
-import type { DataSource } from 'typeorm';
 import type { IdService } from '@/core/IdService.js';
 import { ensureNookCommunity, getNookCommunityMembership } from './access.js';
+import type { DataSource } from 'typeorm';
 import type { NookCommunityBaseRole } from './types.js';
 
 export type NookCommunityJoinResult = 'joined' | 'pending';
@@ -130,7 +130,7 @@ export async function respondNookCommunityJoinRequest(
 		}
 
 		await manager.query(
-			`UPDATE "nook_community_join_request" SET "status" = $2, "respondedAt" = now(), "respondedBy" = $3 WHERE "id" = $1 AND "communityId" = $4`,
+			'UPDATE "nook_community_join_request" SET "status" = $2, "respondedAt" = now(), "respondedBy" = $3 WHERE "id" = $1 AND "communityId" = $4',
 			[requestId, approve ? 'approved' : 'rejected', responderId, communityId],
 		);
 		return { communityId: request.communityId, userId: request.userId };

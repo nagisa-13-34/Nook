@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { DataSource } from 'typeorm';
 import { ensureNookCommunity } from './access.js';
+import type { DataSource } from 'typeorm';
 import type { NookCommunityBaseRole } from './types.js';
 
 export class NookCommunityMemberError extends Error {

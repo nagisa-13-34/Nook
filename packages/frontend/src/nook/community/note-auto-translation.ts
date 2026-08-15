@@ -4,11 +4,11 @@
  */
 
 import { watch } from 'vue';
+import { nookApi } from './nook-api.js';
+import { nookAutoTranslateEnabled, nookAutoTranslateTargetLang } from './translation-preferences.js';
 import type { Ref } from 'vue';
 import type * as Misskey from 'misskey-js';
 import { $i } from '@/i.js';
-import { nookApi } from './nook-api.js';
-import { nookAutoTranslateEnabled, nookAutoTranslateTargetLang } from './translation-preferences.js';
 
 export function useNookNoteAutoTranslation(
 	note: Misskey.entities.Note,

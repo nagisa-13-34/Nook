@@ -12,8 +12,8 @@ import { listNookCommunityRoles } from '@/nook/community/roles.js';
 import { ApiError } from '../../../../error.js';
 
 export const meta = { tags: ['channels'], requireCredential: true, kind: 'read:channels',
-	res: { type: 'array', optional: false, nullable: false, items: { type: 'object', properties: { id: { type: 'string' }, communityId: { type: 'string' }, name: { type: 'string' }, color: { type: 'string', nullable: true }, position: { type: 'number' }, permissions: { type: 'array', items: { type: 'string' } } }, required: ['id', 'communityId', 'name', 'color', 'position', 'permissions'] } },
-	errors: { forbidden: { message: 'You cannot manage roles.', code: 'FORBIDDEN', id: '03b59256-3ea0-483a-a35b-b6fcb99e7e1a' } },
+																						res: { type: 'array', optional: false, nullable: false, items: { type: 'object', properties: { id: { type: 'string' }, communityId: { type: 'string' }, name: { type: 'string' }, color: { type: 'string', nullable: true }, position: { type: 'number' }, permissions: { type: 'array', items: { type: 'string' } } }, required: ['id', 'communityId', 'name', 'color', 'position', 'permissions'] } },
+																						errors: { forbidden: { message: 'You cannot manage roles.', code: 'FORBIDDEN', id: '03b59256-3ea0-483a-a35b-b6fcb99e7e1a' } },
 } as const;
 export const paramDef = { type: 'object', properties: { communityId: { type: 'string', format: 'misskey:id' } }, required: ['communityId'] } as const;
 @Injectable()
