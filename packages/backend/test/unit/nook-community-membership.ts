@@ -58,6 +58,7 @@ describe('Nook Community membership boundaries', () => {
 				calls.push({ sql, params });
 				if (sql.includes('FROM "channel" c')) return communityContext();
 				if (sql.includes('SELECT "baseRole", "state" FROM "nook_community_member"')) return [{ baseRole: 'member', state: 'banned' }];
+				if (sql.includes('FROM "nook_community_member_role"')) return [];
 				throw new Error(`Unexpected query: ${sql}`);
 			},
 			transaction: async <T>(callback: (transactionManager: typeof manager) => Promise<T>) => await callback(manager),
@@ -140,7 +141,7 @@ describe('Nook Community membership boundaries', () => {
 				assert.equal(userId, 'requester');
 				throw new Error('POLICY_DENIED');
 			}),
-			/error|POLICY_DENIED/,
+			/POLICY_DENIED/,
 		);
 		assert.equal(calls.some(call => call.sql.includes('INSERT INTO "nook_community_member"')), false);
 		assert.equal(calls.some(call => call.sql.includes('UPDATE "nook_community_join_request" SET "status"')), false);
