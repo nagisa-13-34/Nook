@@ -76,7 +76,7 @@ export class ApiServerService {
 		//this.createServer = this.createServer.bind(this);
 	}
 
-	private async ensureLegacyCommunityWriteAllowed(endpointKind: string | undefined, data: unknown): Promise<void> {
+	private async ensureLegacyCommunityWriteAllowed(endpointName: string, endpointKind: string | undefined, user: MiLocalUser | null | undefined, data: unknown): Promise<void> {
 		if (endpointKind == null || !endpointKind.startsWith('write:')) return;
 		if (typeof data !== 'object' || data == null) return;
 		const communityId = (data as Record<string, unknown>).communityId;
@@ -100,6 +100,11 @@ export class ApiServerService {
 		const row = rows[0];
 		if (row == null || row.initialized) return;
 		if (row.ownerId == null || row.isDeleted == null || row.isSuspended == null) throw new ApiError(nookCommunityPolicyDenied);
+
+		// A failed management write from a non-owner must not materialize a legacy
+		// Channel into a Community as a side effect. Public join is the one write
+		// that may legitimately materialize a legacy Community for a non-owner.
+		if (endpointName !== 'nook/community/join' && user?.id !== row.ownerId) return;
 
 		const owner = {
 			id: row.ownerId,
@@ -127,7 +132,7 @@ export class ApiServerService {
 			}
 		}
 
-		await this.ensureLegacyCommunityWriteAllowed(endpointKind, data);
+		await this.ensureLegacyCommunityWriteAllowed(endpointName, endpointKind, user, data);
 	}
 
 	@bindThis
@@ -239,12 +244,13 @@ export class ApiServerService {
 				select: { host: true },
 				where: {
 					suspensionState: 'none',
+				},
 			});
 
 			return instances.map(instance => instance.host);
 		});
 
-		fastify.post<{ Params: { session: string; } }>('/miauth/:session/check', async (request, reply) => {
+		fastify.post<{ Params: { session: string; } }>('/miauth/:session/check', (request, reply) => {
 			const token = await this.accessTokensRepository.findOneBy({
 				session: request.params.session,
 			});
