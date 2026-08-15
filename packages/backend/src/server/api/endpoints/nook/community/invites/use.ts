@@ -40,11 +40,11 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 				throw error;
 			}
-			const channel = await this.channelsRepository.findOneBy({ id: communityId });
-			if (channel != null) {
-				// Invite consumption and membership are already committed. Channel follow is best-effort only.
-				try { await this.channelFollowingService.follow(me, channel); } catch {}
-			}
+			// Invite consumption and membership are already committed. Backing Channel follow is best-effort only.
+			try {
+				const channel = await this.channelsRepository.findOneBy({ id: communityId });
+				if (channel != null) await this.channelFollowingService.follow(me, channel);
+			} catch {}
 			return { communityId };
 		});
 	}
