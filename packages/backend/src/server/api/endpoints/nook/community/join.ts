@@ -9,7 +9,6 @@ import type { ChannelsRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { IdService } from '@/core/IdService.js';
 import { ChannelFollowingService } from '@/core/ChannelFollowingService.js';
-import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { requestNookCommunityJoin, NookCommunityMembershipError } from '@/nook/community/membership.js';
 import { NookCommunityAccessError } from '@/nook/community/access.js';
@@ -46,9 +45,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				if (status === 'joined') {
 					const channel = await this.channelsRepository.findOneBy({ id: ps.communityId });
 					if (channel != null) {
-						try { await this.channelFollowingService.follow(me, channel); } catch (error) {
-							if (!(error instanceof IdentifiableError && error.id === '6e335e39-0203-4418-a936-b3f2dc987845')) throw error;
-						}
+						// Community membership is canonical. Following the backing Misskey Channel is only a convenience,
+						// so a follow-side failure must not turn an already-committed join into an API failure.
+						try { await this.channelFollowingService.follow(me, channel); } catch {}
 					}
 				}
 				return { status };
