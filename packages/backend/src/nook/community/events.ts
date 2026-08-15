@@ -63,6 +63,19 @@ export async function setNookCommunityEventRsvp(db: DataSource, eventId: string,
 		);
 		const event = events[0];
 		if (event == null || event.cancelledAt != null) throw new Error('EVENT_UNAVAILABLE');
+
+		const membershipRows = await manager.query<Array<{ state: 'active' | 'banned' }>>(
+			'SELECT "state" FROM "nook_community_member" WHERE "communityId"=$1 AND "userId"=$2 FOR SHARE',
+			[event.communityId, userId],
+		);
+		if (membershipRows[0]?.state !== 'active') {
+			const ownerRows = await manager.query<Array<{ userId: string | null }>>(
+				'SELECT "userId" FROM "channel" WHERE "id"=$1 LIMIT 1',
+				[event.communityId],
+			);
+			if (ownerRows[0]?.userId !== userId) throw new Error('EVENT_UNAVAILABLE');
+		}
+
 		if (response === 'going' && event.maxAttendees != null) {
 			const countRows = await manager.query<Array<{ count: string }>>(
 				`SELECT count(*)::text AS count
