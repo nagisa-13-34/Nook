@@ -87,6 +87,7 @@ export class NookTranslationService {
 		} finally {
 			this.releaseExternalTranslationSlot();
 		}
+		if (translation == null) throw new NookTranslationUnavailableError();
 
 		await this.db.query(
 			`INSERT INTO "nook_translation_cache" ("kind","objectId","sourceHash","targetLang","sourceLang","translatedText")
