@@ -32,6 +32,22 @@ const accessDenied = {
 	id: '56f35758-7dd5-468b-8439-5d6fb8ec9b8e',
 };
 
+function isSensitiveApiParamKey(key: string): boolean {
+	return key === 'i' || /password|token|secret|credential|authorization/i.test(key);
+}
+
+export function redactApiParamsForLogging(value: unknown): unknown {
+	if (Array.isArray(value)) return value.map(redactApiParamsForLogging);
+	if (value == null || typeof value !== 'object') return value;
+	const prototype = Object.getPrototypeOf(value);
+	if (prototype !== Object.prototype && prototype !== null) return value;
+	const redacted: Record<string, unknown> = {};
+	for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+		redacted[key] = isSensitiveApiParamKey(key) ? '[REDACTED]' : redactApiParamsForLogging(item);
+	}
+	return redacted;
+}
+
 @Injectable()
 export class ApiCallService implements OnApplicationShutdown {
 	private logger: Logger;
@@ -117,7 +133,7 @@ export class ApiCallService implements OnApplicationShutdown {
 				attributes: {
 					'api.endpoint': ep.name,
 					'error.id': errId,
-					'api.params': data,
+					'api.params': redactApiParamsForLogging(data),
 				},
 				error: err,
 			});
@@ -133,7 +149,6 @@ export class ApiCallService implements OnApplicationShutdown {
 						stack: err.stack,
 						id: errId,
 					},
-				},
 			});
 
 			throw new ApiError(null, {
