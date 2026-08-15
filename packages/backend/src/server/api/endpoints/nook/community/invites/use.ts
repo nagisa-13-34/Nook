@@ -29,8 +29,12 @@ export const paramDef = { type: 'object', properties: { token: { type: 'string',
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(@Inject(DI.db) private db: DataSource, @Inject(DI.channelsRepository) private channelsRepository: ChannelsRepository, private channelFollowingService: ChannelFollowingService) {
 		super(meta, paramDef, async (ps, me) => {
+			const token = ps.token;
+			ps.token = '[REDACTED]';
 			let communityId: string;
-			try { communityId = await useNookCommunityInvite(this.db, ps.token, me.id); } catch (error) {
+			try {
+				communityId = await useNookCommunityInvite(this.db, token, me.id);
+			} catch (error) {
 				if (error instanceof NookCommunityMembershipError) {
 					if (error.code === 'INVITE_EXPIRED') throw new ApiError(meta.errors.inviteExpired);
 					if (error.code === 'INVITE_EXHAUSTED') throw new ApiError(meta.errors.inviteExhausted);
