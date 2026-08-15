@@ -9,7 +9,7 @@ import { isNookCommunityPermission } from './permissions.js';
 import type { NookCommunityPermission } from './types.js';
 
 export class NookCommunityRoleError extends Error {
-	constructor(public readonly code: 'INVALID_PERMISSIONS' | 'NO_SUCH_ROLE') {
+	constructor(public readonly code: 'INVALID_PERMISSIONS' | 'NO_SUCH_ROLE' | 'ROLE_IN_USE') {
 		super(code);
 	}
 }
@@ -66,11 +66,27 @@ export async function updateNookCommunityRole(db: DataSource, input: { community
 }
 
 export async function deleteNookCommunityRole(db: DataSource, communityId: string, roleId: string): Promise<void> {
-	const result = await db.query<Array<{ id: string }>>(
-		'DELETE FROM "nook_community_role" WHERE "communityId" = $1 AND "id" = $2 RETURNING "id"',
-		[communityId, roleId],
-	);
-	if (result[0] == null) throw new NookCommunityRoleError('NO_SUCH_ROLE');
+	await db.transaction(async manager => {
+		const roleRows = await manager.query<Array<{ id: string }>>(
+			'SELECT "id" FROM "nook_community_role" WHERE "communityId" = $1 AND "id" = $2 FOR UPDATE',
+			[communityId, roleId],
+		);
+		if (roleRows[0] == null) throw new NookCommunityRoleError('NO_SUCH_ROLE');
+
+		const channelRows = await manager.query<Array<{ id: string }>>(
+			`SELECT "id" FROM "nook_community_channel"
+			 WHERE "communityId" = $1
+			 AND COALESCE("allowedRoleIds", '[]'::jsonb) ? $2
+			 LIMIT 1`,
+			[communityId, roleId],
+		);
+		if (channelRows[0] != null) throw new NookCommunityRoleError('ROLE_IN_USE');
+
+		await manager.query(
+			'DELETE FROM "nook_community_role" WHERE "communityId" = $1 AND "id" = $2',
+			[communityId, roleId],
+		);
+	});
 }
 
 export async function assignNookCommunityRole(db: DataSource, communityId: string, userId: string, roleId: string): Promise<void> {
