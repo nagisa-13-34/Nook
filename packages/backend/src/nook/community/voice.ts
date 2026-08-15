@@ -21,6 +21,13 @@ export interface NookVoiceIceServer {
 
 export type NookVoiceIceTransportPolicy = 'all' | 'relay';
 
+export interface NookVoiceConfig {
+	ttsEnabled: boolean;
+	ttsSourceChannelId: string | null;
+	ttsLanguage: string | null;
+	musicEnabled: boolean;
+}
+
 export interface NookVoiceMusicState {
 	url: string | null;
 	title: string | null;
@@ -61,6 +68,14 @@ export function getNookVoiceIceTransportPolicy(): NookVoiceIceTransportPolicy {
 	return process.env.NOOK_VOICE_ICE_TRANSPORT_POLICY === 'relay' ? 'relay' : 'all';
 }
 
+export function hideNookVoiceTtsSource(config: NookVoiceConfig): NookVoiceConfig {
+	return {
+		...config,
+		ttsEnabled: false,
+		ttsSourceChannelId: null,
+	};
+}
+
 async function cleanupVoiceRows(db: DataSource): Promise<void> {
 	await db.query(`DELETE FROM "nook_community_voice_presence" WHERE "lastSeenAt" < now() - interval '45 seconds'`);
 	await db.query(`DELETE FROM "nook_community_voice_signal" WHERE "createdAt" < now() - interval '2 minutes'`);
@@ -76,7 +91,7 @@ export async function requireVoiceSession(db: DataSource, channelId: string, use
 	if (rows[0] == null) throw new NookCommunityVoiceError('NO_SESSION');
 }
 
-async function authorizeVoiceSession(db: DataSource, channelId: string, userId: string, sessionId: string): Promise<{ canSpeak: boolean }> {
+async function authorizeVoiceSession(db: DataSource, channelId: string, userId: string, sessionId: string): Promise<{ canSpeak: boolean; communityId: string }> {
 	await requireVoiceSession(db, channelId, userId, sessionId);
 	const rows = await db.query<Array<{ communityId: string; kind: string; archivedAt: Date | null }>>(
 		'SELECT "communityId", "kind", "archivedAt" FROM "nook_community_channel" WHERE "id"=$1 LIMIT 1',
@@ -90,7 +105,10 @@ async function authorizeVoiceSession(db: DataSource, channelId: string, userId: 
 	try {
 		const membership = await requireNookCommunityPermission(db, channel.communityId, userId, 'voice.join');
 		await requireNookCommunityChannelAccess(db, channel.communityId, userId, channelId);
-		return { canSpeak: membership.permissions.has('*') || membership.permissions.has('voice.speak') };
+		return {
+			canSpeak: membership.permissions.has('*') || membership.permissions.has('voice.speak'),
+			communityId: channel.communityId,
+		};
 	} catch (error) {
 		if (error instanceof NookCommunityAccessError || error instanceof NookCommunityChannelError) {
 			await deleteVoiceSession(db, channelId, userId, sessionId);
@@ -152,13 +170,23 @@ export async function heartbeatNookCommunityVoice(db: DataSource, channelId: str
 	await cleanupVoiceRows(db);
 	const [authorizedPeers, configRows, musicRows] = await Promise.all([
 		listAuthorizedVoicePeers(db, channelId, userId),
-		db.query<Array<{ ttsEnabled: boolean; ttsSourceChannelId: string | null; ttsLanguage: string | null; musicEnabled: boolean }>>('SELECT "ttsEnabled","ttsSourceChannelId","ttsLanguage","musicEnabled" FROM "nook_community_voice_config" WHERE "channelId"=$1 LIMIT 1', [channelId]),
+		db.query<NookVoiceConfig[]>('SELECT "ttsEnabled","ttsSourceChannelId","ttsLanguage","musicEnabled" FROM "nook_community_voice_config" WHERE "channelId"=$1 LIMIT 1', [channelId]),
 		db.query<NookVoiceMusicState[]>('SELECT "url","title","positionSeconds","playing","updatedAt" FROM "nook_community_voice_music" WHERE "channelId"=$1 LIMIT 1', [channelId]),
 	]);
+	let config: NookVoiceConfig = configRows[0] ?? { ttsEnabled: false, ttsSourceChannelId: null, ttsLanguage: null, musicEnabled: false };
+	if (config.ttsEnabled && config.ttsSourceChannelId != null) {
+		try {
+			const source = await requireNookCommunityChannelAccess(db, authorization.communityId, userId, config.ttsSourceChannelId);
+			if (source.kind === 'voice' || source.archivedAt != null) config = hideNookVoiceTtsSource(config);
+		} catch (error) {
+			if (error instanceof NookCommunityAccessError || error instanceof NookCommunityChannelError) config = hideNookVoiceTtsSource(config);
+			else throw error;
+		}
+	}
 	return {
 		...serializePeerState(authorizedPeers),
 		canSpeak: authorization.canSpeak,
-		config: configRows[0] ?? { ttsEnabled: false, ttsSourceChannelId: null, ttsLanguage: null, musicEnabled: false },
+		config,
 		music: musicRows[0] ?? null,
 	};
 }
