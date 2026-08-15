@@ -1,0 +1,156 @@
+name: Community finalize (temporary)
+
+on:
+  push:
+    branches:
+      - fix/community-ci-stabilization
+    paths:
+      - .github/workflows/community-finalize-temp.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out fix branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/community-ci-stabilization
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply final source fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text()
+              if old not in text:
+                  raise SystemExit(f'expected text not found in {path}: {old!r}')
+              file.write_text(text.replace(old, new, 1))
+
+          replace(
+              'packages/backend/src/server/api/endpoints/chat/rooms/join.ts',
+              'participants.flatMap(participant => {',
+              'participants.flatMap<NookDirectChatPair>(participant => {',
+          )
+          replace(
+              'packages/backend/src/models/UserProfile.ts',
+              "\t@Column('boolean', {\n\t\tdefault: true,\n\t})\n\tpublic publicReactions: boolean;",
+              "\t@Column('boolean', {\n\t\tdefault: false,\n\t})\n\tpublic publicReactions: boolean;",
+          )
+          replace(
+              'packages/backend/test/unit/NookAccessService.ts',
+              "\t\tconst protected = localUser('protected');",
+              "\t\tconst protectedUser = localUser('protected');",
+          )
+          replace(
+              'packages/backend/test/unit/NookAccessService.ts',
+              'userId: protected.id',
+              'userId: protectedUser.id',
+          )
+          replace(
+              'packages/backend/test/unit/NookAccessService.ts',
+              '{ sender: protected, recipient: null, isMutual: false }',
+              '{ sender: protectedUser, recipient: null, isMutual: false }',
+          )
+          replace(
+              'packages/backend/test/unit/NookAccessService.ts',
+              '{ sender: adultDenied, recipient: protected, isMutual: true }',
+              '{ sender: adultDenied, recipient: protectedUser, isMutual: true }',
+          )
+          replace(
+              'packages/backend/src/server/api/endpoint-base.ts',
+              "ajv.addFormat('misskey:id', /^[a-zA-Z0-9]+$/);",
+              "ajv.addFormat('misskey:id', /^[a-zA-Z0-9]+$/);\najv.addFormat('date-time', value => /^\\d{4}-\\d{2}-\\d{2}T/.test(value) && Number.isFinite(Date.parse(value)));",
+          )
+          PY
+
+          pnpm --filter backend exec eslint --fix \
+            src/server/api/endpoints/chat/rooms/join.ts \
+            src/server/api/endpoints/nook/community/pins/list.ts \
+            src/models/UserProfile.ts \
+            src/server/api/endpoint-base.ts \
+            test/unit/NookAccessService.ts
+
+      - name: Commit source fixes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/backend/src packages/backend/test
+          if ! git diff --cached --quiet; then
+            git commit -m "Fix remaining Community verification failures"
+            git push origin HEAD:fix/community-ci-stabilization
+          fi
+
+      - name: Prepare test configuration
+        run: |
+          mkdir -p .config
+          cp .github/misskey/test.yml .config/test.yml
+          cp .github/misskey/test.yml .config/default.yml
+
+      - name: Build shared packages
+        run: |
+          pnpm build-pre
+          pnpm --filter i18n build
+          pnpm --filter misskey-reversi build
+          pnpm --filter misskey-js build
+          pnpm --filter misskey-bubble-game build
+
+      - name: Verify backend typecheck and lint
+        run: |
+          pnpm --filter backend typecheck
+          pnpm --filter backend eslint
+
+      - name: Verify scoped backend tests
+        run: >-
+          pnpm --filter backend exec vitest run --config vitest.config.unit.ts
+          test/unit/NookAccessService.ts
+          test/unit/NookChatRoomJoinEndpoint.ts
+          test/unit/NookLikesPrivacy.ts
+          test/unit/NookPolicyEngine.ts
+          test/unit/nook
+          test/unit/nook-community-access.ts
+          test/unit/nook-community-api-gate.ts
+          test/unit/nook-community-authorization.ts
+          test/unit/nook-community-endpoint-privacy.ts
+          test/unit/nook-community-events.ts
+          test/unit/nook-community-members.ts
+          test/unit/nook-community-membership.ts
+          test/unit/nook-community-references.ts
+          test/unit/nook-community-restricted-mutations.ts
+          test/unit/nook-community-roles.ts
+          test/unit/nook-community-voice-session.ts
+          test/unit/nook-translation-cache.ts
+
+      - name: Regenerate API client types
+        run: pnpm build-misskey-js-with-types
+
+      - name: Commit generated API types
+        shell: bash
+        run: |
+          git add packages/misskey-js/src/autogen
+          if ! git diff --cached --quiet; then
+            git commit -m "Regenerate Community API client types"
+            git push origin HEAD:fix/community-ci-stabilization
+          fi
