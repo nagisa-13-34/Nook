@@ -37,6 +37,7 @@ export class NookCommunityVoice1786727000000 {
             )
         `);
         await queryRunner.query(`CREATE INDEX "IDX_nook_community_voice_signal_target" ON "nook_community_voice_signal" ("channelId", "toUserId", "createdAt")`);
+        await queryRunner.query(`CREATE INDEX "IDX_nook_community_voice_signal_created" ON "nook_community_voice_signal" ("createdAt")`);
         await queryRunner.query(`
             CREATE TABLE "nook_community_voice_config" (
                 "channelId" varchar(32) NOT NULL,
