@@ -6,6 +6,7 @@
 import { Module } from '@nestjs/common';
 
 import { CoreModule } from '@/core/CoreModule.js';
+import { RecommendationService } from '@/core/RecommendationService.js';
 import { NookTranslationService } from '@/nook/translation/NookTranslationService.js';
 import * as upstreamEndpointsObject from './endpoint-list.js';
 import * as nookEndpointsObject from './nook-endpoint-list.js';
@@ -28,6 +29,7 @@ const endpointProviders = endpoints.map(([path, endpoint]): Provider => ({ provi
 		GetterService,
 		ApiLoggerService,
 		NookTranslationService,
+		RecommendationService,
 		...endpointProviders,
 	],
 	exports: [
