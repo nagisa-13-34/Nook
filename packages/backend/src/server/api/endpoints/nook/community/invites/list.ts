@@ -24,7 +24,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	constructor(@Inject(DI.db) private db: DataSource) {
 		super(meta, paramDef, async (ps, me) => {
 			try { await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'members.invite'); } catch (error) { if (error instanceof NookCommunityAccessError) throw new ApiError(meta.errors.forbidden); throw error; }
-			return await this.db.query(`SELECT "id", "creatorId", "maxUses", "useCount", "expiresAt", "revokedAt", "createdAt" FROM "nook_community_invite" WHERE "communityId" = $1 ORDER BY "createdAt" DESC LIMIT 200`, [ps.communityId]);
+			return await this.db.query('SELECT "id", "creatorId", "maxUses", "useCount", "expiresAt", "revokedAt", "createdAt" FROM "nook_community_invite" WHERE "communityId" = $1 ORDER BY "createdAt" DESC LIMIT 200', [ps.communityId]);
 		});
 	}
 }

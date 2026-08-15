@@ -10,9 +10,27 @@ import { Endpoint } from '@/server/api/endpoint-base.js';
 import { requireNookCommunityPermission, NookCommunityAccessError } from '@/nook/community/access.js';
 import { listNookCommunityChannels } from '@/nook/community/channels.js';
 import type { NookCommunityBotRecord } from '@/nook/community/bots.js';
+import { serializeNookCommunityBot } from '@/nook/community/serialize.js';
 import { ApiError } from '../../../../error.js';
 
-const botSchema = { type: 'object', properties: { id: { type: 'string' }, communityId: { type: 'string' }, creatorId: { type: 'string', nullable: true }, name: { type: 'string' }, description: { type: 'string', nullable: true }, kind: { type: 'string' }, scopes: { type: 'array', items: { type: 'string' } }, allowedChannelIds: { type: 'array', items: { type: 'string' } }, enabled: { type: 'boolean' }, createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' }, lastUsedAt: { type: 'string', format: 'date-time', nullable: true } }, required: ['id','communityId','creatorId','name','description','kind','scopes','allowedChannelIds','enabled','createdAt','updatedAt','lastUsedAt'] } as const;
+const botSchema = {
+	type: 'object',
+	properties: {
+		id: { type: 'string' },
+		communityId: { type: 'string' },
+		creatorId: { type: 'string', nullable: true },
+		name: { type: 'string' },
+		description: { type: 'string', nullable: true },
+		kind: { type: 'string' },
+		scopes: { type: 'array', items: { type: 'string' } },
+		allowedChannelIds: { type: 'array', items: { type: 'string' } },
+		enabled: { type: 'boolean' },
+		createdAt: { type: 'string', format: 'date-time' },
+		updatedAt: { type: 'string', format: 'date-time' },
+		lastUsedAt: { type: 'string', format: 'date-time', nullable: true },
+	},
+	required: ['id', 'communityId', 'creatorId', 'name', 'description', 'kind', 'scopes', 'allowedChannelIds', 'enabled', 'createdAt', 'updatedAt', 'lastUsedAt'],
+} as const;
 export const meta = { tags: ['channels'], requireCredential: true, kind: 'read:channels', res: { type: 'array', optional: false, nullable: false, items: botSchema }, errors: { forbidden: { message: 'You cannot manage bots.', code: 'FORBIDDEN', id: '86642cd8-6876-4351-b65e-0259416d27cb' } } } as const;
 export const paramDef = { type: 'object', properties: { communityId: { type: 'string', format: 'misskey:id' } }, required: ['communityId'] } as const;
 
@@ -28,12 +46,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			}
 
 			const [bots, visibleChannels] = await Promise.all([
-				this.db.query<NookCommunityBotRecord[]>(`SELECT "id","communityId","creatorId","name","description","kind","scopes","allowedChannelIds","enabled","createdAt","updatedAt","lastUsedAt" FROM "nook_community_bot" WHERE "communityId"=$1 ORDER BY "createdAt" ASC`, [ps.communityId]),
+				this.db.query<NookCommunityBotRecord[]>('SELECT "id","communityId","creatorId","name","description","kind","scopes","allowedChannelIds","enabled","createdAt","updatedAt","lastUsedAt" FROM "nook_community_bot" WHERE "communityId"=$1 ORDER BY "createdAt" ASC', [ps.communityId]),
 				listNookCommunityChannels(this.db, ps.communityId, me.id),
 			]);
 			const visibleChannelIds = new Set(visibleChannels.map(channel => channel.id));
 			return bots.map(bot => ({
-				...bot,
+				...serializeNookCommunityBot(bot),
 				allowedChannelIds: Array.isArray(bot.allowedChannelIds)
 					? bot.allowedChannelIds.filter(channelId => visibleChannelIds.has(channelId))
 					: [],

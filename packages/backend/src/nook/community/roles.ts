@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { DataSource } from 'typeorm';
 import type { IdService } from '@/core/IdService.js';
 import { isNookCommunityPermission } from './permissions.js';
+import type { DataSource } from 'typeorm';
 import type { NookCommunityPermission } from './types.js';
 
 export class NookCommunityRoleError extends Error {

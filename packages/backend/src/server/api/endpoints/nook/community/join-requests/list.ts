@@ -27,7 +27,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				if (error instanceof NookCommunityAccessError) throw new ApiError(meta.errors.forbidden);
 				throw error;
 			}
-			return await this.db.query(`SELECT "id", "userId", "message", "createdAt" FROM "nook_community_join_request" WHERE "communityId" = $1 AND "status" = 'pending' ORDER BY "createdAt" ASC LIMIT 200`, [ps.communityId]);
+			return await this.db.query('SELECT "id", "userId", "message", "createdAt" FROM "nook_community_join_request" WHERE "communityId" = $1 AND "status" = \'pending\' ORDER BY "createdAt" ASC LIMIT 200', [ps.communityId]);
 		});
 	}
 }

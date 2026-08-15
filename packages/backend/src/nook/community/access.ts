@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { DataSource } from 'typeorm';
 import { baseRolePermissions, isNookCommunityPermission } from './permissions.js';
+import type { DataSource } from 'typeorm';
 import type { NookCommunityBaseRole, NookCommunityContext, NookCommunityMembership, NookCommunityPermission } from './types.js';
 
 export class NookCommunityAccessError extends Error {
@@ -61,7 +61,7 @@ export async function ensureNookCommunity(db: DataSource, communityId: string): 
 	if (row.initialized) return contextFromRow(communityId, row);
 
 	await db.query(
-		`INSERT INTO "nook_community" ("channelId") VALUES ($1) ON CONFLICT ("channelId") DO NOTHING`,
+		'INSERT INTO "nook_community" ("channelId") VALUES ($1) ON CONFLICT ("channelId") DO NOTHING',
 		[communityId],
 	);
 	if (row.userId != null) {

@@ -26,6 +26,9 @@ export async function nookApi<T = never>(endpoint: string, data: Record<string, 
 	});
 	if (response.status === 204) return undefined as T;
 	const json = await response.json();
-	if (!response.ok) throw (json.error ?? json) as NookApiError;
+	if (!response.ok) {
+		const apiError = (json.error ?? json) as NookApiError;
+		throw Object.assign(new Error(apiError.message ?? `Nook API request failed (${response.status})`), apiError);
+	}
 	return json as T;
 }

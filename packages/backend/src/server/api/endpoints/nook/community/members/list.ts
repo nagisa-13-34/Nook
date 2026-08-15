@@ -20,11 +20,22 @@ export const meta = { tags: ['channels'], requireCredential: true, kind: 'read:c
 export const paramDef = { type: 'object', properties: { communityId: { type: 'string', format: 'misskey:id' } }, required: ['communityId'] } as const;
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(@Inject(DI.db) private db: DataSource) { super(meta, paramDef, async (ps, me) => {
-		let membership;
-		try { membership = await requireNookCommunityMember(this.db, ps.communityId, me.id); } catch (error) { if (error instanceof NookCommunityAccessError) throw new ApiError(meta.errors.forbidden); throw error; }
-		const members = await listNookCommunityMembers(this.db, ps.communityId) as Array<{ roleIds: string[] } & Record<string, unknown>>;
-		if (membership.permissions.has('*') || membership.permissions.has('roles.manage')) return members;
-		return members.map(member => ({ ...member, roleIds: [] }));
-	}); }
+	constructor(@Inject(DI.db) private db: DataSource) {
+		super(meta, paramDef, async (ps, me) => {
+			let membership;
+			try {
+				membership = await requireNookCommunityMember(this.db, ps.communityId, me.id);
+			} catch (error) {
+				if (error instanceof NookCommunityAccessError) throw new ApiError(meta.errors.forbidden);
+				throw error;
+			}
+			const members = await listNookCommunityMembers(this.db, ps.communityId);
+			const canManageRoles = membership.permissions.has('*') || membership.permissions.has('roles.manage');
+			return members.map(member => ({
+				...member,
+				joinedAt: member.joinedAt.toISOString(),
+				roleIds: canManageRoles ? member.roleIds : [],
+			}));
+		});
+	}
 }

@@ -33,6 +33,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				if (error instanceof NookCommunityMembershipError && (error.code === 'BANNED' || error.code === 'NOT_MEMBER')) throw new ApiError(meta.errors.notActiveMember);
 				throw error;
 			}
-	});
+		});
 	}
 }

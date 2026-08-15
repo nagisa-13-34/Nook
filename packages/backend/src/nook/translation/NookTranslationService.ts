@@ -6,10 +6,10 @@
 import { createHash } from 'node:crypto';
 import { URLSearchParams } from 'node:url';
 import { Inject, Injectable } from '@nestjs/common';
-import type { DataSource } from 'typeorm';
 import type { MiMeta } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
+import type { DataSource } from 'typeorm';
 
 export type NookTranslationKind = 'note' | 'communityMessage' | 'communityAnnouncement' | 'communityEvent';
 export const nookTranslationCacheTtlDays = 30;

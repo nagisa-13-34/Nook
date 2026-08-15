@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { DataSource } from 'typeorm';
 import type { IdService } from '@/core/IdService.js';
 import { requireNookCommunityMember } from './access.js';
 import { requireNookCommunityChannelReference, requireNookCommunityRoleReferences } from './references.js';
+import type { DataSource } from 'typeorm';
 
 export type NookCommunityChannelKind = 'text' | 'announcement' | 'media' | 'forum' | 'voice';
 

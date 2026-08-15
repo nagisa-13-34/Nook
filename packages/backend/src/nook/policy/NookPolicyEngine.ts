@@ -24,7 +24,7 @@ export class NookPolicyEngine {
 				policy.id === subject.assignedPolicyId &&
 				(policy.country === subject.country || policy.country === '*') &&
 				policy.ageGroup === subject.ageGroup &&
-				policy.accountStates.includes(subject.accountState)
+				policy.accountStates.includes(subject.accountState),
 			) ?? null;
 		}
 
@@ -33,7 +33,7 @@ export class NookPolicyEngine {
 				policy.enabled &&
 				(policy.country === subject.country || policy.country === '*') &&
 				policy.ageGroup === subject.ageGroup &&
-				policy.accountStates.includes(subject.accountState)
+				policy.accountStates.includes(subject.accountState),
 			)
 			.sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id))[0] ?? null;
 	}

@@ -18,7 +18,7 @@ import { ApiError } from '../../error.js';
 
 export const meta = {
 	tags: ['notes'], requireCredential: true, kind: 'read:account', limit: { duration: 60000, max: 120 },
-	res: { type: 'object', optional: false, nullable: false, properties: { sourceLang: { type: 'string' }, text: { type: 'string' } }, required: ['sourceLang','text'] },
+	res: { type: 'object', optional: false, nullable: false, properties: { sourceLang: { type: 'string' }, text: { type: 'string' } }, required: ['sourceLang', 'text'] },
 	errors: {
 		unavailable: { message: 'Translation is unavailable.', code: 'UNAVAILABLE', id: '572273ec-21cd-4560-9537-1709427d74e0' },
 		noSuchObject: { message: 'No such translatable object.', code: 'NO_SUCH_OBJECT', id: '7909dc3c-5a93-4409-b02c-51f1407b56c2' },
@@ -27,8 +27,8 @@ export const meta = {
 	},
 } as const;
 export const paramDef = { type: 'object', properties: {
-	kind: { type: 'string', enum: ['note','communityMessage','communityAnnouncement','communityEvent'] }, id: { type: 'string', minLength: 1, maxLength: 64 }, targetLang: { type: 'string', minLength: 2, maxLength: 24 },
-}, required: ['kind','id','targetLang'] } as const;
+	kind: { type: 'string', enum: ['note', 'communityMessage', 'communityAnnouncement', 'communityEvent'] }, id: { type: 'string', minLength: 1, maxLength: 64 }, targetLang: { type: 'string', minLength: 2, maxLength: 24 },
+}, required: ['kind', 'id', 'targetLang'] } as const;
 
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
@@ -53,7 +53,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				text = note.text;
 			} else if (ps.kind === 'communityMessage') {
 				const rows = await this.db.query<Array<{ communityId: string; channelId: string; body: string }>>(
-					`SELECT "communityId","channelId","body" FROM "nook_community_message" WHERE "id"=$1 AND "deletedAt" IS NULL LIMIT 1`, [ps.id]);
+					'SELECT "communityId","channelId","body" FROM "nook_community_message" WHERE "id"=$1 AND "deletedAt" IS NULL LIMIT 1', [ps.id]);
 				const message = rows[0];
 				if (message == null) throw new ApiError(meta.errors.noSuchObject);
 				try { await requireNookCommunityChannelAccess(this.db, message.communityId, me.id, message.channelId); } catch (error) {

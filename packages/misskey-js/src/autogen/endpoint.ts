@@ -674,6 +674,95 @@ import type {
 	V2AdminEmojiListRequest,
 	V2AdminEmojiListResponse,
 	VerifyEmailRequest,
+	NookCommunityAnnouncementsCreateRequest,
+	NookCommunityAnnouncementsCreateResponse,
+	NookCommunityAnnouncementsDeleteRequest,
+	NookCommunityAnnouncementsListRequest,
+	NookCommunityAnnouncementsListResponse,
+	NookCommunityAnnouncementsUpdateRequest,
+	NookCommunityBotsCreateRequest,
+	NookCommunityBotsCreateResponse,
+	NookCommunityBotsListRequest,
+	NookCommunityBotsListResponse,
+	NookCommunityBotsMessagesListRequest,
+	NookCommunityBotsMessagesListResponse,
+	NookCommunityBotsPostRequest,
+	NookCommunityBotsPostResponse,
+	NookCommunityBotsRotateSecretRequest,
+	NookCommunityBotsRotateSecretResponse,
+	NookCommunityBotsUpdateRequest,
+	NookCommunityChannelsCreateRequest,
+	NookCommunityChannelsCreateResponse,
+	NookCommunityChannelsDeleteRequest,
+	NookCommunityChannelsListRequest,
+	NookCommunityChannelsListResponse,
+	NookCommunityChannelsUpdateRequest,
+	NookCommunityEventsCreateRequest,
+	NookCommunityEventsCreateResponse,
+	NookCommunityEventsDeleteRequest,
+	NookCommunityEventsListRequest,
+	NookCommunityEventsListResponse,
+	NookCommunityEventsRsvpRequest,
+	NookCommunityEventsUpdateRequest,
+	NookCommunityInvitesCreateRequest,
+	NookCommunityInvitesCreateResponse,
+	NookCommunityInvitesListRequest,
+	NookCommunityInvitesListResponse,
+	NookCommunityInvitesRevokeRequest,
+	NookCommunityInvitesUseRequest,
+	NookCommunityInvitesUseResponse,
+	NookCommunityJoinRequest,
+	NookCommunityJoinResponse,
+	NookCommunityJoinRequestsListRequest,
+	NookCommunityJoinRequestsListResponse,
+	NookCommunityJoinRequestsRespondRequest,
+	NookCommunityLeaveRequest,
+	NookCommunityMembersListRequest,
+	NookCommunityMembersListResponse,
+	NookCommunityMembersUpdateRequest,
+	NookCommunityMessagesCreateRequest,
+	NookCommunityMessagesCreateResponse,
+	NookCommunityMessagesDeleteRequest,
+	NookCommunityMessagesListRequest,
+	NookCommunityMessagesListResponse,
+	NookCommunityPinsCreateRequest,
+	NookCommunityPinsCreateResponse,
+	NookCommunityPinsDeleteRequest,
+	NookCommunityPinsListRequest,
+	NookCommunityPinsListResponse,
+	NookCommunityRolesAssignRequest,
+	NookCommunityRolesCreateRequest,
+	NookCommunityRolesCreateResponse,
+	NookCommunityRolesDeleteRequest,
+	NookCommunityRolesListRequest,
+	NookCommunityRolesListResponse,
+	NookCommunityRolesUpdateRequest,
+	NookCommunityRolesUpdateResponse,
+	NookCommunityRulesCreateRequest,
+	NookCommunityRulesCreateResponse,
+	NookCommunityRulesDeleteRequest,
+	NookCommunityRulesListRequest,
+	NookCommunityRulesListResponse,
+	NookCommunityRulesUpdateRequest,
+	NookCommunityRulesUpdateResponse,
+	NookCommunitySearchRequest,
+	NookCommunitySearchResponse,
+	NookCommunitySettingsUpdateRequest,
+	NookCommunityShowRequest,
+	NookCommunityShowResponse,
+	NookCommunityVoiceConfigUpdateRequest,
+	NookCommunityVoiceHeartbeatRequest,
+	NookCommunityVoiceHeartbeatResponse,
+	NookCommunityVoiceJoinRequest,
+	NookCommunityVoiceJoinResponse,
+	NookCommunityVoiceLeaveRequest,
+	NookCommunityVoiceMusicUpdateRequest,
+	NookCommunityVoiceSignalRequest,
+	NookCommunityVoiceSignalsRequest,
+	NookCommunityVoiceSignalsResponse,
+	NookFeaturesResponse,
+	NookTranslateRequest,
+	NookTranslateResponse,
 } from './entities.js';
 
 export type Endpoints = {
@@ -1120,6 +1209,62 @@ export type Endpoints = {
 	'users/update-memo': { req: UsersUpdateMemoRequest; res: EmptyResponse };
 	'v2/admin/emoji/list': { req: V2AdminEmojiListRequest; res: V2AdminEmojiListResponse };
 	'verify-email': { req: VerifyEmailRequest; res: EmptyResponse };
+	'nook/community/announcements/create': { req: NookCommunityAnnouncementsCreateRequest; res: NookCommunityAnnouncementsCreateResponse };
+	'nook/community/announcements/delete': { req: NookCommunityAnnouncementsDeleteRequest; res: EmptyResponse };
+	'nook/community/announcements/list': { req: NookCommunityAnnouncementsListRequest; res: NookCommunityAnnouncementsListResponse };
+	'nook/community/announcements/update': { req: NookCommunityAnnouncementsUpdateRequest; res: EmptyResponse };
+	'nook/community/bots/create': { req: NookCommunityBotsCreateRequest; res: NookCommunityBotsCreateResponse };
+	'nook/community/bots/list': { req: NookCommunityBotsListRequest; res: NookCommunityBotsListResponse };
+	'nook/community/bots/messages-list': { req: NookCommunityBotsMessagesListRequest; res: NookCommunityBotsMessagesListResponse };
+	'nook/community/bots/post': { req: NookCommunityBotsPostRequest; res: NookCommunityBotsPostResponse };
+	'nook/community/bots/rotate-secret': { req: NookCommunityBotsRotateSecretRequest; res: NookCommunityBotsRotateSecretResponse };
+	'nook/community/bots/update': { req: NookCommunityBotsUpdateRequest; res: EmptyResponse };
+	'nook/community/channels/create': { req: NookCommunityChannelsCreateRequest; res: NookCommunityChannelsCreateResponse };
+	'nook/community/channels/delete': { req: NookCommunityChannelsDeleteRequest; res: EmptyResponse };
+	'nook/community/channels/list': { req: NookCommunityChannelsListRequest; res: NookCommunityChannelsListResponse };
+	'nook/community/channels/update': { req: NookCommunityChannelsUpdateRequest; res: EmptyResponse };
+	'nook/community/events/create': { req: NookCommunityEventsCreateRequest; res: NookCommunityEventsCreateResponse };
+	'nook/community/events/delete': { req: NookCommunityEventsDeleteRequest; res: EmptyResponse };
+	'nook/community/events/list': { req: NookCommunityEventsListRequest; res: NookCommunityEventsListResponse };
+	'nook/community/events/rsvp': { req: NookCommunityEventsRsvpRequest; res: EmptyResponse };
+	'nook/community/events/update': { req: NookCommunityEventsUpdateRequest; res: EmptyResponse };
+	'nook/community/invites/create': { req: NookCommunityInvitesCreateRequest; res: NookCommunityInvitesCreateResponse };
+	'nook/community/invites/list': { req: NookCommunityInvitesListRequest; res: NookCommunityInvitesListResponse };
+	'nook/community/invites/revoke': { req: NookCommunityInvitesRevokeRequest; res: EmptyResponse };
+	'nook/community/invites/use': { req: NookCommunityInvitesUseRequest; res: NookCommunityInvitesUseResponse };
+	'nook/community/join': { req: NookCommunityJoinRequest; res: NookCommunityJoinResponse };
+	'nook/community/join-requests/list': { req: NookCommunityJoinRequestsListRequest; res: NookCommunityJoinRequestsListResponse };
+	'nook/community/join-requests/respond': { req: NookCommunityJoinRequestsRespondRequest; res: EmptyResponse };
+	'nook/community/leave': { req: NookCommunityLeaveRequest; res: EmptyResponse };
+	'nook/community/members/list': { req: NookCommunityMembersListRequest; res: NookCommunityMembersListResponse };
+	'nook/community/members/update': { req: NookCommunityMembersUpdateRequest; res: EmptyResponse };
+	'nook/community/messages/create': { req: NookCommunityMessagesCreateRequest; res: NookCommunityMessagesCreateResponse };
+	'nook/community/messages/delete': { req: NookCommunityMessagesDeleteRequest; res: EmptyResponse };
+	'nook/community/messages/list': { req: NookCommunityMessagesListRequest; res: NookCommunityMessagesListResponse };
+	'nook/community/pins/create': { req: NookCommunityPinsCreateRequest; res: NookCommunityPinsCreateResponse };
+	'nook/community/pins/delete': { req: NookCommunityPinsDeleteRequest; res: EmptyResponse };
+	'nook/community/pins/list': { req: NookCommunityPinsListRequest; res: NookCommunityPinsListResponse };
+	'nook/community/roles/assign': { req: NookCommunityRolesAssignRequest; res: EmptyResponse };
+	'nook/community/roles/create': { req: NookCommunityRolesCreateRequest; res: NookCommunityRolesCreateResponse };
+	'nook/community/roles/delete': { req: NookCommunityRolesDeleteRequest; res: EmptyResponse };
+	'nook/community/roles/list': { req: NookCommunityRolesListRequest; res: NookCommunityRolesListResponse };
+	'nook/community/roles/update': { req: NookCommunityRolesUpdateRequest; res: NookCommunityRolesUpdateResponse };
+	'nook/community/rules/create': { req: NookCommunityRulesCreateRequest; res: NookCommunityRulesCreateResponse };
+	'nook/community/rules/delete': { req: NookCommunityRulesDeleteRequest; res: EmptyResponse };
+	'nook/community/rules/list': { req: NookCommunityRulesListRequest; res: NookCommunityRulesListResponse };
+	'nook/community/rules/update': { req: NookCommunityRulesUpdateRequest; res: NookCommunityRulesUpdateResponse };
+	'nook/community/search': { req: NookCommunitySearchRequest; res: NookCommunitySearchResponse };
+	'nook/community/settings-update': { req: NookCommunitySettingsUpdateRequest; res: EmptyResponse };
+	'nook/community/show': { req: NookCommunityShowRequest; res: NookCommunityShowResponse };
+	'nook/community/voice/config-update': { req: NookCommunityVoiceConfigUpdateRequest; res: EmptyResponse };
+	'nook/community/voice/heartbeat': { req: NookCommunityVoiceHeartbeatRequest; res: NookCommunityVoiceHeartbeatResponse };
+	'nook/community/voice/join': { req: NookCommunityVoiceJoinRequest; res: NookCommunityVoiceJoinResponse };
+	'nook/community/voice/leave': { req: NookCommunityVoiceLeaveRequest; res: EmptyResponse };
+	'nook/community/voice/music-update': { req: NookCommunityVoiceMusicUpdateRequest; res: EmptyResponse };
+	'nook/community/voice/signal': { req: NookCommunityVoiceSignalRequest; res: EmptyResponse };
+	'nook/community/voice/signals': { req: NookCommunityVoiceSignalsRequest; res: NookCommunityVoiceSignalsResponse };
+	'nook/features': { req: EmptyRequest; res: NookFeaturesResponse };
+	'nook/translate': { req: NookTranslateRequest; res: NookTranslateResponse };
 };
 
 /**

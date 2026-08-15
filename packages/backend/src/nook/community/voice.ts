@@ -4,12 +4,12 @@
  */
 
 import { randomBytes } from 'node:crypto';
-import type { DataSource } from 'typeorm';
 import type { IdService } from '@/core/IdService.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 import { requireNookCommunityPermission, NookCommunityAccessError } from './access.js';
 import { requireNookCommunityChannelAccess, NookCommunityChannelError } from './channels.js';
+import type { DataSource } from 'typeorm';
 
 export class NookCommunityVoiceError extends Error {
 	constructor(public readonly code: 'NOT_VOICE_CHANNEL' | 'NO_SESSION' | 'NO_TARGET') { super(code); }
@@ -103,8 +103,8 @@ async function cleanupVoiceRows(db: DataSource): Promise<void> {
 	// Advance before awaiting so simultaneous heartbeats in this process do not all run the same global cleanup.
 	nextVoiceCleanupAt = now + voiceCleanupIntervalMs;
 	try {
-		await db.query(`DELETE FROM "nook_community_voice_presence" WHERE "lastSeenAt" < now() - interval '45 seconds'`);
-		await db.query(`DELETE FROM "nook_community_voice_signal" WHERE "createdAt" < now() - interval '2 minutes'`);
+		await db.query('DELETE FROM "nook_community_voice_presence" WHERE "lastSeenAt" < now() - interval \'45 seconds\'');
+		await db.query('DELETE FROM "nook_community_voice_signal" WHERE "createdAt" < now() - interval \'2 minutes\'');
 	} catch (error) {
 		nextVoiceCleanupAt = 0;
 		throw error;
@@ -255,7 +255,7 @@ export async function sendNookCommunityVoiceSignal(db: DataSource, nookAccessSer
 export async function consumeNookCommunityVoiceSignals(db: DataSource, nookAccessService: NookAccessService, channelId: string, userId: string, sessionId: string) {
 	await authorizeVoiceSession(db, nookAccessService, channelId, userId, sessionId);
 	return await db.transaction(async manager => {
-		const rows = await manager.query<Array<{ id: string; fromUserId: string; type: string; payload: string; createdAt: Date }>>(`SELECT "id","fromUserId","type","payload","createdAt" FROM "nook_community_voice_signal" WHERE "channelId"=$1 AND "toUserId"=$2 ORDER BY "createdAt" ASC LIMIT 100 FOR UPDATE SKIP LOCKED`, [channelId, userId]);
+		const rows = await manager.query<Array<{ id: string; fromUserId: string; type: string; payload: string; createdAt: Date }>>('SELECT "id","fromUserId","type","payload","createdAt" FROM "nook_community_voice_signal" WHERE "channelId"=$1 AND "toUserId"=$2 ORDER BY "createdAt" ASC LIMIT 100 FOR UPDATE SKIP LOCKED', [channelId, userId]);
 		if (rows.length > 0) await manager.query('DELETE FROM "nook_community_voice_signal" WHERE "id" = ANY($1::varchar[])', [rows.map(row => row.id)]);
 		return rows;
 	});

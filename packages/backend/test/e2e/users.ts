@@ -459,7 +459,7 @@ describe('ユーザー', () => {
 			}, alice);
 
 			assert.strictEqual(response.status, 400);
-			assert.strictEqual(castAsError(response.body).error.code, 'BOTH_WITH_REPLIES_AND_WITH_FILES');
+			assert.strictEqual(castAsError(response.body as any).error.code, 'BOTH_WITH_REPLIES_AND_WITH_FILES');
 		});
 	});
 
