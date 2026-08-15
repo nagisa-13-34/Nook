@@ -10,7 +10,6 @@ import type { MiLocalUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { ChannelFollowingService } from '@/core/ChannelFollowingService.js';
-import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 import { requireNookCommunityPermission, NookCommunityAccessError } from '@/nook/community/access.js';
 import { respondNookCommunityJoinRequest, NookCommunityMembershipError } from '@/nook/community/membership.js';
@@ -69,9 +68,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					this.usersRepository.findOneBy({ id: result.userId, host: null }),
 				]);
 				if (channel != null && user != null) {
-					try { await this.channelFollowingService.follow(user as MiLocalUser, channel); } catch (error) {
-						if (!(error instanceof IdentifiableError && error.id === '6e335e39-0203-4418-a936-b3f2dc987845')) throw error;
-					}
+					// Approval already committed membership; backing Channel follow must remain best-effort.
+					try { await this.channelFollowingService.follow(user as MiLocalUser, channel); } catch {}
 				}
 			}
 		});
