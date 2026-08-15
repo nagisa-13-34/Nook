@@ -52,13 +52,15 @@ export async function requireNookCommunityChannelAccess(db: DataSource, communit
 }
 
 export async function createNookCommunityChannel(db: DataSource, idService: IdService, input: Omit<NookCommunityChannelRecord, 'id' | 'archivedAt'>): Promise<NookCommunityChannelRecord> {
-	if (input.parentId != null) await requireNookCommunityChannelReference(db, input.communityId, input.parentId);
-	await requireNookCommunityRoleReferences(db, input.communityId, input.allowedRoleIds);
-	const rows = await db.query<NookCommunityChannelRecord[]>(
-		`INSERT INTO "nook_community_channel" ("id", "communityId", "parentId", "name", "topic", "kind", "position", "allowedRoleIds")
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
-		 RETURNING "id", "communityId", "parentId", "name", "topic", "kind", "position", "allowedRoleIds", "archivedAt"`,
-		[idService.gen(), input.communityId, input.parentId, input.name, input.topic, input.kind, input.position, JSON.stringify(input.allowedRoleIds)],
-	);
-	return rows[0];
+	return await db.transaction(async manager => {
+		if (input.parentId != null) await requireNookCommunityChannelReference(manager, input.communityId, input.parentId);
+		await requireNookCommunityRoleReferences(manager, input.communityId, input.allowedRoleIds, { lockForWrite: true });
+		const rows = await manager.query<NookCommunityChannelRecord[]>(
+			`INSERT INTO "nook_community_channel" ("id", "communityId", "parentId", "name", "topic", "kind", "position", "allowedRoleIds")
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+			 RETURNING "id", "communityId", "parentId", "name", "topic", "kind", "position", "allowedRoleIds", "archivedAt"`,
+			[idService.gen(), input.communityId, input.parentId, input.name, input.topic, input.kind, input.position, JSON.stringify(input.allowedRoleIds)],
+		);
+		return rows[0];
+	});
 }
