@@ -166,23 +166,24 @@ export class NookAccessService {
 		engine: NookPolicyEngine,
 		profileByUserId: ReadonlyMap<string, NookPolicyProfile>,
 	): NookDirectChatEvaluation {
+		const recipient = pair.recipient;
 		const senderPermissions: NookPermission[] = ['send_chat'];
-		const recipientPermissions: NookPermission[] = pair.recipient == null ? [] : ['receive_chat'];
+		const recipientPermissions: NookPermission[] = recipient == null ? [] : ['receive_chat'];
 		const senderTargetSensitivePermissions: NookPermission[] = [];
 
 		if (!pair.isMutual) {
 			senderPermissions.push('chat_with_stranger');
-			if (pair.recipient != null) recipientPermissions.push('chat_with_stranger');
+			if (recipient != null) recipientPermissions.push('chat_with_stranger');
 		}
 
 		const senderProfile = profileByUserId.get(pair.sender.id);
 		const senderAgeGroup = senderProfile?.nookVerifiedAgeGroup ?? 'UNKNOWN';
-		const recipientState: NookDirectChatRecipientState = pair.recipient == null
+		const recipientState: NookDirectChatRecipientState = recipient == null
 			? { kind: 'remote', ageGroup: 'UNKNOWN' }
 			: {
 				kind: 'local',
-				profile: profileByUserId.get(pair.recipient.id),
-				ageGroup: profileByUserId.get(pair.recipient.id)?.nookVerifiedAgeGroup ?? 'UNKNOWN',
+				profile: profileByUserId.get(recipient.id),
+				ageGroup: profileByUserId.get(recipient.id)?.nookVerifiedAgeGroup ?? 'UNKNOWN',
 			};
 
 		// Remote recipients have no authoritative Nook age/profile data. Treat that
@@ -205,10 +206,10 @@ export class NookAccessService {
 		return {
 			sender: senderPermissions.map(permission => engine.evaluate(senderSubject, permission)),
 			senderTargetSensitive: senderTargetSensitivePermissions.map(permission => engine.evaluate(senderSubject, permission)),
-			recipient: pair.recipient == null
+			recipient: recipient == null
 				? null
 				: recipientPermissions.map(permission => engine.evaluate(
-					this.getSubject(pair.recipient, recipientState.kind === 'local' ? recipientState.profile : undefined),
+					this.getSubject(recipient, recipientState.kind === 'local' ? recipientState.profile : undefined),
 					permission,
 				)),
 		};
