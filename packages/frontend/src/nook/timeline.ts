@@ -45,3 +45,16 @@ export function isNookRecommendationUnavailableError(error: unknown): boolean {
 	const code = (error as { code?: unknown }).code;
 	return code === 'NOOK_RECOMMENDATIONS_DISABLED' || code === 'RESTRICTED_BY_NOOK_POLICY';
 }
+
+export function mergeNookRecommendationPage<T extends { id: string }>(current: readonly T[], page: readonly T[]): T[] {
+	const seen = new Set(current.map(item => item.id));
+	const merged = [...current];
+
+	for (const item of page) {
+		if (seen.has(item.id)) continue;
+		seen.add(item.id);
+		merged.push(item);
+	}
+
+	return merged;
+}
