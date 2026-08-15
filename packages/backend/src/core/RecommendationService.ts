@@ -71,7 +71,6 @@ export class RecommendationService {
 			notes = this.mergeNotes(notes, fallbackNotes);
 		}
 
-		const noteById = new Map(notes.map(note => [note.id, note]));
 		const rankCandidates: RecommendationRankCandidate[] = [];
 
 		for (const note of notes) {
@@ -94,13 +93,14 @@ export class RecommendationService {
 		const selected = selectDiverseRecommendations(ranked, limit);
 		const selectedIds = selected.map(candidate => candidate.noteId);
 
-		// Visibility or mute state can change while ranking is in progress, so validate the small
-		// selected set once more immediately before packing the response.
-		const finalNotes = await this.loadEligibleNotes(selectedIds, me, mutedChannels);
+		// Visibility and mute state can change while ranking is in progress, so refresh mutable
+		// channel state and validate the selected set once more immediately before packing.
+		const finalMutedChannels = await this.channelMutingService.mutingChannelsCache.fetch(me.id);
+		const finalNotes = await this.loadEligibleNotes(selectedIds, me, finalMutedChannels);
 		const finalNoteById = new Map(finalNotes.map(note => [note.id, note]));
 		const orderedNotes = selectedIds
-			.map(id => finalNoteById.get(id) ?? noteById.get(id))
-			.filter((note): note is MiNote => note != null && finalNoteById.has(note.id));
+			.map(id => finalNoteById.get(id))
+			.filter((note): note is MiNote => note != null);
 
 		return await this.noteEntityService.packMany(orderedNotes, me);
 	}
