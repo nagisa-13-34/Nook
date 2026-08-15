@@ -41,6 +41,9 @@ interface NookVoicePeerState {
 	canSpeak: boolean;
 }
 
+const voiceCleanupIntervalMs = 30_000;
+let nextVoiceCleanupAt = 0;
+
 function cleanIceServer(value: unknown): NookVoiceIceServer | null {
 	if (typeof value !== 'object' || value == null) return null;
 	const raw = value as Record<string, unknown>;
@@ -77,13 +80,27 @@ export function hideNookVoiceTtsSource(config: NookVoiceConfig): NookVoiceConfig
 }
 
 async function cleanupVoiceRows(db: DataSource): Promise<void> {
-	await db.query(`DELETE FROM "nook_community_voice_presence" WHERE "lastSeenAt" < now() - interval '45 seconds'`);
-	await db.query(`DELETE FROM "nook_community_voice_signal" WHERE "createdAt" < now() - interval '2 minutes'`);
+	const now = Date.now();
+	if (now < nextVoiceCleanupAt) return;
+	// Advance before awaiting so simultaneous heartbeats in this process do not all run the same global cleanup.
+	nextVoiceCleanupAt = now + voiceCleanupIntervalMs;
+	try {
+		await db.query(`DELETE FROM "nook_community_voice_presence" WHERE "lastSeenAt" < now() - interval '45 seconds'`);
+		await db.query(`DELETE FROM "nook_community_voice_signal" WHERE "createdAt" < now() - interval '2 minutes'`);
+	} catch (error) {
+		nextVoiceCleanupAt = 0;
+		throw error;
+	}
 }
 
-async function deleteVoiceSession(db: DataSource, channelId: string, userId: string, sessionId: string): Promise<void> {
-	await db.query('DELETE FROM "nook_community_voice_presence" WHERE "channelId"=$1 AND "userId"=$2 AND "sessionId"=$3', [channelId, userId, sessionId]);
+async function deleteVoiceSession(db: DataSource, channelId: string, userId: string, sessionId: string): Promise<boolean> {
+	const deleted = await db.query<Array<{ sessionId: string }>>(
+		'DELETE FROM "nook_community_voice_presence" WHERE "channelId"=$1 AND "userId"=$2 AND "sessionId"=$3 RETURNING "sessionId"',
+		[channelId, userId, sessionId],
+	);
+	if (deleted[0] == null) return false;
 	await db.query('DELETE FROM "nook_community_voice_signal" WHERE "channelId"=$1 AND ("fromUserId"=$2 OR "toUserId"=$2)', [channelId, userId]);
+	return true;
 }
 
 export async function requireVoiceSession(db: DataSource, channelId: string, userId: string, sessionId: string): Promise<void> {
@@ -149,11 +166,17 @@ export async function joinNookCommunityVoice(db: DataSource, communityId: string
 	if (channel.kind !== 'voice' || channel.archivedAt != null) throw new NookCommunityVoiceError('NOT_VOICE_CHANNEL');
 	await cleanupVoiceRows(db);
 	const sessionId = randomBytes(24).toString('base64url');
-	await db.query(
-		`INSERT INTO "nook_community_voice_presence" ("channelId","userId","sessionId") VALUES ($1,$2,$3)
-		 ON CONFLICT ("channelId","userId") DO UPDATE SET "sessionId"=EXCLUDED."sessionId", "joinedAt"=now(), "lastSeenAt"=now()`,
-		[channelId, userId, sessionId],
-	);
+	await db.transaction(async manager => {
+		await manager.query(
+			'DELETE FROM "nook_community_voice_signal" WHERE "channelId"=$1 AND ("fromUserId"=$2 OR "toUserId"=$2)',
+			[channelId, userId],
+		);
+		await manager.query(
+			`INSERT INTO "nook_community_voice_presence" ("channelId","userId","sessionId") VALUES ($1,$2,$3)
+			 ON CONFLICT ("channelId","userId") DO UPDATE SET "sessionId"=EXCLUDED."sessionId", "joinedAt"=now(), "lastSeenAt"=now()`,
+			[channelId, userId, sessionId],
+		);
+	});
 	const peerState = serializePeerState(await listAuthorizedVoicePeers(db, channelId, userId));
 	return {
 		sessionId,
