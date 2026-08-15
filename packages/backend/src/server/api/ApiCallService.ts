@@ -149,6 +149,7 @@ export class ApiCallService implements OnApplicationShutdown {
 						stack: err.stack,
 						id: errId,
 					},
+				},
 			});
 
 			throw new ApiError(null, {
