@@ -17,7 +17,7 @@ import { NookTranslationService, NookTranslationUnavailableError } from '@/nook/
 import { ApiError } from '../../error.js';
 
 export const meta = {
-	tags: ['notes'], requireCredential: true, kind: 'read:account',
+	tags: ['notes'], requireCredential: true, kind: 'read:account', limit: { duration: 60000, max: 120 },
 	res: { type: 'object', optional: false, nullable: false, properties: { sourceLang: { type: 'string' }, text: { type: 'string' } }, required: ['sourceLang','text'] },
 	errors: {
 		unavailable: { message: 'Translation is unavailable.', code: 'UNAVAILABLE', id: '572273ec-21cd-4560-9537-1709427d74e0' },
@@ -63,7 +63,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				text = message.body;
 			} else if (ps.kind === 'communityAnnouncement') {
 				const rows = await this.db.query<Array<{ communityId: string; body: string }>>(
-					'SELECT "communityId","body" FROM "nook_community_announcement" WHERE "id"=$1 LIMIT 1', [ps.id]);
+					'SELECT "communityId","body" FROM "nook_community_announcement" WHERE "id"=$1 AND ("expiresAt" IS NULL OR "expiresAt" > now()) LIMIT 1', [ps.id]);
 				const announcement = rows[0];
 				if (announcement == null) throw new ApiError(meta.errors.noSuchObject);
 				try { await requireNookCommunityMember(this.db, announcement.communityId, me.id); } catch (error) {
