@@ -29,6 +29,38 @@ function note(id: string, userId: string): MiNote {
 	} as MiNote;
 }
 
+function createServiceForCandidates(candidates: MiNote[]): RecommendationService {
+	const fanoutGet = vi.fn().mockImplementation(async (name: string) => {
+		if (name === `homeTimeline:${me.id}`) return candidates.length > 0 ? [candidates[0]!.id] : [];
+		if (name === 'localTimeline') return candidates.slice(1).map(candidate => candidate.id);
+		return [];
+	});
+	const service = new RecommendationService(
+		{} as NotesRepository,
+		{ get: fanoutGet } as unknown as FanoutTimelineService,
+		{} as QueryService,
+		{
+			userFollowingChannelsCache: { fetch: vi.fn().mockResolvedValue(new Set<string>()) },
+		} as unknown as ChannelFollowingService,
+		{
+			mutingChannelsCache: { fetch: vi.fn().mockResolvedValue(new Set<string>()) },
+		} as unknown as ChannelMutingService,
+		{
+			parse: vi.fn().mockReturnValue({ date: new Date('2026-08-15T12:00:00.000Z') }),
+		} as unknown as IdService,
+		{
+			packMany: vi.fn().mockImplementation(async (notes: MiNote[]) => notes),
+		} as unknown as NoteEntityService,
+	);
+	const internal = service as unknown as {
+		loadEligibleNotes(noteIds: readonly string[], user: MiLocalUser, mutedChannels: Set<string>): Promise<MiNote[]>;
+		loadRecentEligibleLocalNotes(user: MiLocalUser, mutedChannels: Set<string>, limit: number): Promise<MiNote[]>;
+	};
+	vi.spyOn(internal, 'loadEligibleNotes').mockResolvedValue(candidates);
+	vi.spyOn(internal, 'loadRecentEligibleLocalNotes').mockResolvedValue([]);
+	return service;
+}
+
 describe('RecommendationService', () => {
 	test('local discovery fallback only considers public non-channel local notes', async () => {
 		const query = {
@@ -117,5 +149,16 @@ describe('RecommendationService', () => {
 		expect(loadEligibleNotes.mock.calls[1]?.[0]).toHaveLength(6);
 		expect(result).toHaveLength(2);
 		expect(packMany).toHaveBeenCalledWith(expect.any(Array), me);
+	});
+
+	test('slices pages after ranking and diversity selection', async () => {
+		const candidates = Array.from({ length: 8 }, (_, index) => note(`n${index + 1}`, `author-${index + 1}`));
+		const fullService = createServiceForCandidates(candidates);
+		const pageService = createServiceForCandidates(candidates);
+
+		const firstFour = await fullService.getRecommendations(me, 4, 0) as unknown as MiNote[];
+		const secondPage = await pageService.getRecommendations(me, 2, 2) as unknown as MiNote[];
+
+		expect(secondPage.map(item => item.id)).toEqual(firstFour.slice(2, 4).map(item => item.id));
 	});
 });
