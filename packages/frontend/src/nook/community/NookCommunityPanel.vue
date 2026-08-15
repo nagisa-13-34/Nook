@@ -16,7 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<NookCommunityEvents v-else-if="tab==='events'" :community-id="communityId" :can-manage="can('events.manage')"/>
 			<NookCommunityMembers v-else-if="tab==='members'" :community-id="communityId" :can-manage="can('members.manage')" :can-manage-roles="can('roles.manage')"/>
 			<NookCommunityBots v-else-if="tab==='bots'" :community-id="communityId" :can-manage="true"/>
-			<NookCommunityAdmin v-else-if="tab==='admin'" :community-id="communityId" :detail="detail" @refresh="load"/>
+			<NookCommunityAdmin v-else-if="tab==='admin'" :community-id="communityId" :detail="detail" :voice-enabled="voiceEnabled" @refresh="load"/>
 			<section v-else class="_gaps"><div class="_panel" :class="$style.box"><h3>{{ l.rules }}</h3><ol><li v-for="rule in rules" :key="rule.id"><strong>{{ rule.title }}</strong><p>{{ rule.body }}</p></li></ol></div><div class="_panel" :class="$style.box"><h3>{{ l.pins }}</h3><div v-for="pin in pins" :key="pin.id">📌 <a v-if="pin.url" :href="pin.url" target="_blank" rel="noopener noreferrer">{{ pin.label||pin.url }}</a><span v-else>{{ pin.label||pin.targetId }}</span></div></div></section>
 		</template>
 	</template>
