@@ -8,12 +8,14 @@ import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import { ModuleRef } from '@nestjs/core';
 import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
+import type { DataSource } from 'typeorm';
 import type { Config } from '@/config.js';
 import type { InstancesRepository, AccessTokensRepository } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { bindThis } from '@/decorators.js';
+import { ensureNookCommunity } from '@/nook/community/access.js';
 import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 import endpoints from './endpoints.js';
 import { ApiCallService } from './ApiCallService.js';
@@ -55,6 +57,9 @@ export class ApiServerService {
 		@Inject(DI.config)
 		private config: Config,
 
+		@Inject(DI.db)
+		private db: DataSource,
+
 		@Inject(DI.instancesRepository)
 		private instancesRepository: InstancesRepository,
 
@@ -71,7 +76,41 @@ export class ApiServerService {
 		//this.createServer = this.createServer.bind(this);
 	}
 
-	private async assertNookEndpointAccess(endpointName: string, user: MiLocalUser | null | undefined): Promise<void> {
+	private async ensureLegacyCommunityWriteAllowed(endpointKind: string | undefined, data: unknown): Promise<void> {
+		if (endpointKind == null || !endpointKind.startsWith('write:')) return;
+		if (typeof data !== 'object' || data == null) return;
+		const communityId = (data as Record<string, unknown>).communityId;
+		if (typeof communityId !== 'string') return;
+
+		const rows = await this.db.query<Array<{
+			ownerId: string | null;
+			initialized: boolean;
+			isDeleted: boolean | null;
+			isSuspended: boolean | null;
+		}>>(
+			`SELECT c."userId" AS "ownerId",
+			 (nc."channelId" IS NOT NULL) AS "initialized",
+			 u."isDeleted", u."isSuspended"
+			 FROM "channel" c
+			 LEFT JOIN "nook_community" nc ON nc."channelId" = c."id"
+			 LEFT JOIN "user" u ON u."id" = c."userId" AND u."host" IS NULL
+			 WHERE c."id" = $1 LIMIT 1`,
+			[communityId],
+		);
+		const row = rows[0];
+		if (row == null || row.initialized) return;
+		if (row.ownerId == null || row.isDeleted == null || row.isSuspended == null) throw new ApiError(nookCommunityPolicyDenied);
+
+		const owner = {
+			id: row.ownerId,
+			isDeleted: row.isDeleted,
+			isSuspended: row.isSuspended,
+		} as MiLocalUser;
+		if (!(await this.nookAccessService.evaluate(owner, 'create_community')).allowed) throw new ApiError(nookCommunityPolicyDenied);
+		await ensureNookCommunity(this.db, communityId);
+	}
+
+	private async assertNookEndpointAccess(endpointName: string, user: MiLocalUser | null | undefined, data?: unknown, endpointKind?: string): Promise<void> {
 		if (!endpointName.startsWith('nook/community/')) return;
 		if (!(await this.nookAccessService.isFeatureEnabled('community'))) throw new ApiError(nookCommunityDisabled);
 
@@ -87,6 +126,8 @@ export class ApiServerService {
 				throw new ApiError(nookCommunityPolicyDenied);
 			}
 		}
+
+		await this.ensureLegacyCommunityWriteAllowed(endpointKind, data);
 	}
 
 	@bindThis
@@ -115,7 +156,7 @@ export class ApiServerService {
 				meta: endpoint.meta,
 				params: endpoint.params,
 				exec: async (data: unknown, user: MiLocalUser | null | undefined, ...rest: unknown[]) => {
-					await this.assertNookEndpointAccess(endpoint.name, user);
+					await this.assertNookEndpointAccess(endpoint.name, user, data, endpoint.meta.kind);
 					return await endpointExec(data, user, ...rest);
 				},
 			};
