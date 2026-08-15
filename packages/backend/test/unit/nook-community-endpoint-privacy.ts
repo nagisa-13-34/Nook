@@ -12,10 +12,12 @@ import { redactApiParamsForLogging } from '@/server/api/ApiCallService.js';
 import { ApiError } from '@/server/api/error.js';
 import { meta as featuresMeta } from '@/server/api/endpoints/nook/features.js';
 import { meta as rolesListMeta } from '@/server/api/endpoints/nook/community/roles/list.js';
+import BotCreateEndpoint from '@/server/api/endpoints/nook/community/bots/create.js';
 import BotsListEndpoint, { meta as botsListMeta } from '@/server/api/endpoints/nook/community/bots/list.js';
 import BotPostEndpoint from '@/server/api/endpoints/nook/community/bots/post.js';
 import BotMessagesListEndpoint from '@/server/api/endpoints/nook/community/bots/messages-list.js';
 import BotRotateSecretEndpoint from '@/server/api/endpoints/nook/community/bots/rotate-secret.js';
+import BotUpdateEndpoint from '@/server/api/endpoints/nook/community/bots/update.js';
 import InviteUseEndpoint from '@/server/api/endpoints/nook/community/invites/use.js';
 import { meta as voiceJoinMeta } from '@/server/api/endpoints/nook/community/voice/join.js';
 import { meta as voiceHeartbeatMeta } from '@/server/api/endpoints/nook/community/voice/heartbeat.js';
@@ -26,7 +28,7 @@ import { meta as voiceSignalsMeta } from '@/server/api/endpoints/nook/community/
 function createRestrictedBotDb(): DataSource {
 	const now = new Date(0);
 	return {
-		query: async (sql: string) => {
+		query: async (sql: string, params?: unknown[]) => {
 			if (sql.includes('FROM "channel" c')) {
 				return [{ userId: 'owner', joinMode: 'open', discoverable: true, initialized: true }];
 			}
@@ -54,6 +56,7 @@ function createRestrictedBotDb(): DataSource {
 			}
 			if (sql.includes('FROM "nook_community_channel"')) {
 				if (sql.includes('AND "id" = $2')) {
+					if (params?.[1] === 'public') return [{ id: 'public', communityId: 'community', parentId: null, name: 'Public', topic: null, kind: 'text', position: 0, allowedRoleIds: [], archivedAt: null }];
 					return [{ id: 'staff', communityId: 'community', parentId: null, name: 'Staff', topic: null, kind: 'text', position: 1, allowedRoleIds: ['staff-role'], archivedAt: null }];
 				}
 				return [
@@ -152,10 +155,12 @@ describe('Nook Community endpoint privacy metadata', () => {
 		assert.equal(params.token, '[REDACTED]');
 	});
 
-	test('Bot managers cannot discover hidden allowlist channel IDs or rotate credentials for a hidden-channel Bot', async () => {
+	test('Bot managers cannot discover hidden allowlist channel IDs or obtain hidden-channel Bot credentials', async () => {
 		const db = createRestrictedBotDb();
 		const list = new BotsListEndpoint(db);
 		const rotate = new BotRotateSecretEndpoint(db);
+		const create = new BotCreateEndpoint(db, { gen: () => 'new-bot' } as unknown as IdService);
+		const update = new BotUpdateEndpoint(db);
 		const user = { id: 'manager' } as never;
 
 		const bots = await list.exec({ communityId: 'community' }, user, null);
@@ -163,6 +168,14 @@ describe('Nook Community endpoint privacy metadata', () => {
 		await assert.rejects(
 			() => rotate.exec({ communityId: 'community', botId: 'bot' }, user, null),
 			(error: unknown) => error instanceof ApiError && error.code === 'FORBIDDEN',
+		);
+		await assert.rejects(
+			() => create.exec({ communityId: 'community', name: 'Hidden reader', scopes: ['read:messages'], allowedChannelIds: ['staff'] }, user, null),
+			(error: unknown) => error instanceof ApiError && error.code === 'INVALID_CHANNEL',
+		);
+		await assert.rejects(
+			() => update.exec({ communityId: 'community', botId: 'bot', name: 'Tampered' }, user, null),
+			(error: unknown) => error instanceof ApiError && error.code === 'INVALID_CHANNEL',
 		);
 	});
 });
