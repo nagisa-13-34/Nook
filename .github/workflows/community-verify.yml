@@ -2,9 +2,12 @@ name: Community 2 verification
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
-      - agent/community-2-platform
+      - main
 
 permissions:
   contents: read
@@ -66,6 +69,13 @@ jobs:
         run: |
           mkdir -p .config
           cp .github/misskey/test.yml .config/test.yml
+
+      - name: Build shared workspace packages
+        run: |
+          pnpm build-pre
+          pnpm --filter i18n build
+          pnpm --filter misskey-reversi build
+          pnpm --filter misskey-js build
 
       - name: Backend typecheck
         id: backend_typecheck
