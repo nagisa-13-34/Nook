@@ -42,6 +42,14 @@ export const paramDef = {
 	type: 'object',
 	properties: {
 		limit: { type: 'integer', minimum: 1, maximum: 400, default: 20 },
+		snapshotAt: { type: 'integer', minimum: 0 },
+		excludeNoteIds: {
+			type: 'array',
+			maxItems: 400,
+			uniqueItems: true,
+			items: { type: 'string', format: 'misskey:id' },
+			default: [],
+		},
 	},
 	required: [],
 } as const;
@@ -62,7 +70,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.restrictedByNookPolicy);
 			}
 
-			return await this.recommendationService.getRecommendations(me, ps.limit);
+			return await this.recommendationService.getRecommendations(me, ps.limit, {
+				snapshotAt: ps.snapshotAt == null ? undefined : new Date(ps.snapshotAt),
+				excludeNoteIds: ps.excludeNoteIds,
+			});
 		});
 	}
 }
