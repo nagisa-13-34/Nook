@@ -50,7 +50,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			try {
 				const context = await getNookCommunityContext(this.db, ps.communityId);
 				const membership = me == null ? null : await getNookCommunityMembership(this.db, ps.communityId, me.id);
-				const countRows = await this.db.query<Array<{ count: string }>>('SELECT count(*)::text AS count FROM "nook_community_member" WHERE "communityId" = $1 AND "state" = \'active\'', [ps.communityId]);
+				const countRows = await this.db.query<Array<{ count: string }>>(
+					`SELECT count(*)::text AS count FROM (
+					 SELECT "userId" FROM "nook_community_member" WHERE "communityId" = $1 AND "state" = 'active'
+					 UNION
+					 SELECT "userId" FROM "channel" WHERE "id" = $1 AND "userId" IS NOT NULL
+					) active_members`,
+					[ps.communityId],
+				);
 				return {
 					communityId: ps.communityId,
 					joinMode: context.joinMode,
