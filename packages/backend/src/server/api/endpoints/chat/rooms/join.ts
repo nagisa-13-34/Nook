@@ -11,7 +11,7 @@ import { ChatService } from '@/core/ChatService.js';
 import { ApiError } from '@/server/api/error.js';
 import type { ChatRoomMembershipsRepository, FollowingsRepository, UsersRepository } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { NookAccessService } from '@/nook/policy/NookAccessService.js';
+import { NookAccessService, type NookDirectChatPair } from '@/nook/policy/NookAccessService.js';
 
 export const meta = {
 	tags: ['chat'],
@@ -112,7 +112,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					followDirectionCount.set(otherId, (followDirectionCount.get(otherId) ?? 0) + 1);
 				}
 
-				const pairs = participants.flatMap(participant => {
+				const pairs: NookDirectChatPair[] = participants.flatMap(participant => {
 					const participantLocal = participant.host == null ? participant as MiLocalUser : null;
 					const isMutual = followDirectionCount.get(participant.id) === 2;
 					return participantLocal == null
