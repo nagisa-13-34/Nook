@@ -13,48 +13,85 @@ export class NookCommunityAccessError extends Error {
 	}
 }
 
-export async function ensureNookCommunity(db: DataSource, communityId: string): Promise<NookCommunityContext> {
-	const channels = await db.query<Array<{ id: string; userId: string | null }>>(
-		'SELECT "id", "userId" FROM "channel" WHERE "id" = $1 LIMIT 1',
+interface NookCommunityContextRow {
+	userId: string | null;
+	joinMode: NookCommunityContext['joinMode'] | null;
+	discoverable: boolean | null;
+	initialized: boolean;
+}
+
+async function readNookCommunityContextRow(db: DataSource, communityId: string): Promise<NookCommunityContextRow> {
+	const rows = await db.query<NookCommunityContextRow[]>(
+		`SELECT c."userId",
+		 nc."joinMode",
+		 nc."discoverable",
+		 (nc."channelId" IS NOT NULL) AS "initialized"
+		 FROM "channel" c
+		 LEFT JOIN "nook_community" nc ON nc."channelId" = c."id"
+		 WHERE c."id" = $1
+		 LIMIT 1`,
 		[communityId],
 	);
-	const channel = channels[0];
-	if (channel == null) throw new NookCommunityAccessError('NO_SUCH_COMMUNITY');
+	const row = rows[0];
+	if (row == null) throw new NookCommunityAccessError('NO_SUCH_COMMUNITY');
+	return row;
+}
+
+function contextFromRow(communityId: string, row: NookCommunityContextRow): NookCommunityContext {
+	return {
+		communityId,
+		ownerId: row.userId,
+		joinMode: row.joinMode ?? 'open',
+		discoverable: row.discoverable ?? true,
+	};
+}
+
+/** Read Community metadata without creating or updating companion rows. */
+export async function getNookCommunityContext(db: DataSource, communityId: string): Promise<NookCommunityContext> {
+	return contextFromRow(communityId, await readNookCommunityContextRow(db, communityId));
+}
+
+/**
+ * Ensure the Nook companion row exists for a Misskey Channel.
+ * Existing Communities are SELECT-only; initialization writes happen only when the companion row is absent.
+ */
+export async function ensureNookCommunity(db: DataSource, communityId: string): Promise<NookCommunityContext> {
+	const row = await readNookCommunityContextRow(db, communityId);
+	if (row.initialized) return contextFromRow(communityId, row);
 
 	await db.query(
 		`INSERT INTO "nook_community" ("channelId") VALUES ($1) ON CONFLICT ("channelId") DO NOTHING`,
 		[communityId],
 	);
-	if (channel.userId != null) {
+	if (row.userId != null) {
 		await db.query(
 			`INSERT INTO "nook_community_member" ("communityId", "userId", "baseRole", "state")
 			 VALUES ($1, $2, 'owner', 'active')
-			 ON CONFLICT ("communityId", "userId") DO UPDATE SET "baseRole" = 'owner', "state" = 'active'`,
-			[communityId, channel.userId],
+			 ON CONFLICT ("communityId", "userId") DO NOTHING`,
+			[communityId, row.userId],
 		);
 	}
 
-	const rows = await db.query<Array<{ joinMode: NookCommunityContext['joinMode']; discoverable: boolean }>>(
-		'SELECT "joinMode", "discoverable" FROM "nook_community" WHERE "channelId" = $1 LIMIT 1',
-		[communityId],
-	);
-
-	return {
-		communityId,
-		ownerId: channel.userId,
-		joinMode: rows[0]?.joinMode ?? 'open',
-		discoverable: rows[0]?.discoverable ?? true,
-	};
+	return contextFromRow(communityId, row);
 }
 
 export async function getNookCommunityMembership(db: DataSource, communityId: string, userId: string): Promise<NookCommunityMembership | null> {
-	const context = await ensureNookCommunity(db, communityId);
+	const context = await getNookCommunityContext(db, communityId);
 	const members = await db.query<Array<{ baseRole: NookCommunityBaseRole; state: 'active' | 'banned' }>>(
 		'SELECT "baseRole", "state" FROM "nook_community_member" WHERE "communityId" = $1 AND "userId" = $2 LIMIT 1',
 		[communityId, userId],
 	);
 	const member = members[0];
-	if (member == null) return null;
+	if (member == null) {
+		if (context.ownerId !== userId) return null;
+		return {
+			communityId,
+			userId,
+			baseRole: 'owner',
+			state: 'active',
+			permissions: baseRolePermissions('owner'),
+		};
+	}
 
 	const baseRole: NookCommunityBaseRole = context.ownerId === userId ? 'owner' : member.baseRole;
 	const permissions = baseRolePermissions(baseRole);
@@ -90,6 +127,9 @@ export async function requireNookCommunityMember(db: DataSource, communityId: st
 }
 
 export async function requireNookCommunityPermission(db: DataSource, communityId: string, userId: string, permission: NookCommunityPermission): Promise<NookCommunityMembership> {
+	// Permission-protected operations may be the first Nook-specific action on a legacy Channel.
+	// Initialization is idempotent and writes only while the companion row is absent.
+	await ensureNookCommunity(db, communityId);
 	const membership = await requireNookCommunityMember(db, communityId, userId);
 	if (!membership.permissions.has('*') && !membership.permissions.has(permission)) throw new NookCommunityAccessError('FORBIDDEN');
 	return membership;
