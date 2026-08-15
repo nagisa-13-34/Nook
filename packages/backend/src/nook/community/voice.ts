@@ -29,6 +29,11 @@ export interface NookVoiceMusicState {
 	updatedAt: Date;
 }
 
+interface NookVoicePeerState {
+	userId: string;
+	canSpeak: boolean;
+}
+
 function cleanIceServer(value: unknown): NookVoiceIceServer | null {
 	if (typeof value !== 'object' || value == null) return null;
 	const raw = value as Record<string, unknown>;
@@ -95,22 +100,29 @@ async function authorizeVoiceSession(db: DataSource, channelId: string, userId: 
 	}
 }
 
-async function listAuthorizedVoicePeers(db: DataSource, channelId: string, excludeUserId: string): Promise<string[]> {
+async function listAuthorizedVoicePeers(db: DataSource, channelId: string, excludeUserId: string): Promise<NookVoicePeerState[]> {
 	const rows = await db.query<Array<{ userId: string; sessionId: string }>>(
 		'SELECT "userId","sessionId" FROM "nook_community_voice_presence" WHERE "channelId"=$1 AND "userId"<>$2 AND "lastSeenAt">now()-interval \'45 seconds\' ORDER BY "joinedAt" ASC',
 		[channelId, excludeUserId],
 	);
-	const peers: string[] = [];
+	const peers: NookVoicePeerState[] = [];
 	for (const row of rows) {
 		try {
-			await authorizeVoiceSession(db, channelId, row.userId, row.sessionId);
-			peers.push(row.userId);
+			const authorization = await authorizeVoiceSession(db, channelId, row.userId, row.sessionId);
+			peers.push({ userId: row.userId, canSpeak: authorization.canSpeak });
 		} catch (error) {
 			if (error instanceof NookCommunityVoiceError && error.code === 'NO_SESSION') continue;
 			throw error;
 		}
 	}
 	return peers;
+}
+
+function serializePeerState(peers: NookVoicePeerState[]) {
+	return {
+		peers: peers.map(peer => peer.userId),
+		speakingPeerIds: peers.filter(peer => peer.canSpeak).map(peer => peer.userId),
+	};
 }
 
 export async function joinNookCommunityVoice(db: DataSource, communityId: string, channelId: string, userId: string) {
@@ -124,10 +136,10 @@ export async function joinNookCommunityVoice(db: DataSource, communityId: string
 		 ON CONFLICT ("channelId","userId") DO UPDATE SET "sessionId"=EXCLUDED."sessionId", "joinedAt"=now(), "lastSeenAt"=now()`,
 		[channelId, userId, sessionId],
 	);
-	const peers = await listAuthorizedVoicePeers(db, channelId, userId);
+	const peerState = serializePeerState(await listAuthorizedVoicePeers(db, channelId, userId));
 	return {
 		sessionId,
-		peers,
+		...peerState,
 		canSpeak: membership.permissions.has('*') || membership.permissions.has('voice.speak'),
 		iceServersJson: JSON.stringify(getNookVoiceIceServers()),
 		iceTransportPolicy: getNookVoiceIceTransportPolicy(),
@@ -138,13 +150,13 @@ export async function heartbeatNookCommunityVoice(db: DataSource, channelId: str
 	const authorization = await authorizeVoiceSession(db, channelId, userId, sessionId);
 	await db.query('UPDATE "nook_community_voice_presence" SET "lastSeenAt"=now() WHERE "channelId"=$1 AND "userId"=$2 AND "sessionId"=$3', [channelId, userId, sessionId]);
 	await cleanupVoiceRows(db);
-	const [peers, configRows, musicRows] = await Promise.all([
+	const [authorizedPeers, configRows, musicRows] = await Promise.all([
 		listAuthorizedVoicePeers(db, channelId, userId),
 		db.query<Array<{ ttsEnabled: boolean; ttsSourceChannelId: string | null; ttsLanguage: string | null; musicEnabled: boolean }>>('SELECT "ttsEnabled","ttsSourceChannelId","ttsLanguage","musicEnabled" FROM "nook_community_voice_config" WHERE "channelId"=$1 LIMIT 1', [channelId]),
 		db.query<NookVoiceMusicState[]>('SELECT "url","title","positionSeconds","playing","updatedAt" FROM "nook_community_voice_music" WHERE "channelId"=$1 LIMIT 1', [channelId]),
 	]);
 	return {
-		peers,
+		...serializePeerState(authorizedPeers),
 		canSpeak: authorization.canSpeak,
 		config: configRows[0] ?? { ttsEnabled: false, ttsSourceChannelId: null, ttsLanguage: null, musicEnabled: false },
 		music: musicRows[0] ?? null,
