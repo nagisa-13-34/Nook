@@ -5,6 +5,7 @@
 
 import type { DataSource } from 'typeorm';
 import type { IdService } from '@/core/IdService.js';
+import { requireNookCommunityChannelReference } from './references.js';
 
 export interface NookCommunityEventRecord {
 	id: string;
@@ -40,6 +41,8 @@ export async function listNookCommunityEvents(db: DataSource, communityId: strin
 }
 
 export async function createNookCommunityEvent(db: DataSource, idService: IdService, input: { communityId: string; creatorId: string; title: string; description: string | null; location: string | null; startsAt: Date; endsAt: Date | null; maxAttendees: number | null; textChannelId: string | null; voiceChannelId: string | null }): Promise<string> {
+	if (input.textChannelId != null) await requireNookCommunityChannelReference(db, input.communityId, input.textChannelId, { nonVoice: true });
+	if (input.voiceChannelId != null) await requireNookCommunityChannelReference(db, input.communityId, input.voiceChannelId, { kind: 'voice' });
 	const id = idService.gen();
 	await db.query(
 		`INSERT INTO "nook_community_event" ("id", "communityId", "creatorId", "title", "description", "location", "startsAt", "endsAt", "maxAttendees", "textChannelId", "voiceChannelId")
