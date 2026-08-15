@@ -5,10 +5,14 @@
 
 import * as assert from 'node:assert';
 import { describe, test } from 'vitest';
+import type { DataSource } from 'typeorm';
+import type { IdService } from '@/core/IdService.js';
 import { hideNookVoiceTtsSource } from '@/nook/community/voice.js';
 import { meta as featuresMeta } from '@/server/api/endpoints/nook/features.js';
 import { meta as rolesListMeta } from '@/server/api/endpoints/nook/community/roles/list.js';
 import { meta as botsListMeta } from '@/server/api/endpoints/nook/community/bots/list.js';
+import BotPostEndpoint from '@/server/api/endpoints/nook/community/bots/post.js';
+import BotMessagesListEndpoint from '@/server/api/endpoints/nook/community/bots/messages-list.js';
 import { meta as voiceJoinMeta } from '@/server/api/endpoints/nook/community/voice/join.js';
 import { meta as voiceHeartbeatMeta } from '@/server/api/endpoints/nook/community/voice/heartbeat.js';
 import { meta as voiceLeaveMeta } from '@/server/api/endpoints/nook/community/voice/leave.js';
@@ -47,5 +51,21 @@ describe('Nook Community endpoint privacy metadata', () => {
 			ttsLanguage: 'ja-JP',
 			musicEnabled: true,
 		});
+	});
+
+	test('Bot endpoints redact the shared request secret before unexpected failures can be logged', async () => {
+		const db = {
+			query: async () => { throw new Error('database unavailable'); },
+		} as unknown as DataSource;
+		const idService = { gen: () => 'message' } as unknown as IdService;
+		const post = new BotPostEndpoint(db, idService);
+		const list = new BotMessagesListEndpoint(db);
+		const postParams = { botId: 'bot', secret: 'x'.repeat(32), channelId: 'channel', body: 'hello' };
+		const listParams = { botId: 'bot', secret: 'y'.repeat(32), channelId: 'channel' };
+
+		await assert.rejects(() => post.exec(postParams, null, null), /database unavailable/);
+		await assert.rejects(() => list.exec(listParams, null, null), /database unavailable/);
+		assert.equal(postParams.secret, '[REDACTED]');
+		assert.equal(listParams.secret, '[REDACTED]');
 	});
 });
