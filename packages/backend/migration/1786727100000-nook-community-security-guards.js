@@ -14,6 +14,34 @@ export class NookCommunitySecurityGuards1786727100000 {
         `);
 
         await queryRunner.query(`
+            CREATE OR REPLACE FUNCTION "nook_cap_voice_signal_queue"()
+            RETURNS trigger
+            LANGUAGE plpgsql
+            AS $$
+            BEGIN
+                PERFORM pg_advisory_xact_lock(hashtext(NEW."channelId" || ':' || NEW."toUserId"));
+                DELETE FROM "nook_community_voice_signal"
+                WHERE "id" IN (
+                    SELECT "id"
+                    FROM "nook_community_voice_signal"
+                    WHERE "channelId" = NEW."channelId"
+                      AND "toUserId" = NEW."toUserId"
+                    ORDER BY "createdAt" DESC, "id" DESC
+                    OFFSET 511
+                );
+                RETURN NEW;
+            END;
+            $$
+        `);
+
+        await queryRunner.query(`
+            CREATE TRIGGER "TRG_nook_cap_voice_signal_queue"
+            BEFORE INSERT ON "nook_community_voice_signal"
+            FOR EACH ROW
+            EXECUTE FUNCTION "nook_cap_voice_signal_queue"()
+        `);
+
+        await queryRunner.query(`
             CREATE OR REPLACE FUNCTION "nook_guard_join_request_response"()
             RETURNS trigger
             LANGUAGE plpgsql
@@ -63,6 +91,8 @@ export class NookCommunitySecurityGuards1786727100000 {
     async down(queryRunner) {
         await queryRunner.query(`DROP TRIGGER IF EXISTS "TRG_nook_guard_join_request_response" ON "nook_community_join_request"`);
         await queryRunner.query(`DROP FUNCTION IF EXISTS "nook_guard_join_request_response"()`);
+        await queryRunner.query(`DROP TRIGGER IF EXISTS "TRG_nook_cap_voice_signal_queue" ON "nook_community_voice_signal"`);
+        await queryRunner.query(`DROP FUNCTION IF EXISTS "nook_cap_voice_signal_queue"()`);
         await queryRunner.query(`ALTER TABLE "nook_community_voice_signal" DROP CONSTRAINT IF EXISTS "CHK_nook_community_voice_signal_payload_length"`);
     }
 }
