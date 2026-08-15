@@ -6,6 +6,7 @@
 import type { DataSource } from 'typeorm';
 import type { IdService } from '@/core/IdService.js';
 import { requireNookCommunityMember } from './access.js';
+import { requireNookCommunityChannelReference, requireNookCommunityRoleReferences } from './references.js';
 
 export type NookCommunityChannelKind = 'text' | 'announcement' | 'media' | 'forum' | 'voice';
 
@@ -51,6 +52,8 @@ export async function requireNookCommunityChannelAccess(db: DataSource, communit
 }
 
 export async function createNookCommunityChannel(db: DataSource, idService: IdService, input: Omit<NookCommunityChannelRecord, 'id' | 'archivedAt'>): Promise<NookCommunityChannelRecord> {
+	if (input.parentId != null) await requireNookCommunityChannelReference(db, input.communityId, input.parentId);
+	await requireNookCommunityRoleReferences(db, input.communityId, input.allowedRoleIds);
 	const rows = await db.query<NookCommunityChannelRecord[]>(
 		`INSERT INTO "nook_community_channel" ("id", "communityId", "parentId", "name", "topic", "kind", "position", "allowedRoleIds")
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
