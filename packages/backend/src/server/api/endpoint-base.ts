@@ -18,6 +18,7 @@ const ajv = new Ajv({
 });
 
 ajv.addFormat('misskey:id', /^[a-zA-Z0-9]+$/);
+ajv.addFormat('date-time', value => /^\d{4}-\d{2}-\d{2}T/.test(value) && Number.isFinite(Date.parse(value)));
 
 export type Response = Record<string, any> | void;
 
@@ -29,7 +30,7 @@ type File = {
 // TODO: paramsの型をT['params']のスキーマ定義から推論する
 type Executor<T extends IEndpointMeta, Ps extends Schema> =
 	(params: SchemaType<Ps>, user: T['requireCredential'] extends true ? MiLocalUser : MiLocalUser | null, token: MiAccessToken | null, file?: File, cleanup?: () => any, ip?: string | null, headers?: Record<string, string> | null) =>
-		Promise<T['res'] extends undefined ? Response : SchemaType<NonNullable<T['res']>>>;
+	Promise<T['res'] extends undefined ? Response : SchemaType<NonNullable<T['res']>>>;
 
 export abstract class Endpoint<T extends IEndpointMeta, Ps extends Schema> {
 	public exec: (params: any, user: T['requireCredential'] extends true ? MiLocalUser : MiLocalUser | null, token: MiAccessToken | null, file?: File, ip?: string | null, headers?: Record<string, string> | null) => Promise<any>;

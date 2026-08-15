@@ -119,7 +119,7 @@ describe('NookAccessService', () => {
 	});
 
 	test('direct chat pair results preserve allowed, denied, remote, and reverse-only denial outcomes', async () => {
-		const protected = localUser('protected');
+		const protectedUser = localUser('protected');
 		const adultAllowed = localUser('adult-allowed');
 		const adultDenied = localUser('adult-denied');
 		const protectedPolicy: NookPolicy = {
@@ -162,7 +162,7 @@ describe('NookAccessService', () => {
 			priority: 2,
 		};
 		const profiles = [
-			{ userId: protected.id, nookCountryCode: 'JP', nookVerifiedAgeGroup: '13_15' as const, nookPolicyId: 'protected' },
+			{ userId: protectedUser.id, nookCountryCode: 'JP', nookVerifiedAgeGroup: '13_15' as const, nookPolicyId: 'protected' },
 			{ userId: adultAllowed.id, nookCountryCode: 'JP', nookVerifiedAgeGroup: '18_PLUS' as const, nookPolicyId: 'adult-allowed' },
 			{ userId: adultDenied.id, nookCountryCode: 'JP', nookVerifiedAgeGroup: '18_PLUS' as const, nookPolicyId: 'adult-denied' },
 		];
@@ -171,8 +171,8 @@ describe('NookAccessService', () => {
 		const [allowed, denied, remote, reverseDenied] = await service.evaluateDirectChatPairs([
 			{ sender: adultAllowed, recipient: adultDenied, isMutual: true },
 			{ sender: adultDenied, recipient: adultAllowed, isMutual: true },
-			{ sender: protected, recipient: null, isMutual: false },
-			{ sender: adultDenied, recipient: protected, isMutual: true },
+			{ sender: protectedUser, recipient: null, isMutual: false },
+			{ sender: adultDenied, recipient: protectedUser, isMutual: true },
 		]);
 
 		expect(allowed?.sender).toEqual([expect.objectContaining({ permission: 'send_chat', allowed: true })]);

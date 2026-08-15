@@ -112,7 +112,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					followDirectionCount.set(otherId, (followDirectionCount.get(otherId) ?? 0) + 1);
 				}
 
-				const pairs: NookDirectChatPair[] = participants.flatMap(participant => {
+				const pairs: NookDirectChatPair[] = participants.flatMap<NookDirectChatPair>(participant => {
 					const participantLocal = participant.host == null ? participant as MiLocalUser : null;
 					const isMutual = followDirectionCount.get(participant.id) === 2;
 					return participantLocal == null
