@@ -34,6 +34,7 @@ async function gate(service: ApiServerService, endpoint: string, user: MiLocalUs
 }
 
 const user = { id: 'user', isDeleted: false, isSuspended: false } as unknown as MiLocalUser;
+const owner = { id: 'owner', isDeleted: false, isSuspended: false } as unknown as MiLocalUser;
 
 describe('Nook Community API feature and policy gate', () => {
 	test('Community endpoints are unavailable while the Community feature is disabled', async () => {
@@ -102,7 +103,30 @@ describe('Nook Community API feature and policy gate', () => {
 		assert.equal(databaseCalls, 0);
 	});
 
-	test('first legacy Community write requires the Channel owner create_community policy', async () => {
+	test('non-owner management write does not materialize a legacy Community', async () => {
+		const sqlCalls: string[] = [];
+		const evaluated: string[] = [];
+		const db = {
+			query: async (sql: string) => {
+				sqlCalls.push(sql);
+				return [{ ownerId: 'owner', initialized: false, isDeleted: false, isSuspended: false }];
+			},
+		} as unknown as DataSource;
+		const service = createService({
+			isFeatureEnabled: async () => true,
+			evaluate: async (_user, permission) => {
+				evaluated.push(permission);
+				return { allowed: true, permission, policyId: null, reason: 'allowed' };
+			},
+		}, db);
+
+		await gate(service, 'nook/community/settings-update', user, { communityId: 'legacy' }, 'write:channels');
+		assert.deepEqual(evaluated, []);
+		assert.equal(sqlCalls.length, 1);
+		assert.match(sqlCalls[0] ?? '', /LEFT JOIN "nook_community"/);
+	});
+
+	test('first owner legacy Community write requires create_community policy', async () => {
 		const sqlCalls: string[] = [];
 		const db = {
 			query: async (sql: string) => {
@@ -120,7 +144,7 @@ describe('Nook Community API feature and policy gate', () => {
 		}, db);
 
 		await assert.rejects(
-			() => gate(service, 'nook/community/settings-update', user, { communityId: 'legacy' }, 'write:channels'),
+			() => gate(service, 'nook/community/settings-update', owner, { communityId: 'legacy' }, 'write:channels'),
 			(error: unknown) => error instanceof ApiError && error.code === 'RESTRICTED_BY_NOOK_POLICY',
 		);
 		assert.deepEqual(evaluated, ['create_community']);
