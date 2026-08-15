@@ -40,9 +40,13 @@ Important rules:
 - administrators cannot create another peer administrator through member management
 - moderators cannot manage administrators
 - custom-role managers cannot grant permissions that they do not already hold
+- full custom-role configuration and custom-role IDs are exposed only to `roles.manage` users
 - bots only access message channels explicitly listed in their allowlist
+- full bot configuration, including channel allowlists, is exposed only to `bots.manage` users
 - restricted Community subchannels are checked before reading messages or translations
+- restricted channel IDs are redacted from Event links and inaccessible message pins
 - active bans take precedence over join and invite flows
+- an already-active member cannot reuse an invite to change their base role or consume an invite use
 - parent channels, custom roles, replies, pins, event channels, and bot channel allowlists are validated against their owning Community before being stored
 
 The Nook policy layer remains above Community permissions. A Community permission must never be treated as a way to bypass global safety policy.
@@ -111,7 +115,7 @@ Original content is never replaced. Translations are cached separately by:
 - SHA-256 hash of the current source text
 - target language
 
-Changing the source text changes its hash, so stale translated text is not reused. Community-message, announcement, and event cache entries are removed when their source object is deleted, and edited announcement/event text purges its previous translations. Remaining cache entries have a 30-day retention limit; cleanup is throttled and runs opportunistically during translation use.
+Changing the source text changes its hash, so stale translated text is not reused. Community-message, announcement, and event cache entries are removed when their source object is deleted, and edited announcement/event text purges its previous translations. Cache entries older than 30 days are eligible for cleanup; cleanup is throttled and runs opportunistically during translation use rather than being a hard wall-clock deletion guarantee.
 
 Supported Nook translation objects currently include:
 
@@ -135,6 +139,7 @@ Do not squash these migrations after they have been deployed to a persistent ins
 - `voice.speak` is enforced by authorization metadata plus the official mesh client; strong server-side media publish enforcement requires an SFU.
 - TTS is browser-local rather than a server-side audio bot.
 - Music is synchronized playback state rather than a server-side music relay.
+- Translation-cache expiry is opportunistic; operators that require strict deletion deadlines should add a scheduled database cleanup job.
 - `misskey-js` generated endpoint types must be regenerated after the Nook endpoints are finalized.
 
 Before merging or deploying, run the backend/frontend/misskey-js typechecks, relevant unit tests, lint, migrations on a disposable database, and the `misskey-js` autogenerator.
