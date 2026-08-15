@@ -36,6 +36,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build shared workspace packages
+        run: |
+          pnpm build-pre
+          pnpm --filter i18n build
+          pnpm --filter misskey-reversi build
+          pnpm --filter misskey-js build
+          pnpm --filter misskey-bubble-game build
+
       - name: Regenerate misskey-js API types
         run: pnpm build-misskey-js-with-types
 
