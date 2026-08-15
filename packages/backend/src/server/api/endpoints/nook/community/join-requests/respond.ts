@@ -63,14 +63,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw error;
 			}
 			if (ps.approve) {
-				const [channel, user] = await Promise.all([
-					this.channelsRepository.findOneBy({ id: result.communityId }),
-					this.usersRepository.findOneBy({ id: result.userId, host: null }),
-				]);
-				if (channel != null && user != null) {
-					// Approval already committed membership; backing Channel follow must remain best-effort.
-					try { await this.channelFollowingService.follow(user as MiLocalUser, channel); } catch {}
-				}
+				// Approval already committed membership; backing Channel lookup/follow is best-effort only.
+				try {
+					const [channel, user] = await Promise.all([
+						this.channelsRepository.findOneBy({ id: result.communityId }),
+						this.usersRepository.findOneBy({ id: result.userId, host: null }),
+					]);
+					if (channel != null && user != null) await this.channelFollowingService.follow(user as MiLocalUser, channel);
+				} catch {}
 			}
 		});
 	}
