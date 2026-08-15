@@ -766,3 +766,5 @@ export type NookCommunityVoiceSignalsResponse = operations['nook___community___v
 export type NookFeaturesResponse = operations['nook___features']['responses']['200']['content']['application/json'];
 export type NookTranslateRequest = operations['nook___translate']['requestBody']['content']['application/json'];
 export type NookTranslateResponse = operations['nook___translate']['responses']['200']['content']['application/json'];
+export type NotesRecommendedRequest = operations['notes___recommended']['requestBody']['content']['application/json'];
+export type NotesRecommendedResponse = operations['notes___recommended']['responses']['200']['content']['application/json'];
