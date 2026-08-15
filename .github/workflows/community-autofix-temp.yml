@@ -51,12 +51,14 @@ jobs:
           "src/nook/**/*.ts"
           "src/server/api/endpoints/nook/**/*.ts"
           src/server/api/endpoints/chat/rooms/join.ts
+          || true
 
       - name: Auto-fix frontend Community lint
         run: >-
           pnpm --filter frontend exec eslint --fix
           "src/nook/community/**/*.{ts,vue}"
           src/pages/channel.vue
+          || true
 
       - name: Commit autofixes
         shell: bash
