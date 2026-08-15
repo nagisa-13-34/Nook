@@ -109,24 +109,9 @@ export class NookCommunityCore1786722000000 {
         `);
         await queryRunner.query(`CREATE INDEX "IDX_nook_community_rule_community" ON "nook_community_rule" ("communityId", "position")`);
 
-        await queryRunner.query(`
-            INSERT INTO "nook_community" ("channelId")
-            SELECT "id" FROM "channel"
-            ON CONFLICT ("channelId") DO NOTHING
-        `);
-        await queryRunner.query(`
-            INSERT INTO "nook_community_member" ("communityId", "userId", "baseRole")
-            SELECT "id", "userId", 'owner'
-            FROM "channel"
-            WHERE "userId" IS NOT NULL
-            ON CONFLICT ("communityId", "userId") DO UPDATE SET "baseRole" = 'owner', "state" = 'active'
-        `);
-        await queryRunner.query(`
-            INSERT INTO "nook_community_member" ("communityId", "userId", "baseRole")
-            SELECT "followeeId", "followerId", 'member'
-            FROM "channel_following"
-            ON CONFLICT ("communityId", "userId") DO NOTHING
-        `);
+        // Do not materialize existing Channels or promote existing Channel followers here.
+        // Community creation/join is policy-gated at runtime, and legacy Channels are
+        // materialized lazily only after the relevant create_community/join_community checks.
     }
 
     async down(queryRunner) {
