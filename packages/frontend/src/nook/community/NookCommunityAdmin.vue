@@ -103,7 +103,7 @@ async function createInvite() {
 }
 
 async function copyInvite() {
-	await navigator.clipboard.writeText(`${location.origin}/channels/${props.communityId}?invite=${encodeURIComponent(inviteToken.value)}`);
+	await navigator.clipboard.writeText(`${window.location.origin}/channels/${props.communityId}?invite=${encodeURIComponent(inviteToken.value)}`);
 }
 
 async function revokeInvite(inviteId: string) {
