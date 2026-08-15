@@ -39,3 +39,9 @@ export function detectNookTimelineView(src: string, onlyFiles: boolean): NookTim
 	if ((src === 'local' || src === 'global') && !onlyFiles) return 'discover';
 	return null;
 }
+
+export function isNookRecommendationUnavailableError(error: unknown): boolean {
+	if (typeof error !== 'object' || error == null || !('code' in error)) return false;
+	const code = (error as { code?: unknown }).code;
+	return code === 'NOOK_RECOMMENDATIONS_DISABLED' || code === 'RESTRICTED_BY_NOOK_POLICY';
+}
