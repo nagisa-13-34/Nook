@@ -129,17 +129,22 @@ export async function useNookCommunityInvite(db: DataSource, token: string, user
 		if (invite.expiresAt != null && new Date(invite.expiresAt).getTime() <= Date.now()) throw new NookCommunityMembershipError('INVITE_EXPIRED');
 		if (invite.maxUses != null && invite.useCount >= invite.maxUses) throw new NookCommunityMembershipError('INVITE_EXHAUSTED');
 
+		const existingRows = await manager.query<Array<{ state: 'active' | 'banned' }>>(
+			'SELECT "state" FROM "nook_community_member" WHERE "communityId"=$1 AND "userId"=$2 FOR UPDATE',
+			[invite.communityId, userId],
+		);
+		const existing = existingRows[0];
+		if (existing?.state === 'banned') throw new NookCommunityMembershipError('BANNED');
+		if (existing?.state === 'active') throw new NookCommunityMembershipError('ALREADY_MEMBER');
+
 		const memberRows = await manager.query<Array<{ userId: string }>>(
 			`INSERT INTO "nook_community_member" ("communityId", "userId", "baseRole", "state")
 			 VALUES ($1, $2, $3, 'active')
-			 ON CONFLICT ("communityId", "userId") DO UPDATE
-			 SET "baseRole" = CASE WHEN "nook_community_member"."baseRole" = 'owner' THEN 'owner' ELSE EXCLUDED."baseRole" END,
-			     "state" = 'active'
-			 WHERE "nook_community_member"."state" <> 'banned'
+			 ON CONFLICT ("communityId", "userId") DO NOTHING
 			 RETURNING "userId"`,
 			[invite.communityId, userId, invite.defaultBaseRole],
 		);
-		if (memberRows[0] == null) throw new NookCommunityMembershipError('BANNED');
+		if (memberRows[0] == null) throw new NookCommunityMembershipError('ALREADY_MEMBER');
 
 		await manager.query('UPDATE "nook_community_invite" SET "useCount" = "useCount" + 1 WHERE "id" = $1', [invite.id]);
 		await manager.query(
