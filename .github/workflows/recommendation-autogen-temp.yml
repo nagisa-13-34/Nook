@@ -1,0 +1,69 @@
+name: Recommendation API type autogen (temporary)
+
+on:
+  push:
+    branches:
+      - agent/nook-recommendation-foundation
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: recommendation-api-type-autogen
+  cancel-in-progress: true
+
+jobs:
+  autogen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare configuration
+        run: |
+          mkdir -p .config
+          cp .github/misskey/test.yml .config/test.yml
+          cp .github/misskey/test.yml .config/default.yml
+
+      - name: Build prerequisites
+        run: |
+          pnpm build-pre
+          pnpm --filter i18n build
+          pnpm --filter misskey-reversi build
+          pnpm --filter misskey-js build
+          pnpm --filter misskey-bubble-game build
+
+      - name: Regenerate misskey-js API types
+        run: pnpm build-misskey-js-with-types
+
+      - name: Commit generated API types
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- packages/misskey-js/src/autogen; then
+            echo "Generated API types are already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/misskey-js/src/autogen
+          git commit -m "Regenerate API types for recommendations"
+          git push origin HEAD:agent/nook-recommendation-foundation
