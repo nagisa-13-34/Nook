@@ -53,7 +53,7 @@ import { prefer } from '@/preferences.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 
 const PAGE_SIZE = 20;
-const MAX_RECOMMENDATION_OFFSET = 400;
+const MAX_RECOMMENDATION_LIMIT = 400;
 
 const props = withDefaults(defineProps<{
 	withSensitive?: boolean;
@@ -74,17 +74,19 @@ const loadingMore = ref(false);
 const error = ref(false);
 const loadMoreError = ref(false);
 const hasMore = ref(true);
-const nextOffset = ref(0);
+const requestedLimit = ref(PAGE_SIZE);
 
-async function fetchPage(reset: boolean): Promise<void> {
-	const offset = reset ? 0 : nextOffset.value;
+async function fetchWindow(reset: boolean): Promise<void> {
+	const limit = reset
+		? PAGE_SIZE
+		: Math.min(requestedLimit.value + PAGE_SIZE, MAX_RECOMMENDATION_LIMIT);
 
 	if (reset) {
 		loading.value = true;
 		error.value = false;
 		loadMoreError.value = false;
 		hasMore.value = true;
-		nextOffset.value = 0;
+		requestedLimit.value = PAGE_SIZE;
 		notes.value = [];
 	} else {
 		loadingMore.value = true;
@@ -92,14 +94,11 @@ async function fetchPage(reset: boolean): Promise<void> {
 	}
 
 	try {
-		const page = await misskeyApi('notes/recommended', {
-			limit: PAGE_SIZE,
-			offset,
-		});
+		const windowNotes = await misskeyApi('notes/recommended', { limit });
 
-		notes.value = reset ? page : mergeNookRecommendationPage(notes.value, page);
-		nextOffset.value = offset + page.length;
-		hasMore.value = page.length === PAGE_SIZE && nextOffset.value <= MAX_RECOMMENDATION_OFFSET;
+		notes.value = reset ? windowNotes : mergeNookRecommendationPage(notes.value, windowNotes);
+		requestedLimit.value = limit;
+		hasMore.value = windowNotes.length === limit && limit < MAX_RECOMMENDATION_LIMIT;
 	} catch (err) {
 		if (isNookRecommendationUnavailableError(err)) {
 			emit('unavailable');
@@ -120,12 +119,12 @@ async function fetchPage(reset: boolean): Promise<void> {
 }
 
 async function reload(): Promise<void> {
-	await fetchPage(true);
+	await fetchWindow(true);
 }
 
 async function loadMore(): Promise<void> {
 	if (!hasMore.value || loading.value || loadingMore.value) return;
-	await fetchPage(false);
+	await fetchWindow(false);
 }
 
 useGlobalEvent('noteDeleted', (noteId) => {
