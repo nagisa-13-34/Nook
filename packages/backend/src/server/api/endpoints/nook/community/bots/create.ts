@@ -12,6 +12,7 @@ import { requireNookCommunityPermission, NookCommunityAccessError } from '@/nook
 import { requireNookCommunityChannelAccess, NookCommunityChannelError } from '@/nook/community/channels.js';
 import { createNookCommunityBot, NookCommunityBotError } from '@/nook/community/bots.js';
 import { NookCommunityReferenceError } from '@/nook/community/references.js';
+import { serializeNookCommunityBot } from '@/nook/community/serialize.js';
 import { ApiError } from '../../../../error.js';
 
 const botSchema = {
@@ -95,7 +96,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			}
 
 			try {
-				return await createNookCommunityBot(this.db, this.idService, {
+				const result = await createNookCommunityBot(this.db, this.idService, {
 					communityId: ps.communityId,
 					creatorId: me.id,
 					name: ps.name,
@@ -103,6 +104,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 					scopes: ps.scopes,
 					allowedChannelIds: ps.allowedChannelIds ?? [],
 				});
+				return { bot: serializeNookCommunityBot(result.bot), secret: result.secret };
 			} catch (error) {
 				if (error instanceof NookCommunityBotError && error.code === 'INVALID_SCOPE') throw new ApiError(meta.errors.invalidScope);
 				if (error instanceof NookCommunityReferenceError) throw new ApiError(meta.errors.invalidChannel);
