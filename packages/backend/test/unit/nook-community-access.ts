@@ -6,7 +6,7 @@
 import * as assert from 'node:assert';
 import { describe, test } from 'vitest';
 import type { DataSource } from 'typeorm';
-import { ensureNookCommunity, getNookCommunityContext } from '@/nook/community/access.js';
+import { ensureNookCommunity, getNookCommunityContext, requireNookCommunityPermission } from '@/nook/community/access.js';
 
 describe('Nook Community access reads', () => {
 	test('Community context reads never write companion rows', async () => {
@@ -22,6 +22,23 @@ describe('Nook Community access reads', () => {
 		const context = await getNookCommunityContext(db, 'community');
 		assert.equal(context.ownerId, 'owner');
 		assert.equal(calls.length, 1);
+		assert.ok(calls.every(sql => sql.trimStart().startsWith('SELECT')));
+	});
+
+	test('permission reads for a legacy owner do not initialize the Community', async () => {
+		const calls: string[] = [];
+		const db = {
+			query: async (sql: string) => {
+				calls.push(sql);
+				if (sql.includes('FROM "channel" c')) return [{ userId: 'owner', joinMode: null, discoverable: null, initialized: false }];
+				if (sql.includes('SELECT "baseRole", "state" FROM "nook_community_member"')) return [];
+				throw new Error(`Unexpected query: ${sql}`);
+			},
+		} as unknown as DataSource;
+
+		const membership = await requireNookCommunityPermission(db, 'community', 'owner', 'community.manage');
+		assert.equal(membership.baseRole, 'owner');
+		assert.equal(membership.permissions.has('*'), true);
 		assert.ok(calls.every(sql => sql.trimStart().startsWith('SELECT')));
 	});
 
