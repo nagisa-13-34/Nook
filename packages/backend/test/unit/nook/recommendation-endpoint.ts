@@ -4,9 +4,9 @@
  */
 
 import { describe, expect, test, vi } from 'vitest';
-import { RecommendationService } from '@/core/RecommendationService.js';
+import type { RecommendationService } from '@/core/RecommendationService.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { NookAccessService } from '@/nook/policy/NookAccessService.js';
+import type { NookAccessService } from '@/nook/policy/NookAccessService.js';
 import RecommendedEndpoint from '@/server/api/endpoints/notes/recommended.js';
 
 const me = { id: 'viewer' } as MiLocalUser;
