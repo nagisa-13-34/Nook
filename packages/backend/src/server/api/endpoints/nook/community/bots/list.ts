@@ -12,7 +12,24 @@ import { listNookCommunityChannels } from '@/nook/community/channels.js';
 import type { NookCommunityBotRecord } from '@/nook/community/bots.js';
 import { ApiError } from '../../../../error.js';
 
-const botSchema = { type: 'object', properties: { id: { type: 'string' }, communityId: { type: 'string' }, creatorId: { type: 'string', nullable: true }, name: { type: 'string' }, description: { type: 'string', nullable: true }, kind: { type: 'string' }, scopes: { type: 'array', items: { type: 'string' } }, allowedChannelIds: { type: 'array', items: { type: 'string' } }, enabled: { type: 'boolean' }, createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' }, lastUsedAt: { type: 'string', format: 'date-time', nullable: true } }, required: ['id','communityId','creatorId','name','description','kind','scopes','allowedChannelIds','enabled','createdAt','updatedAt','lastUsedAt'] } as const;
+const botSchema = {
+	type: 'object',
+	properties: {
+		id: { type: 'string' },
+		communityId: { type: 'string' },
+		creatorId: { type: 'string', nullable: true },
+		name: { type: 'string' },
+		description: { type: 'string', nullable: true },
+		kind: { type: 'string' },
+		scopes: { type: 'array', items: { type: 'string' } },
+		allowedChannelIds: { type: 'array', items: { type: 'string' } },
+		enabled: { type: 'boolean' },
+		createdAt: { type: 'string', format: 'date-time' },
+		updatedAt: { type: 'string', format: 'date-time' },
+		lastUsedAt: { type: 'string', format: 'date-time', nullable: true },
+	},
+	required: ['id', 'communityId', 'creatorId', 'name', 'description', 'kind', 'scopes', 'allowedChannelIds', 'enabled', 'createdAt', 'updatedAt', 'lastUsedAt'],
+} as const;
 export const meta = { tags: ['channels'], requireCredential: true, kind: 'read:channels', res: { type: 'array', optional: false, nullable: false, items: botSchema }, errors: { forbidden: { message: 'You cannot manage bots.', code: 'FORBIDDEN', id: '86642cd8-6876-4351-b65e-0259416d27cb' } } } as const;
 export const paramDef = { type: 'object', properties: { communityId: { type: 'string', format: 'misskey:id' } }, required: ['communityId'] } as const;
 
