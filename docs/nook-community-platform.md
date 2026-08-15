@@ -43,6 +43,7 @@ Important rules:
 - bots only access message channels explicitly listed in their allowlist
 - restricted Community subchannels are checked before reading messages or translations
 - active bans take precedence over join and invite flows
+- parent channels, custom roles, replies, pins, event channels, and bot channel allowlists are validated against their owning Community before being stored
 
 The Nook policy layer remains above Community permissions. A Community permission must never be treated as a way to bypass global safety policy.
 
@@ -57,11 +58,17 @@ Current integration-bot scopes are intentionally small:
 - `read:messages`
 - `write:messages`
 
-A bot must also have an explicit channel allowlist. An empty allowlist grants no message access.
+A bot must also have an explicit channel allowlist. An empty allowlist grants no message access. Full bot configuration, including channel IDs, is available only to members with `bots.manage`.
 
 ## Voice
 
 The current Voice implementation is a small-room WebRTC mesh MVP. The Nook backend handles Community authorization, presence, and signaling; media travels between permitted peers.
+
+The backend revalidates active membership, channel access, and `voice.join` during Voice activity. It also reports which peers currently hold `voice.speak`; the official frontend mutes incoming audio tracks from peers that do not hold that permission and updates this state on heartbeat.
+
+Because media is peer-to-peer in the mesh MVP, `voice.speak` is not a cryptographic server-side media gate against mutually modified clients. A future SFU should enforce publish permission at the media server for stronger server-side moderation.
+
+Malformed signaling messages are isolated to the sending peer by the official frontend; a malformed offer, answer, or ICE payload does not force the receiving user to leave the entire Voice room.
 
 This separation is intentional so the media layer can later be replaced by an SFU without replacing Community roles, channel records, or frontend navigation.
 
@@ -104,7 +111,7 @@ Original content is never replaced. Translations are cached separately by:
 - SHA-256 hash of the current source text
 - target language
 
-Changing the source text changes its hash, so stale translated text is not reused.
+Changing the source text changes its hash, so stale translated text is not reused. Community-message, announcement, and event cache entries are removed when their source object is deleted, and edited announcement/event text purges its previous translations. Remaining cache entries have a 30-day retention limit; cleanup is throttled and runs opportunistically during translation use.
 
 Supported Nook translation objects currently include:
 
@@ -125,6 +132,7 @@ Do not squash these migrations after they have been deployed to a persistent ins
 
 - Community messages use polling rather than a dedicated streaming channel.
 - Voice uses peer-to-peer mesh and is intended for small rooms; large rooms should move to an SFU.
+- `voice.speak` is enforced by authorization metadata plus the official mesh client; strong server-side media publish enforcement requires an SFU.
 - TTS is browser-local rather than a server-side audio bot.
 - Music is synchronized playback state rather than a server-side music relay.
 - `misskey-js` generated endpoint types must be regenerated after the Nook endpoints are finalized.
