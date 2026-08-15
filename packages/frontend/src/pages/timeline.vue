@@ -20,11 +20,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<span>{{ tab.title }}</span>
 			</button>
 		</nav>
-		<MkTip v-if="isBasicTimeline(src)" :k="`tl.${src}`" style="margin-bottom: var(--MI-margin);">
+		<MkTip v-if="isBasicTimeline(src) && !showRecommendedDiscover" :k="`tl.${src}`" style="margin-bottom: var(--MI-margin);">
 			{{ i18n.ts._timelineDescription[src] }}
 		</MkTip>
 		<MkPostForm v-if="prefer.r.showFixedPostForm.value" :class="$style.postForm" class="_panel" fixed style="margin-bottom: var(--MI-margin);"/>
+		<MkRecommendedNotesTimeline
+			v-if="showRecommendedDiscover"
+			ref="recommendedTlComponent"
+			:class="$style.tl"
+			:withSensitive="withSensitive"
+			@unavailable="recommendedUnavailable = true"
+		/>
 		<MkStreamingNotesTimeline
+			v-else
 			ref="tlComponent"
 			:key="src + withRenotes + withReplies + onlyFiles + withSensitive"
 			:class="$style.tl"
@@ -47,6 +55,7 @@ import type { MenuItem } from '@/types/menu.js';
 import type { BasicTimelineType } from '@/timelines.js';
 import type { NookTimelineView } from '@/nook/timeline.js';
 import type { PageHeaderItem } from '@/types/page-header.js';
+import MkRecommendedNotesTimeline from '@/components/MkRecommendedNotesTimeline.vue';
 import MkStreamingNotesTimeline from '@/components/MkStreamingNotesTimeline.vue';
 import MkPostForm from '@/components/MkPostForm.vue';
 import * as os from '@/os.js';
@@ -63,6 +72,7 @@ import { prefer } from '@/preferences.js';
 import { detectNookTimelineView, isNookDiscoverAvailable, resolveNookTimelineSource } from '@/nook/timeline.js';
 
 const tlComponent = useTemplateRef('tlComponent');
+const recommendedTlComponent = useTemplateRef('recommendedTlComponent');
 
 type TimelinePageSrc = BasicTimelineType | `list:${string}`;
 
@@ -106,6 +116,8 @@ const onlyFiles = computed<boolean>({
 });
 
 const nookTimelineView = computed(() => detectNookTimelineView(src.value, onlyFiles.value));
+const recommendedUnavailable = ref(false);
+const showRecommendedDiscover = computed(() => $i != null && nookTimelineView.value === 'discover' && !recommendedUnavailable.value);
 const nookTimelineTabs = computed(() => [{
 	key: 'following' as const,
 	title: i18n.ts.nookFollowing,
@@ -123,9 +135,14 @@ const nookTimelineTabs = computed(() => [{
 function selectNookTimeline(view: NookTimelineView): void {
 	const target = resolveNookTimelineSource(view, availableBasicTimelines());
 	if (target == null) return;
+	if (view === 'discover') recommendedUnavailable.value = false;
 	onlyFiles.value = target.onlyFiles;
 	src.value = target.src;
 }
+
+watch(nookTimelineView, (view) => {
+	if (view !== 'discover') recommendedUnavailable.value = false;
+});
 
 watch([withReplies, onlyFiles], ([withRepliesTo, onlyFilesTo]) => {
 	if (withRepliesTo) {
@@ -249,21 +266,23 @@ const headerActions = computed<PageHeaderItem[]>(() => {
 		handler: (ev) => {
 			const menuItems: MenuItem[] = [];
 
-			menuItems.push({
-				type: 'switch',
-				icon: 'ti ti-repeat',
-				text: i18n.ts.showRenotes,
-				ref: withRenotes,
-			});
-
-			if (isBasicTimeline(src.value) && hasWithReplies(src.value)) {
+			if (!showRecommendedDiscover.value) {
 				menuItems.push({
 					type: 'switch',
-					icon: 'ti ti-messages',
-					text: i18n.ts.showRepliesToOthersInTimeline,
-					ref: withReplies,
-					disabled: onlyFiles,
+					icon: 'ti ti-repeat',
+					text: i18n.ts.showRenotes,
+					ref: withRenotes,
 				});
+
+				if (isBasicTimeline(src.value) && hasWithReplies(src.value)) {
+					menuItems.push({
+						type: 'switch',
+						icon: 'ti ti-messages',
+						text: i18n.ts.showRepliesToOthersInTimeline,
+						ref: withReplies,
+						disabled: onlyFiles,
+					});
+				}
 			}
 
 			menuItems.push({
@@ -271,13 +290,19 @@ const headerActions = computed<PageHeaderItem[]>(() => {
 				icon: 'ti ti-eye-exclamation',
 				text: i18n.ts.withSensitive,
 				ref: withSensitive,
-			}, {
-				type: 'switch',
-				icon: 'ti ti-photo',
-				text: i18n.ts.fileAttachedOnly,
-				ref: onlyFiles,
-				disabled: isBasicTimeline(src.value) && hasWithReplies(src.value) ? withReplies : false,
-			}, {
+			});
+
+			if (!showRecommendedDiscover.value) {
+				menuItems.push({
+					type: 'switch',
+					icon: 'ti ti-photo',
+					text: i18n.ts.fileAttachedOnly,
+					ref: onlyFiles,
+					disabled: isBasicTimeline(src.value) && hasWithReplies(src.value) ? withReplies : false,
+				});
+			}
+
+			menuItems.push({
 				type: 'divider',
 			}, {
 				type: 'switch',
@@ -294,7 +319,11 @@ const headerActions = computed<PageHeaderItem[]>(() => {
 			icon: 'ti ti-refresh',
 			text: i18n.ts.reload,
 			handler: () => {
-				tlComponent.value?.reloadTimeline();
+				if (showRecommendedDiscover.value) {
+					void recommendedTlComponent.value?.reload();
+				} else {
+					tlComponent.value?.reloadTimeline();
+				}
 			},
 		});
 	}
