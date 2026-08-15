@@ -18,6 +18,7 @@ const translated = ref<{ sourceLang: string; text: string } | null>(null);
 const enabled = computed(() => nookAutoTranslateEnabled.value && !!props.text);
 
 let requestId = 0;
+
 async function refresh() {
 	const id = ++requestId;
 	translated.value = null;
