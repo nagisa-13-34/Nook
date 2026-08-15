@@ -8,7 +8,6 @@ import { DataSource } from 'typeorm';
 import type { ChannelsRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { ChannelFollowingService } from '@/core/ChannelFollowingService.js';
-import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { useNookCommunityInvite, NookCommunityMembershipError } from '@/nook/community/membership.js';
 import { ApiError } from '../../../../error.js';
@@ -43,7 +42,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 			const channel = await this.channelsRepository.findOneBy({ id: communityId });
 			if (channel != null) {
-				try { await this.channelFollowingService.follow(me, channel); } catch (error) { if (!(error instanceof IdentifiableError && error.id === '6e335e39-0203-4418-a936-b3f2dc987845')) throw error; }
+				// Invite consumption and membership are already committed. Channel follow is best-effort only.
+				try { await this.channelFollowingService.follow(me, channel); } catch {}
 			}
 			return { communityId };
 		});
