@@ -100,7 +100,14 @@ export async function leaveNookCommunity(db: DataSource, communityId: string, us
 	});
 }
 
-export async function respondNookCommunityJoinRequest(db: DataSource, communityId: string, requestId: string, responderId: string, approve: boolean): Promise<{ communityId: string; userId: string }> {
+export async function respondNookCommunityJoinRequest(
+	db: DataSource,
+	communityId: string,
+	requestId: string,
+	responderId: string,
+	approve: boolean,
+	beforeApprove?: (userId: string) => Promise<void>,
+): Promise<{ communityId: string; userId: string }> {
 	return await db.transaction(async manager => {
 		const rows = await manager.query<Array<{ communityId: string; userId: string; status: string }>>(
 			'SELECT "communityId", "userId", "status" FROM "nook_community_join_request" WHERE "id" = $1 AND "communityId" = $2 FOR UPDATE',
@@ -110,6 +117,7 @@ export async function respondNookCommunityJoinRequest(db: DataSource, communityI
 		if (request == null || request.status !== 'pending') throw new NookCommunityMembershipError('NO_SUCH_REQUEST');
 
 		if (approve) {
+			if (beforeApprove != null) await beforeApprove(request.userId);
 			const memberRows = await manager.query<Array<{ userId: string }>>(
 				`INSERT INTO "nook_community_member" ("communityId", "userId", "baseRole", "state")
 				 VALUES ($1, $2, 'member', 'active')
