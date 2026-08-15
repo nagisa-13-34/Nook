@@ -5,6 +5,8 @@
 
 import type { DataSource } from 'typeorm';
 
+type NookCommunityQueryExecutor = Pick<DataSource, 'query'>;
+
 export type NookCommunityReferenceErrorCode =
 	| 'CHANNEL_NOT_IN_COMMUNITY'
 	| 'INVALID_CHANNEL_KIND'
@@ -26,7 +28,7 @@ export interface NookCommunityChannelReference {
 }
 
 export async function requireNookCommunityChannelReference(
-	db: DataSource,
+	db: NookCommunityQueryExecutor,
 	communityId: string,
 	channelId: string,
 	options: { kind?: NookCommunityChannelReference['kind']; nonVoice?: boolean } = {},
@@ -42,18 +44,24 @@ export async function requireNookCommunityChannelReference(
 	return channel;
 }
 
-export async function requireNookCommunityRoleReferences(db: DataSource, communityId: string, roleIds: readonly string[]): Promise<void> {
+export async function requireNookCommunityRoleReferences(
+	db: NookCommunityQueryExecutor,
+	communityId: string,
+	roleIds: readonly string[],
+	options: { lockForWrite?: boolean } = {},
+): Promise<void> {
 	const unique = [...new Set(roleIds)];
 	if (unique.length === 0) return;
+	const lockClause = options.lockForWrite === true ? ' FOR KEY SHARE' : '';
 	const rows = await db.query<Array<{ id: string }>>(
-		'SELECT "id" FROM "nook_community_role" WHERE "communityId"=$1 AND "id" = ANY($2::varchar[])',
+		`SELECT "id" FROM "nook_community_role" WHERE "communityId"=$1 AND "id" = ANY($2::varchar[])${lockClause}`,
 		[communityId, unique],
 	);
 	if (rows.length !== unique.length) throw new NookCommunityReferenceError('ROLE_NOT_IN_COMMUNITY');
 }
 
 export async function requireNookCommunityReplyReference(
-	db: DataSource,
+	db: NookCommunityQueryExecutor,
 	communityId: string,
 	channelId: string,
 	replyToId: string | null,
@@ -67,7 +75,7 @@ export async function requireNookCommunityReplyReference(
 }
 
 export async function requireNookCommunityPinReferences(
-	db: DataSource,
+	db: NookCommunityQueryExecutor,
 	communityId: string,
 	input: { channelId: string | null; kind: 'message' | 'note' | 'announcement' | 'event' | 'url'; targetId: string | null },
 ): Promise<void> {
