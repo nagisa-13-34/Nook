@@ -37,6 +37,7 @@ import { notePage } from '@/filters/note.js';
 import type { DI as DIType } from '@/di.js';
 import type { ExtractInjectedType } from '@/types/misc.js';
 import type { MenuItem } from '@/types/menu.js';
+import { useNookNoteAutoTranslation } from '@/nook/community/note-auto-translation.js';
 
 export interface UseNoteProps {
 	note: Misskey.entities.Note;
@@ -143,6 +144,7 @@ export function useNote(
 	const isDeleted = ref(false);
 	const translating = ref(false);
 	const translation = ref<Misskey.entities.NotesTranslateResponse | null>(null);
+	useNookNoteAutoTranslation(appearNote, translation, translating, props.mock);
 
 	// ミュート判定
 	const muted = ref($i ? calculateMuteStatus(appearNote, $i, $i.mutedWords, inTimeline && !tl_withSensitive.value) : false);

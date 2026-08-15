@@ -8,17 +8,46 @@ import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import { ModuleRef } from '@nestjs/core';
 import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
+import type { DataSource } from 'typeorm';
 import type { Config } from '@/config.js';
 import type { InstancesRepository, AccessTokensRepository } from '@/models/_.js';
+import type { MiLocalUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { bindThis } from '@/decorators.js';
+import { ensureNookCommunity } from '@/nook/community/access.js';
+import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 import endpoints from './endpoints.js';
 import { ApiCallService } from './ApiCallService.js';
+import { ApiError } from './error.js';
 import { SignupApiService } from './SignupApiService.js';
 import { SigninApiService } from './SigninApiService.js';
 import { SigninWithPasskeyApiService } from './SigninWithPasskeyApiService.js';
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
+
+const nookCommunityDisabled = {
+	message: 'Community is currently disabled by the Nook feature flag.',
+	code: 'NOOK_COMMUNITY_DISABLED',
+	id: '5aa139c4-72cb-41c2-af40-37e1d37f9024',
+	kind: 'permission',
+	httpStatusCode: 403,
+} as const;
+
+const nookVoiceDisabled = {
+	message: 'Voice calls are currently disabled by the Nook feature flag.',
+	code: 'NOOK_VOICE_CALL_DISABLED',
+	id: 'c71e6c24-7c60-45be-a609-45145d6dcd7a',
+	kind: 'permission',
+	httpStatusCode: 403,
+} as const;
+
+const nookCommunityPolicyDenied = {
+	message: 'This Community action is restricted by the current Nook policy.',
+	code: 'RESTRICTED_BY_NOOK_POLICY',
+	id: '19f85dc5-bf12-4b1a-bd16-66fb2b49759f',
+	kind: 'permission',
+	httpStatusCode: 403,
+} as const;
 
 @Injectable()
 export class ApiServerService {
@@ -28,6 +57,9 @@ export class ApiServerService {
 		@Inject(DI.config)
 		private config: Config,
 
+		@Inject(DI.db)
+		private db: DataSource,
+
 		@Inject(DI.instancesRepository)
 		private instancesRepository: InstancesRepository,
 
@@ -36,11 +68,71 @@ export class ApiServerService {
 
 		private userEntityService: UserEntityService,
 		private apiCallService: ApiCallService,
+		private nookAccessService: NookAccessService,
 		private signupApiService: SignupApiService,
 		private signinApiService: SigninApiService,
 		private signinWithPasskeyApiService: SigninWithPasskeyApiService,
 	) {
 		//this.createServer = this.createServer.bind(this);
+	}
+
+	private async ensureLegacyCommunityWriteAllowed(endpointName: string, endpointKind: string | undefined, user: MiLocalUser | null | undefined, data: unknown): Promise<void> {
+		if (endpointKind == null || !endpointKind.startsWith('write:')) return;
+		if (typeof data !== 'object' || data == null) return;
+		const communityId = (data as Record<string, unknown>).communityId;
+		if (typeof communityId !== 'string') return;
+
+		const rows = await this.db.query<Array<{
+			ownerId: string | null;
+			initialized: boolean;
+			isDeleted: boolean | null;
+			isSuspended: boolean | null;
+		}>>(
+			`SELECT c."userId" AS "ownerId",
+			 (nc."channelId" IS NOT NULL) AS "initialized",
+			 u."isDeleted", u."isSuspended"
+			 FROM "channel" c
+			 LEFT JOIN "nook_community" nc ON nc."channelId" = c."id"
+			 LEFT JOIN "user" u ON u."id" = c."userId" AND u."host" IS NULL
+			 WHERE c."id" = $1 LIMIT 1`,
+			[communityId],
+		);
+		const row = rows[0];
+		if (row == null || row.initialized) return;
+		if (row.ownerId == null || row.isDeleted == null || row.isSuspended == null) throw new ApiError(nookCommunityPolicyDenied);
+
+		// A failed management write from a non-owner must not materialize a legacy
+		// Channel into a Community as a side effect. Public join is the one write
+		// that may legitimately materialize a legacy Community for a non-owner.
+		if (endpointName !== 'nook/community/join' && user?.id !== row.ownerId) return;
+
+		const owner = {
+			id: row.ownerId,
+			isDeleted: row.isDeleted,
+			isSuspended: row.isSuspended,
+		} as MiLocalUser;
+		if (!(await this.nookAccessService.evaluate(owner, 'create_community')).allowed) throw new ApiError(nookCommunityPolicyDenied);
+		await ensureNookCommunity(this.db, communityId);
+	}
+
+	private async assertNookEndpointAccess(endpointName: string, user: MiLocalUser | null | undefined, data?: unknown, endpointKind?: string): Promise<void> {
+		if (!endpointName.startsWith('nook/community/')) return;
+		if (!(await this.nookAccessService.isFeatureEnabled('community'))) throw new ApiError(nookCommunityDisabled);
+
+		if (endpointName.startsWith('nook/community/voice/')) {
+			if (!(await this.nookAccessService.isFeatureEnabled('voice_call'))) throw new ApiError(nookVoiceDisabled);
+			if (user != null && !(await this.nookAccessService.evaluate(user, 'voice_call')).allowed) {
+				throw new ApiError(nookCommunityPolicyDenied);
+			}
+		}
+
+		if (user != null && (endpointName === 'nook/community/join' || endpointName === 'nook/community/invites/use')) {
+			if (!(await this.nookAccessService.evaluate(user, 'join_community')).allowed) {
+				throw new ApiError(nookCommunityPolicyDenied);
+			}
+		}
+
+		await this.ensureLegacyCommunityWriteAllowed(endpointName, endpointKind, user, data);
 	}
 
 	@bindThis
@@ -63,11 +155,15 @@ export class ApiServerService {
 		});
 
 		for (const endpoint of endpoints) {
+			const endpointExec = this.moduleRef.get('ep:' + endpoint.name, { strict: false }).exec;
 			const ep = {
 				name: endpoint.name,
 				meta: endpoint.meta,
 				params: endpoint.params,
-				exec: this.moduleRef.get('ep:' + endpoint.name, { strict: false }).exec,
+				exec: async (data: unknown, user: MiLocalUser | null | undefined, ...rest: unknown[]) => {
+					await this.assertNookEndpointAccess(endpoint.name, user, data, endpoint.meta.kind);
+					return await endpointExec(data, user, ...rest);
+				},
 			};
 
 			if (endpoint.meta.requireFile) {

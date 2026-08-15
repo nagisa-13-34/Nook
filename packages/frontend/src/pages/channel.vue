@@ -56,6 +56,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<MkInfo warn>{{ i18n.ts.notesSearchNotAvailable }}</MkInfo>
 			</div>
 		</div>
+		<div v-if="channel && communityEnabled && tab === 'community'">
+			<NookCommunityPanel :communityId="channelId" :voice-enabled="voiceCallEnabled"/>
+		</div>
 	</div>
 	<template #footer>
 		<div :class="$style.footer">
@@ -98,6 +101,8 @@ import { notesSearchAvailable } from '@/utility/check-permissions.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { useRouter } from '@/router.js';
 import { Paginator } from '@/utility/paginator.js';
+import NookCommunityPanel from '@/nook/community/NookCommunityPanel.vue';
+import { nookApi } from '@/nook/community/nook-api.js';
 
 const router = useRouter();
 
@@ -108,6 +113,8 @@ const props = defineProps<{
 const tab = ref('overview');
 const channel = ref<Misskey.entities.Channel | null>(null);
 const favorited = ref(false);
+const communityEnabled = ref(false);
+const voiceCallEnabled = ref(false);
 const searchQuery = ref('');
 const searchPaginator = shallowRef();
 const searchKey = ref('');
@@ -122,7 +129,13 @@ useInterval(() => {
 }, 3000, { immediate: true, afterMounted: true });
 
 watch(() => props.channelId, async () => {
-	const _channel = await misskeyApi('channels/show', { channelId: props.channelId });
+	const [_channel, features] = await Promise.all([
+		misskeyApi('channels/show', { channelId: props.channelId }),
+		nookApi<{ community: boolean; voiceCall: boolean }>('nook/features').catch(() => ({ community: false, voiceCall: false })),
+	]);
+	communityEnabled.value = features.community;
+	voiceCallEnabled.value = features.community && features.voiceCall;
+	if (!communityEnabled.value && tab.value === 'community') tab.value = 'overview';
 	favorited.value = _channel.isFavorited ?? false;
 	if (favorited.value || _channel.isFollowing) tab.value = 'timeline';
 	if ((favorited.value || _channel.isFollowing) && _channel.lastNotedAt) {
@@ -238,6 +251,7 @@ const headerActions = computed(() => {
 
 const headerTabs = computed(() => [
 	{ key: 'overview', title: i18n.ts.overview, icon: 'ti ti-info-circle' },
+	...(communityEnabled.value ? [{ key: 'community', title: 'Community', icon: 'ti ti-users-group' }] : []),
 	{ key: 'timeline', title: i18n.ts.timeline, icon: 'ti ti-home' },
 	{ key: 'featured', title: i18n.ts.featured, icon: 'ti ti-bolt' },
 	{ key: 'search', title: i18n.ts.search, icon: 'ti ti-search' },

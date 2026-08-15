@@ -5,12 +5,15 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import ms from 'ms';
+import type { DataSource } from 'typeorm';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import type { ChannelsRepository, DriveFilesRepository } from '@/models/_.js';
 import type { MiChannel } from '@/models/Channel.js';
 import { IdService } from '@/core/IdService.js';
 import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
 import { DI } from '@/di-symbols.js';
+import { NookAccessService } from '@/nook/policy/NookAccessService.js';
+import { ensureNookCommunity } from '@/nook/community/access.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -41,6 +44,13 @@ export const meta = {
 			code: 'NO_SUCH_FILE',
 			id: 'cd1e9f3e-5a12-4ab4-96f6-5d0a2cc32050',
 		},
+		communityRestricted: {
+			message: 'You are not allowed to create a Community under the current Nook policy.',
+			code: 'RESTRICTED_BY_NOOK_POLICY',
+			id: '513a3c2d-d5df-44f4-86f7-94c74139be39',
+			kind: 'permission',
+			httpStatusCode: 403,
+		},
 	},
 } as const;
 
@@ -60,6 +70,9 @@ export const paramDef = {
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
+		@Inject(DI.db)
+		private db: DataSource,
+
 		@Inject(DI.driveFilesRepository)
 		private driveFilesRepository: DriveFilesRepository,
 
@@ -68,8 +81,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 		private idService: IdService,
 		private channelEntityService: ChannelEntityService,
+		private nookAccessService: NookAccessService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
+			const communityEnabled = await this.nookAccessService.isFeatureEnabled('community');
+			if (communityEnabled && !(await this.nookAccessService.evaluate(me, 'create_community')).allowed) {
+				throw new ApiError(meta.errors.communityRestricted);
+			}
+
 			let banner = null;
 			if (ps.bannerId != null) {
 				banner = await this.driveFilesRepository.findOneBy({
@@ -93,6 +112,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				allowRenoteToExternal: ps.allowRenoteToExternal ?? true,
 			} as MiChannel);
 
+			if (communityEnabled) await ensureNookCommunity(this.db, channel.id);
 			return await this.channelEntityService.pack(channel, me);
 		});
 	}

@@ -1,0 +1,170 @@
+name: Community 2 verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/community-2-platform
+
+permissions:
+  contents: read
+
+concurrency:
+  group: community-2-verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: test-misskey
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 54312:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d test-misskey"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 56312:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare test configuration
+        run: |
+          mkdir -p .config
+          cp .github/misskey/test.yml .config/test.yml
+
+      - name: Backend typecheck
+        id: backend_typecheck
+        continue-on-error: true
+        run: pnpm --filter backend typecheck
+
+      - name: Backend ESLint
+        id: backend_eslint
+        continue-on-error: true
+        run: pnpm --filter backend eslint
+
+      - name: Backend unit tests
+        id: backend_tests
+        continue-on-error: true
+        run: pnpm --filter backend test
+
+      - name: Frontend typecheck
+        id: frontend_typecheck
+        continue-on-error: true
+        run: pnpm --filter frontend typecheck
+
+      - name: Frontend ESLint
+        id: frontend_eslint
+        continue-on-error: true
+        run: pnpm --filter frontend eslint
+
+      - name: Frontend unit tests
+        id: frontend_tests
+        continue-on-error: true
+        run: pnpm --filter frontend test
+
+      - name: misskey-js typecheck
+        id: misskey_js_typecheck
+        continue-on-error: true
+        run: pnpm --filter misskey-js typecheck
+
+      - name: misskey-js ESLint
+        id: misskey_js_eslint
+        continue-on-error: true
+        run: pnpm --filter misskey-js eslint
+
+      - name: Verify migrations up, down, and schema cleanliness
+        id: migrations
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter backend build
+          pnpm --filter backend migrate
+          pnpm --filter backend check-migrations
+
+          NOOK_MIGRATION_COUNT="$(git diff --diff-filter=A --name-only origin/main...HEAD -- 'packages/backend/migration/*.js' | wc -l | tr -d ' ')"
+          echo "Community branch added ${NOOK_MIGRATION_COUNT} migration(s)."
+          for ((i = 0; i < NOOK_MIGRATION_COUNT; i++)); do
+            pnpm --filter backend revert
+          done
+
+          pnpm --filter backend migrate
+          pnpm --filter backend check-migrations
+
+      - name: Regenerate misskey-js API types
+        id: autogen
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm build-misskey-js-with-types
+          if ! git diff --exit-code -- packages/misskey-js/src/autogen; then
+            echo "::error::misskey-js generated API types are out of date. Commit the regenerated files."
+            exit 1
+          fi
+
+      - name: Summarize verification result
+        if: always()
+        shell: bash
+        env:
+          BACKEND_TYPECHECK: ${{ steps.backend_typecheck.outcome }}
+          BACKEND_ESLINT: ${{ steps.backend_eslint.outcome }}
+          BACKEND_TESTS: ${{ steps.backend_tests.outcome }}
+          FRONTEND_TYPECHECK: ${{ steps.frontend_typecheck.outcome }}
+          FRONTEND_ESLINT: ${{ steps.frontend_eslint.outcome }}
+          FRONTEND_TESTS: ${{ steps.frontend_tests.outcome }}
+          MISSKEY_JS_TYPECHECK: ${{ steps.misskey_js_typecheck.outcome }}
+          MISSKEY_JS_ESLINT: ${{ steps.misskey_js_eslint.outcome }}
+          MIGRATIONS: ${{ steps.migrations.outcome }}
+          AUTOGEN: ${{ steps.autogen.outcome }}
+        run: |
+          set -u
+          failed=0
+          for check in \
+            BACKEND_TYPECHECK BACKEND_ESLINT BACKEND_TESTS \
+            FRONTEND_TYPECHECK FRONTEND_ESLINT FRONTEND_TESTS \
+            MISSKEY_JS_TYPECHECK MISSKEY_JS_ESLINT MIGRATIONS AUTOGEN
+          do
+            result="${!check}"
+            printf '%-24s %s\n' "$check" "$result"
+            if [ "$result" != "success" ]; then
+              failed=1
+              echo "::error::${check} finished with ${result}"
+            fi
+          done
+          exit "$failed"
