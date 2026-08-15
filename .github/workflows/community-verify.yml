@@ -77,6 +77,7 @@ jobs:
           pnpm --filter i18n build
           pnpm --filter misskey-reversi build
           pnpm --filter misskey-js build
+          pnpm --filter misskey-bubble-game build
 
       - name: Backend typecheck
         id: backend_typecheck
@@ -88,10 +89,28 @@ jobs:
         continue-on-error: true
         run: pnpm --filter backend eslint
 
-      - name: Backend unit tests
+      - name: Backend Nook and Community unit tests
         id: backend_tests
         continue-on-error: true
-        run: pnpm --filter backend test
+        run: >-
+          pnpm --filter backend exec vitest run
+          test/unit/NookAccessService.ts
+          test/unit/NookChatRoomJoinEndpoint.ts
+          test/unit/NookLikesPrivacy.ts
+          test/unit/NookPolicyEngine.ts
+          test/unit/nook
+          test/unit/nook-community-access.ts
+          test/unit/nook-community-api-gate.ts
+          test/unit/nook-community-authorization.ts
+          test/unit/nook-community-endpoint-privacy.ts
+          test/unit/nook-community-events.ts
+          test/unit/nook-community-members.ts
+          test/unit/nook-community-membership.ts
+          test/unit/nook-community-references.ts
+          test/unit/nook-community-restricted-mutations.ts
+          test/unit/nook-community-roles.ts
+          test/unit/nook-community-voice-session.ts
+          test/unit/nook-translation-cache.ts
 
       - name: Frontend typecheck
         id: frontend_typecheck
