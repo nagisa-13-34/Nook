@@ -12,19 +12,38 @@ import { DI } from '@/di-symbols.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
 
 export type NookTranslationKind = 'note' | 'communityMessage' | 'communityAnnouncement' | 'communityEvent';
+export const nookTranslationCacheTtlDays = 30;
 
 export class NookTranslationUnavailableError extends Error {}
 
+export async function purgeNookTranslationCache(db: DataSource, kind: NookTranslationKind, objectId: string): Promise<void> {
+	await db.query('DELETE FROM "nook_translation_cache" WHERE "kind"=$1 AND "objectId"=$2', [kind, objectId]);
+}
+
 @Injectable()
 export class NookTranslationService {
+	private nextCacheCleanupAt = 0;
+
 	constructor(
 		@Inject(DI.db) private db: DataSource,
 		@Inject(DI.meta) private serverSettings: MiMeta,
 		private httpRequestService: HttpRequestService,
 	) {}
 
+	private async cleanupExpiredCache(): Promise<void> {
+		const now = Date.now();
+		if (now < this.nextCacheCleanupAt) return;
+		this.nextCacheCleanupAt = now + 60 * 60 * 1000;
+		try {
+			await this.db.query(`DELETE FROM "nook_translation_cache" WHERE "createdAt" < now() - interval '${nookTranslationCacheTtlDays} days'`);
+		} catch {
+			// Cache cleanup must never make translation unavailable.
+		}
+	}
+
 	public async translate(kind: NookTranslationKind, objectId: string, text: string, targetLanguage: string): Promise<{ sourceLang: string; text: string }> {
 		if (this.serverSettings.deeplAuthKey == null) throw new NookTranslationUnavailableError();
+		await this.cleanupExpiredCache();
 		const sourceHash = createHash('sha256').update(text).digest('hex');
 		let targetLang = targetLanguage.trim();
 		if (targetLang.includes('-')) targetLang = targetLang.split('-')[0];
