@@ -4,7 +4,7 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
 import type { ChannelsRepository, UsersRepository } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
@@ -51,7 +51,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					me.id,
 					ps.approve,
 					ps.approve ? async userId => {
-						const user = await this.usersRepository.findOneBy({ id: userId, host: null });
+						const user = await this.usersRepository.findOneBy({ id: userId, host: IsNull() });
 						if (user == null || !(await this.nookAccessService.evaluate(user as MiLocalUser, 'join_community')).allowed) {
 							throw new ApiError(meta.errors.joinRestricted);
 						}
@@ -67,7 +67,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				try {
 					const [channel, user] = await Promise.all([
 						this.channelsRepository.findOneBy({ id: result.communityId }),
-						this.usersRepository.findOneBy({ id: result.userId, host: null }),
+						this.usersRepository.findOneBy({ id: result.userId, host: IsNull() }),
 					]);
 					if (channel != null && user != null) await this.channelFollowingService.follow(user as MiLocalUser, channel);
 				} catch {}
