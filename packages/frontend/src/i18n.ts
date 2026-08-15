@@ -21,9 +21,13 @@ const nookLocale = lang === 'ja-JP'
 
 type NookLocale = Locale & typeof nookLocale;
 
-export const i18n = markRaw(new I18n<NookLocale>(Object.assign(locale, nookLocale), _DEV_));
+function withNookLocale(baseLocale: Locale | undefined): NookLocale {
+	return Object.assign({}, baseLocale ?? {}, nookLocale) as NookLocale;
+}
+
+export const i18n = markRaw(new I18n<NookLocale>(withNookLocale(locale), _DEV_));
 
 // test 以外では使わないこと。インライン化されてるのでだいたい意味がない
 export function updateI18n(newLocale: Locale) {
-	i18n.locale = Object.assign(newLocale, nookLocale);
+	i18n.locale = withNookLocale(newLocale);
 }
