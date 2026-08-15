@@ -21,7 +21,10 @@ export const paramDef = { type: 'object', properties: { communityId: { type: 'st
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(@Inject(DI.db) private db: DataSource) { super(meta, paramDef, async (ps, me) => {
-		try { await requireNookCommunityMember(this.db, ps.communityId, me.id); } catch (error) { if (error instanceof NookCommunityAccessError) throw new ApiError(meta.errors.forbidden); throw error; }
-		return await listNookCommunityMembers(this.db, ps.communityId);
+		let membership;
+		try { membership = await requireNookCommunityMember(this.db, ps.communityId, me.id); } catch (error) { if (error instanceof NookCommunityAccessError) throw new ApiError(meta.errors.forbidden); throw error; }
+		const members = await listNookCommunityMembers(this.db, ps.communityId) as Array<{ roleIds: string[] } & Record<string, unknown>>;
+		if (membership.permissions.has('*') || membership.permissions.has('roles.manage')) return members;
+		return members.map(member => ({ ...member, roleIds: [] }));
 	}); }
 }
