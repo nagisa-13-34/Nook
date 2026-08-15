@@ -763,6 +763,8 @@ import type {
 	NookFeaturesResponse,
 	NookTranslateRequest,
 	NookTranslateResponse,
+	NotesRecommendedRequest,
+	NotesRecommendedResponse,
 } from './entities.js';
 
 export type Endpoints = {
@@ -1265,6 +1267,7 @@ export type Endpoints = {
 	'nook/community/voice/signals': { req: NookCommunityVoiceSignalsRequest; res: NookCommunityVoiceSignalsResponse };
 	'nook/features': { req: EmptyRequest; res: NookFeaturesResponse };
 	'nook/translate': { req: NookTranslateRequest; res: NookTranslateResponse };
+	'notes/recommended': { req: NotesRecommendedRequest; res: NotesRecommendedResponse };
 };
 
 /**
