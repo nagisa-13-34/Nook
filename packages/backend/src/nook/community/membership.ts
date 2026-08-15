@@ -12,7 +12,7 @@ import type { NookCommunityBaseRole } from './types.js';
 export type NookCommunityJoinResult = 'joined' | 'pending';
 
 export class NookCommunityMembershipError extends Error {
-	constructor(public readonly code: 'ALREADY_MEMBER' | 'BANNED' | 'INVITE_REQUIRED' | 'OWNER_CANNOT_LEAVE' | 'NO_SUCH_REQUEST' | 'NO_SUCH_INVITE' | 'INVITE_EXPIRED' | 'INVITE_EXHAUSTED') {
+	constructor(public readonly code: 'ALREADY_MEMBER' | 'BANNED' | 'NOT_MEMBER' | 'INVITE_REQUIRED' | 'OWNER_CANNOT_LEAVE' | 'NO_SUCH_REQUEST' | 'NO_SUCH_INVITE' | 'INVITE_EXPIRED' | 'INVITE_EXHAUSTED') {
 		super(code);
 	}
 }
@@ -73,8 +73,31 @@ export async function requestNookCommunityJoin(db: DataSource, idService: IdServ
 export async function leaveNookCommunity(db: DataSource, communityId: string, userId: string): Promise<void> {
 	const context = await ensureNookCommunity(db, communityId);
 	if (context.ownerId === userId) throw new NookCommunityMembershipError('OWNER_CANNOT_LEAVE');
-	await db.query('DELETE FROM "nook_community_member" WHERE "communityId" = $1 AND "userId" = $2', [communityId, userId]);
-	await db.query('DELETE FROM "nook_community_join_request" WHERE "communityId" = $1 AND "userId" = $2 AND "status" = \'pending\'', [communityId, userId]);
+
+	await db.transaction(async manager => {
+		const rows = await manager.query<Array<{ state: 'active' | 'banned' }>>(
+			'SELECT "state" FROM "nook_community_member" WHERE "communityId"=$1 AND "userId"=$2 FOR UPDATE',
+			[communityId, userId],
+		);
+		const membership = rows[0];
+		if (membership?.state === 'banned') throw new NookCommunityMembershipError('BANNED');
+		if (membership?.state !== 'active') throw new NookCommunityMembershipError('NOT_MEMBER');
+
+		await manager.query(
+			`DELETE FROM "nook_community_event_rsvp" r
+			 USING "nook_community_event" e
+			 WHERE r."eventId"=e."id" AND e."communityId"=$1 AND r."userId"=$2`,
+			[communityId, userId],
+		);
+		await manager.query(
+			'DELETE FROM "nook_community_member" WHERE "communityId"=$1 AND "userId"=$2 AND "state"=\'active\'',
+			[communityId, userId],
+		);
+		await manager.query(
+			'DELETE FROM "nook_community_join_request" WHERE "communityId"=$1 AND "userId"=$2 AND "status"=\'pending\'',
+			[communityId, userId],
+		);
+	});
 }
 
 export async function respondNookCommunityJoinRequest(db: DataSource, communityId: string, requestId: string, responderId: string, approve: boolean): Promise<{ communityId: string; userId: string }> {
