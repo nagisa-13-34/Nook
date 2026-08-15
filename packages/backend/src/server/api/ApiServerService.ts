@@ -250,7 +250,7 @@ export class ApiServerService {
 			return instances.map(instance => instance.host);
 		});
 
-		fastify.post<{ Params: { session: string; } }>('/miauth/:session/check', (request, reply) => {
+		fastify.post<{ Params: { session: string; } }>('/miauth/:session/check', async (request, reply) => {
 			const token = await this.accessTokensRepository.findOneBy({
 				session: request.params.session,
 			});
