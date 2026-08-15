@@ -10,15 +10,42 @@ import { ModuleRef } from '@nestjs/core';
 import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
 import type { Config } from '@/config.js';
 import type { InstancesRepository, AccessTokensRepository } from '@/models/_.js';
+import type { MiLocalUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { bindThis } from '@/decorators.js';
+import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 import endpoints from './endpoints.js';
 import { ApiCallService } from './ApiCallService.js';
+import { ApiError } from './error.js';
 import { SignupApiService } from './SignupApiService.js';
 import { SigninApiService } from './SigninApiService.js';
 import { SigninWithPasskeyApiService } from './SigninWithPasskeyApiService.js';
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
+
+const nookCommunityDisabled = {
+	message: 'Community is currently disabled by the Nook feature flag.',
+	code: 'NOOK_COMMUNITY_DISABLED',
+	id: '5aa139c4-72cb-41c2-af40-37e1d37f9024',
+	kind: 'permission',
+	httpStatusCode: 403,
+} as const;
+
+const nookVoiceDisabled = {
+	message: 'Voice calls are currently disabled by the Nook feature flag.',
+	code: 'NOOK_VOICE_CALL_DISABLED',
+	id: 'c71e6c24-7c60-45be-a609-45145d6dcd7a',
+	kind: 'permission',
+	httpStatusCode: 403,
+} as const;
+
+const nookCommunityPolicyDenied = {
+	message: 'This Community action is restricted by the current Nook policy.',
+	code: 'RESTRICTED_BY_NOOK_POLICY',
+	id: '19f85dc5-bf12-4b1a-bd16-66fb2b49759f',
+	kind: 'permission',
+	httpStatusCode: 403,
+} as const;
 
 @Injectable()
 export class ApiServerService {
@@ -36,11 +63,30 @@ export class ApiServerService {
 
 		private userEntityService: UserEntityService,
 		private apiCallService: ApiCallService,
+		private nookAccessService: NookAccessService,
 		private signupApiService: SignupApiService,
 		private signinApiService: SigninApiService,
 		private signinWithPasskeyApiService: SigninWithPasskeyApiService,
 	) {
 		//this.createServer = this.createServer.bind(this);
+	}
+
+	private async assertNookEndpointAccess(endpointName: string, user: MiLocalUser | null | undefined): Promise<void> {
+		if (!endpointName.startsWith('nook/community/')) return;
+		if (!(await this.nookAccessService.isFeatureEnabled('community'))) throw new ApiError(nookCommunityDisabled);
+
+		if (endpointName.startsWith('nook/community/voice/')) {
+			if (!(await this.nookAccessService.isFeatureEnabled('voice_call'))) throw new ApiError(nookVoiceDisabled);
+			if (user != null && !(await this.nookAccessService.evaluate(user, 'voice_call')).allowed) {
+				throw new ApiError(nookCommunityPolicyDenied);
+			}
+		}
+
+		if (user != null && (endpointName === 'nook/community/join' || endpointName === 'nook/community/invites/use')) {
+			if (!(await this.nookAccessService.evaluate(user, 'join_community')).allowed) {
+				throw new ApiError(nookCommunityPolicyDenied);
+			}
+		}
 	}
 
 	@bindThis
@@ -63,11 +109,15 @@ export class ApiServerService {
 		});
 
 		for (const endpoint of endpoints) {
+			const endpointExec = this.moduleRef.get('ep:' + endpoint.name, { strict: false }).exec;
 			const ep = {
 				name: endpoint.name,
 				meta: endpoint.meta,
 				params: endpoint.params,
-				exec: this.moduleRef.get('ep:' + endpoint.name, { strict: false }).exec,
+				exec: async (data: unknown, user: MiLocalUser | null | undefined, ...rest: unknown[]) => {
+					await this.assertNookEndpointAccess(endpoint.name, user);
+					return await endpointExec(data, user, ...rest);
+				},
 			};
 
 			if (endpoint.meta.requireFile) {
@@ -148,7 +198,6 @@ export class ApiServerService {
 				select: { host: true },
 				where: {
 					suspensionState: 'none',
-				},
 			});
 
 			return instances.map(instance => instance.host);
