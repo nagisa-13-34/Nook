@@ -6,6 +6,7 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { DataSource } from 'typeorm';
 import type { IdService } from '@/core/IdService.js';
+import { requireNookCommunityChannelReference } from './references.js';
 
 export const nookCommunityBotScopes = ['read:messages', 'write:messages'] as const;
 export type NookCommunityBotScope = typeof nookCommunityBotScopes[number];
@@ -44,6 +45,12 @@ function secretMatches(secret: string, expectedHash: string): boolean {
 	return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
+async function validateAllowedChannels(db: DataSource, communityId: string, channelIds: readonly string[]): Promise<string[]> {
+	const unique = [...new Set(channelIds)];
+	for (const channelId of unique) await requireNookCommunityChannelReference(db, communityId, channelId, { nonVoice: true });
+	return unique;
+}
+
 export function generateNookCommunityBotSecret(): string {
 	return randomBytes(32).toString('base64url');
 }
@@ -52,11 +59,12 @@ export async function createNookCommunityBot(db: DataSource, idService: IdServic
 	const id = idService.gen();
 	const secret = generateNookCommunityBotSecret();
 	const scopes = normalizeScopes(input.scopes);
+	const allowedChannelIds = await validateAllowedChannels(db, input.communityId, input.allowedChannelIds);
 	const rows = await db.query<NookCommunityBotRecord[]>(
 		`INSERT INTO "nook_community_bot" ("id", "communityId", "creatorId", "name", "description", "kind", "secretHash", "scopes", "allowedChannelIds")
 		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb)
 		 RETURNING "id","communityId","creatorId","name","description","kind","scopes","allowedChannelIds","enabled","createdAt","updatedAt","lastUsedAt"`,
-		[id, input.communityId, input.creatorId, input.name, input.description, input.kind ?? 'integration', hashSecret(secret), JSON.stringify(scopes), JSON.stringify([...new Set(input.allowedChannelIds)])],
+		[id, input.communityId, input.creatorId, input.name, input.description, input.kind ?? 'integration', hashSecret(secret), JSON.stringify(scopes), JSON.stringify(allowedChannelIds)],
 	);
 	return { bot: rows[0], secret };
 }
