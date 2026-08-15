@@ -36,6 +36,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Prepare test configuration
+        run: |
+          mkdir -p .config
+          cp .github/misskey/test.yml .config/test.yml
+          cp .github/misskey/test.yml .config/default.yml
+
       - name: Build shared workspace packages
         run: |
           pnpm build-pre
