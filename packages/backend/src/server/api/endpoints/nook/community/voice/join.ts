@@ -8,6 +8,8 @@ import { DataSource } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NookAccessService } from '@/nook/policy/NookAccessService.js';
+import { NookCommunityAccessError } from '@/nook/community/access.js';
+import { NookCommunityChannelError } from '@/nook/community/channels.js';
 import { NookCommunityCommunicationError } from '@/nook/community/communication.js';
 import { joinNookCommunityVoice, NookCommunityVoiceError } from '@/nook/community/voice.js';
 import { ApiError } from '../../../../error.js';
@@ -55,7 +57,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				return await joinNookCommunityVoice(this.db, this.nookAccessService, ps.communityId, ps.channelId, me.id);
 			} catch (error) {
 				if (error instanceof NookCommunityVoiceError && error.code === 'NOT_VOICE_CHANNEL') throw new ApiError(meta.errors.notVoice);
-				if (error instanceof NookCommunityVoiceError || error instanceof NookCommunityCommunicationError) throw new ApiError(meta.errors.forbidden);
+				if (error instanceof NookCommunityVoiceError || error instanceof NookCommunityAccessError || error instanceof NookCommunityChannelError || error instanceof NookCommunityCommunicationError) throw new ApiError(meta.errors.forbidden);
 				throw error;
 			}
 		});
