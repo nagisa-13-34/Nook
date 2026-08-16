@@ -2235,6 +2235,99 @@ declare namespace entities {
         V2AdminEmojiListRequest,
         V2AdminEmojiListResponse,
         VerifyEmailRequest,
+        NookCommunityAnnouncementsCreateRequest,
+        NookCommunityAnnouncementsCreateResponse,
+        NookCommunityAnnouncementsDeleteRequest,
+        NookCommunityAnnouncementsListRequest,
+        NookCommunityAnnouncementsListResponse,
+        NookCommunityAnnouncementsUpdateRequest,
+        NookCommunityBotsCreateRequest,
+        NookCommunityBotsCreateResponse,
+        NookCommunityBotsListRequest,
+        NookCommunityBotsListResponse,
+        NookCommunityBotsMessagesListRequest,
+        NookCommunityBotsMessagesListResponse,
+        NookCommunityBotsPostRequest,
+        NookCommunityBotsPostResponse,
+        NookCommunityBotsRotateSecretRequest,
+        NookCommunityBotsRotateSecretResponse,
+        NookCommunityBotsUpdateRequest,
+        NookCommunityChannelsCreateRequest,
+        NookCommunityChannelsCreateResponse,
+        NookCommunityChannelsDeleteRequest,
+        NookCommunityChannelsListRequest,
+        NookCommunityChannelsListResponse,
+        NookCommunityChannelsUpdateRequest,
+        NookCommunityEventsCreateRequest,
+        NookCommunityEventsCreateResponse,
+        NookCommunityEventsDeleteRequest,
+        NookCommunityEventsListRequest,
+        NookCommunityEventsListResponse,
+        NookCommunityEventsRsvpRequest,
+        NookCommunityEventsUpdateRequest,
+        NookCommunityInvitesCreateRequest,
+        NookCommunityInvitesCreateResponse,
+        NookCommunityInvitesListRequest,
+        NookCommunityInvitesListResponse,
+        NookCommunityInvitesRevokeRequest,
+        NookCommunityInvitesUseRequest,
+        NookCommunityInvitesUseResponse,
+        NookCommunityJoinRequest,
+        NookCommunityJoinResponse,
+        NookCommunityJoinRequestsListRequest,
+        NookCommunityJoinRequestsListResponse,
+        NookCommunityJoinRequestsRespondRequest,
+        NookCommunityLeaveRequest,
+        NookCommunityMembersListRequest,
+        NookCommunityMembersListResponse,
+        NookCommunityMembersUpdateRequest,
+        NookCommunityMessagesCreateRequest,
+        NookCommunityMessagesCreateResponse,
+        NookCommunityMessagesDeleteRequest,
+        NookCommunityMessagesListRequest,
+        NookCommunityMessagesListResponse,
+        NookCommunityPinsCreateRequest,
+        NookCommunityPinsCreateResponse,
+        NookCommunityPinsDeleteRequest,
+        NookCommunityPinsListRequest,
+        NookCommunityPinsListResponse,
+        NookCommunityRolesAssignRequest,
+        NookCommunityRolesCreateRequest,
+        NookCommunityRolesCreateResponse,
+        NookCommunityRolesDeleteRequest,
+        NookCommunityRolesListRequest,
+        NookCommunityRolesListResponse,
+        NookCommunityRolesUpdateRequest,
+        NookCommunityRolesUpdateResponse,
+        NookCommunityRulesCreateRequest,
+        NookCommunityRulesCreateResponse,
+        NookCommunityRulesDeleteRequest,
+        NookCommunityRulesListRequest,
+        NookCommunityRulesListResponse,
+        NookCommunityRulesUpdateRequest,
+        NookCommunityRulesUpdateResponse,
+        NookCommunitySearchRequest,
+        NookCommunitySearchResponse,
+        NookCommunitySettingsUpdateRequest,
+        NookCommunityShowRequest,
+        NookCommunityShowResponse,
+        NookCommunityVoiceConfigUpdateRequest,
+        NookCommunityVoiceHeartbeatRequest,
+        NookCommunityVoiceHeartbeatResponse,
+        NookCommunityVoiceJoinRequest,
+        NookCommunityVoiceJoinResponse,
+        NookCommunityVoiceLeaveRequest,
+        NookCommunityVoiceMusicUpdateRequest,
+        NookCommunityVoiceSignalRequest,
+        NookCommunityVoiceSignalsRequest,
+        NookCommunityVoiceSignalsResponse,
+        NookFeaturesResponse,
+        NookTranslateRequest,
+        NookTranslateResponse,
+        NotesRecommendedRequest,
+        NotesRecommendedResponse,
+        NotesRecommendedPageRequest,
+        NotesRecommendedPageResponse,
         Error_2 as Error,
         UserLite,
         UserDetailedNotMeOnly,
@@ -2963,6 +3056,273 @@ type MyAppsRequest = operations['my___apps']['requestBody']['content']['applicat
 type MyAppsResponse = operations['my___apps']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
+type NookCommunityAnnouncementsCreateRequest = operations['nook___community___announcements___create']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityAnnouncementsCreateResponse = operations['nook___community___announcements___create']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityAnnouncementsDeleteRequest = operations['nook___community___announcements___delete']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityAnnouncementsListRequest = operations['nook___community___announcements___list']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityAnnouncementsListResponse = operations['nook___community___announcements___list']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityAnnouncementsUpdateRequest = operations['nook___community___announcements___update']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityBotsCreateRequest = operations['nook___community___bots___create']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityBotsCreateResponse = operations['nook___community___bots___create']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityBotsListRequest = operations['nook___community___bots___list']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityBotsListResponse = operations['nook___community___bots___list']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityBotsMessagesListRequest = operations['nook___community___bots___messages-list']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityBotsMessagesListResponse = operations['nook___community___bots___messages-list']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityBotsPostRequest = operations['nook___community___bots___post']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityBotsPostResponse = operations['nook___community___bots___post']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityBotsRotateSecretRequest = operations['nook___community___bots___rotate-secret']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityBotsRotateSecretResponse = operations['nook___community___bots___rotate-secret']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityBotsUpdateRequest = operations['nook___community___bots___update']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityChannelsCreateRequest = operations['nook___community___channels___create']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityChannelsCreateResponse = operations['nook___community___channels___create']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityChannelsDeleteRequest = operations['nook___community___channels___delete']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityChannelsListRequest = operations['nook___community___channels___list']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityChannelsListResponse = operations['nook___community___channels___list']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityChannelsUpdateRequest = operations['nook___community___channels___update']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityEventsCreateRequest = operations['nook___community___events___create']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityEventsCreateResponse = operations['nook___community___events___create']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityEventsDeleteRequest = operations['nook___community___events___delete']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityEventsListRequest = operations['nook___community___events___list']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityEventsListResponse = operations['nook___community___events___list']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityEventsRsvpRequest = operations['nook___community___events___rsvp']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityEventsUpdateRequest = operations['nook___community___events___update']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityInvitesCreateRequest = operations['nook___community___invites___create']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityInvitesCreateResponse = operations['nook___community___invites___create']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityInvitesListRequest = operations['nook___community___invites___list']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityInvitesListResponse = operations['nook___community___invites___list']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityInvitesRevokeRequest = operations['nook___community___invites___revoke']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityInvitesUseRequest = operations['nook___community___invites___use']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityInvitesUseResponse = operations['nook___community___invites___use']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityJoinRequest = operations['nook___community___join']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityJoinRequestsListRequest = operations['nook___community___join-requests___list']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityJoinRequestsListResponse = operations['nook___community___join-requests___list']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityJoinRequestsRespondRequest = operations['nook___community___join-requests___respond']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityJoinResponse = operations['nook___community___join']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityLeaveRequest = operations['nook___community___leave']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityMembersListRequest = operations['nook___community___members___list']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityMembersListResponse = operations['nook___community___members___list']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityMembersUpdateRequest = operations['nook___community___members___update']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityMessagesCreateRequest = operations['nook___community___messages___create']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityMessagesCreateResponse = operations['nook___community___messages___create']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityMessagesDeleteRequest = operations['nook___community___messages___delete']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityMessagesListRequest = operations['nook___community___messages___list']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityMessagesListResponse = operations['nook___community___messages___list']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityPinsCreateRequest = operations['nook___community___pins___create']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityPinsCreateResponse = operations['nook___community___pins___create']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityPinsDeleteRequest = operations['nook___community___pins___delete']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityPinsListRequest = operations['nook___community___pins___list']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityPinsListResponse = operations['nook___community___pins___list']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityRolesAssignRequest = operations['nook___community___roles___assign']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityRolesCreateRequest = operations['nook___community___roles___create']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityRolesCreateResponse = operations['nook___community___roles___create']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityRolesDeleteRequest = operations['nook___community___roles___delete']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityRolesListRequest = operations['nook___community___roles___list']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityRolesListResponse = operations['nook___community___roles___list']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityRolesUpdateRequest = operations['nook___community___roles___update']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityRolesUpdateResponse = operations['nook___community___roles___update']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityRulesCreateRequest = operations['nook___community___rules___create']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityRulesCreateResponse = operations['nook___community___rules___create']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityRulesDeleteRequest = operations['nook___community___rules___delete']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityRulesListRequest = operations['nook___community___rules___list']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityRulesListResponse = operations['nook___community___rules___list']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityRulesUpdateRequest = operations['nook___community___rules___update']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityRulesUpdateResponse = operations['nook___community___rules___update']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunitySearchRequest = operations['nook___community___search']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunitySearchResponse = operations['nook___community___search']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunitySettingsUpdateRequest = operations['nook___community___settings-update']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityShowRequest = operations['nook___community___show']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityShowResponse = operations['nook___community___show']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityVoiceConfigUpdateRequest = operations['nook___community___voice___config-update']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityVoiceHeartbeatRequest = operations['nook___community___voice___heartbeat']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityVoiceHeartbeatResponse = operations['nook___community___voice___heartbeat']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityVoiceJoinRequest = operations['nook___community___voice___join']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityVoiceJoinResponse = operations['nook___community___voice___join']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityVoiceLeaveRequest = operations['nook___community___voice___leave']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityVoiceMusicUpdateRequest = operations['nook___community___voice___music-update']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityVoiceSignalRequest = operations['nook___community___voice___signal']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityVoiceSignalsRequest = operations['nook___community___voice___signals']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookCommunityVoiceSignalsResponse = operations['nook___community___voice___signals']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookFeaturesResponse = operations['nook___features']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NookTranslateRequest = operations['nook___translate']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NookTranslateResponse = operations['nook___translate']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
 type Note = components['schemas']['Note'];
 
 declare namespace note {
@@ -3091,6 +3451,18 @@ type NotesReactionsRequest = operations['notes___reactions']['requestBody']['con
 
 // @public (undocumented)
 type NotesReactionsResponse = operations['notes___reactions']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NotesRecommendedPageRequest = operations['notes___recommended-page']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NotesRecommendedPageResponse = operations['notes___recommended-page']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type NotesRecommendedRequest = operations['notes___recommended']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type NotesRecommendedResponse = operations['notes___recommended']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 type NotesRenotesRequest = operations['notes___renotes']['requestBody']['content']['application/json'];

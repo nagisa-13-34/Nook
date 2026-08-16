@@ -41684,6 +41684,8 @@ export interface operations {
                     communityId: string;
                     /** @enum {string|null} */
                     joinMode?: 'open' | 'approval' | 'invite' | 'private' | null;
+                    /** @enum {string|null} */
+                    ageMode?: 'minors_only' | 'mixed' | 'adults_only' | null;
                     discoverable?: boolean | null;
                 };
             };
@@ -41762,6 +41764,8 @@ export interface operations {
                         communityId: string;
                         /** @enum {string} */
                         joinMode: 'open' | 'approval' | 'invite' | 'private';
+                        /** @enum {string} */
+                        ageMode: 'minors_only' | 'mixed' | 'adults_only';
                         discoverable: boolean;
                         memberCount: number;
                         membership?: {
