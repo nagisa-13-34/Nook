@@ -26,8 +26,10 @@ import XFeatured from './explore.featured.vue';
 import XVideos from './explore.videos.vue';
 import XUsers from './explore.users.vue';
 import XRoles from './explore.roles.vue';
-import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
+import { isNookVideoFeedAvailable } from '@/nook/video-feed.js';
+import { definePage } from '@/page.js';
+import { availableBasicTimelines } from '@/timelines.js';
 
 const props = withDefaults(defineProps<{
 	initialTab?: string;
@@ -35,7 +37,8 @@ const props = withDefaults(defineProps<{
 	initialTab: 'featured',
 });
 
-const tab = ref(props.initialTab);
+const videoFeedAvailable = computed(() => isNookVideoFeedAvailable(availableBasicTimelines()));
+const tab = ref(props.initialTab === 'videos' && !videoFeedAvailable.value ? 'featured' : props.initialTab);
 
 const headerActions = computed(() => []);
 
@@ -43,11 +46,11 @@ const headerTabs = computed(() => [{
 	key: 'featured',
 	icon: 'ti ti-bolt',
 	title: i18n.ts.featured,
-}, {
+}, ...(videoFeedAvailable.value ? [{
 	key: 'videos',
 	icon: 'ti ti-video',
 	title: i18n.ts.nookVideos,
-}, {
+}] : []), {
 	key: 'users',
 	icon: 'ti ti-users',
 	title: i18n.ts.users,

@@ -3,9 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { BasicTimelineType } from '@/timelines.js';
+
 export const nookVideoTabs = ['shorts', 'videos'] as const;
 
 export type NookVideoTab = typeof nookVideoTabs[number];
+export type NookVideoTimelineSource = 'local' | 'global';
 
 export type NookVideoFile = Readonly<{
 	type: string;
@@ -18,6 +21,16 @@ export type NookVideoFile = Readonly<{
 export type NookVideoNote = Readonly<{
 	files?: readonly NookVideoFile[] | null;
 }>;
+
+export function resolveNookVideoTimelineSource(availableTimelines: readonly BasicTimelineType[]): NookVideoTimelineSource | null {
+	if (availableTimelines.includes('local')) return 'local';
+	if (availableTimelines.includes('global')) return 'global';
+	return null;
+}
+
+export function isNookVideoFeedAvailable(availableTimelines: readonly BasicTimelineType[]): boolean {
+	return resolveNookVideoTimelineSource(availableTimelines) != null;
+}
 
 export function classifyNookVideoFile(file: NookVideoFile): NookVideoTab | null {
 	if (!file.type.startsWith('video/')) return null;
