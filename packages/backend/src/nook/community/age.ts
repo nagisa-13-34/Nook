@@ -48,34 +48,6 @@ export async function assertNookCommunityAgeModeForUser(
 	}
 }
 
-export async function assertNookCommunityCurrentAgeModeForUser(
-	db: NookCommunityQueryExecutor,
-	communityId: string,
-	userId: string,
-): Promise<void> {
-	const rows = await db.query<Array<{
-		ageMode: NookCommunityAgeMode;
-		host: string | null;
-		nookVerifiedAgeGroup: NookAgeGroup | null;
-	}>>(
-		`SELECT COALESCE(nc."ageMode", 'mixed') AS "ageMode", u."host", up."nookVerifiedAgeGroup"
-		 FROM "channel" c
-		 LEFT JOIN "nook_community" nc ON nc."channelId" = c."id"
-		 LEFT JOIN "user" u ON u."id" = $2
-		 LEFT JOIN "user_profile" up ON up."userId" = u."id"
-		 WHERE c."id" = $1
-		 LIMIT 1`,
-		[communityId, userId],
-	);
-	const row = rows[0];
-	if (row == null) throw new NookCommunityAgeError('NO_SUCH_COMMUNITY');
-	if (row.ageMode === 'mixed') return;
-	const ageGroup: NookAgeGroup = row.host == null ? row.nookVerifiedAgeGroup ?? 'UNKNOWN' : 'UNKNOWN';
-	if (!isNookCommunityAgeModeAllowed(row.ageMode, ageGroup)) {
-		throw new NookCommunityAgeError('AGE_MODE_RESTRICTED');
-	}
-}
-
 export async function lockNookCommunityAgeMode(
 	db: NookCommunityQueryExecutor,
 	communityId: string,
