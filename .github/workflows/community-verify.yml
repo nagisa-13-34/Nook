@@ -188,7 +188,7 @@ jobs:
           PY
 
             changed="$(git diff --name-only)"
-            unexpected="$(printf '%s\n' "$changed" | grep -Ev '^(CHANGELOG\.md|packages/misskey-js/src/autogen/types\.ts)$' || true)"
+            unexpected="$(printf '%s\n' "$changed" | grep -Ev '^(CHANGELOG\.md|packages/misskey-js/src/autogen/[^/]+\.ts|packages/misskey-js/etc/misskey-js\.api\.md)$' || true)"
             if [ -n "$unexpected" ]; then
               echo "::error::Unexpected generated changes:"
               printf '%s\n' "$unexpected"
@@ -198,14 +198,14 @@ jobs:
             if [ -n "$changed" ]; then
               git config user.name 'github-actions[bot]'
               git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-              git add CHANGELOG.md packages/misskey-js/src/autogen/types.ts
+              git add CHANGELOG.md packages/misskey-js/src/autogen packages/misskey-js/etc/misskey-js.api.md
               git commit -m 'chore: regenerate Community API types'
               git push origin "HEAD:${GITHUB_REF_NAME}"
             fi
           fi
 
-          if ! git diff --exit-code -- packages/misskey-js/src/autogen; then
-            echo "::error::misskey-js generated API types are out of date. Commit the regenerated files."
+          if ! git diff --exit-code -- packages/misskey-js/src/autogen packages/misskey-js/etc/misskey-js.api.md; then
+            echo "::error::misskey-js generated API types or API report are out of date. Commit the regenerated files."
             exit 1
           fi
 
