@@ -82,13 +82,17 @@ export async function requestNookCommunityJoin(db: DataSource, idService: IdServ
 		return 'joined';
 	}
 	if (context.joinMode === 'invite' || context.joinMode === 'private') throw new NookCommunityMembershipError('INVITE_REQUIRED');
-	await db.query(
-		`INSERT INTO "nook_community_join_request" ("id", "communityId", "userId", "message")
-		 VALUES ($1, $2, $3, $4)
-		 ON CONFLICT ("communityId", "userId") WHERE "status" = 'pending'
-		 DO UPDATE SET "message" = EXCLUDED."message", "createdAt" = now()`,
-		[idService.gen(), communityId, userId, message],
-	);
+	await db.transaction(async manager => {
+		const ageMode = await lockNookCommunityAgeMode(manager, communityId);
+		await assertMembershipRestrictions(manager, communityId, userId, ageMode);
+		await manager.query(
+			`INSERT INTO "nook_community_join_request" ("id", "communityId", "userId", "message")
+			 VALUES ($1, $2, $3, $4)
+			 ON CONFLICT ("communityId", "userId") WHERE "status" = 'pending'
+			 DO UPDATE SET "message" = EXCLUDED."message", "createdAt" = now()`,
+			[idService.gen(), communityId, userId, message],
+		);
+	});
 	return 'pending';
 }
 
