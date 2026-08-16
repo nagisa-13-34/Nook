@@ -109,11 +109,38 @@ describe('Nook Community membership boundaries', () => {
 		assert.equal(calls.some(call => call.sql.includes('UPDATE "nook_community_join_request" SET "status"')), false);
 	});
 
+	test('open join rechecks join mode under the locked Community row before activation', async () => {
+		const calls: Array<{ sql: string; params: unknown[] }> = [];
+		const manager = { query: async (sql: string, params: unknown[] = []) => {
+			calls.push({ sql, params });
+			if (sql.includes('SELECT "ageMode" FROM "nook_community"')) return ageModeRow();
+			if (sql.includes('SELECT "joinMode" FROM "nook_community"')) return [{ joinMode: 'private' }];
+			if (sql.includes('INSERT INTO "nook_community_member"')) throw new Error('MEMBER_WAS_ACTIVATED');
+			throw new Error(`Unexpected transaction query: ${sql}`);
+		} };
+		const db = {
+			query: async (sql: string) => {
+				if (sql.includes('FROM "channel" c')) return communityContext();
+				if (sql.includes('SELECT "baseRole", "state" FROM "nook_community_member"')) return [];
+				throw new Error(`Unexpected query: ${sql}`);
+			},
+			transaction: async <T>(callback: (transactionManager: typeof manager) => Promise<T>) => await callback(manager),
+		} as unknown as DataSource;
+		const idService = { gen: () => 'request' } as unknown as IdService;
+
+		await assert.rejects(
+			() => requestNookCommunityJoin(db, idService, 'community', 'requester', null),
+			(error: unknown) => error instanceof NookCommunityMembershipError && error.code === 'INVITE_REQUIRED',
+		);
+		assert.equal(calls.some(call => call.sql.includes('INSERT INTO "nook_community_member"')), false);
+	});
+
 	test('approval-request message is rejected before storage when the adult boundary denies communication', async () => {
 		const calls: Array<{ sql: string; params: unknown[] }> = [];
 		const manager = { query: async (sql: string, params: unknown[] = []) => {
 			calls.push({ sql, params });
 			if (sql.includes('SELECT "ageMode" FROM "nook_community"')) return ageModeRow();
+			if (sql.includes('SELECT "joinMode" FROM "nook_community"')) return [{ joinMode: 'approval' }];
 			if (sql.includes('SELECT "userId" FROM "nook_community_member"')) return [{ userId: 'adult' }];
 			if (sql.includes('FROM "nook_feature_flag"')) return [{ enabled: true }];
 			if (sql.includes('FROM "user" u')) return [
