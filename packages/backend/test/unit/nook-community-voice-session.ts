@@ -7,6 +7,7 @@ import * as assert from 'node:assert';
 import { describe, test } from 'vitest';
 import type { DataSource } from 'typeorm';
 import type { NookAccessService } from '@/nook/policy/NookAccessService.js';
+import { NookCommunityCommunicationError } from '@/nook/community/communication.js';
 import { joinNookCommunityVoice, leaveNookCommunityVoice } from '@/nook/community/voice.js';
 
 describe('Nook Community Voice session generations', () => {
@@ -41,11 +42,13 @@ describe('Nook Community Voice session generations', () => {
 		assert.equal(calls.some(call => call.sql.includes('DELETE FROM "nook_community_voice_signal"')), true);
 	});
 
-	test('rejoin clears old signals before installing the new presence session', async () => {
+	test('rejoin serializes the age-boundary check before installing the new presence session', async () => {
 		const transactionCalls: string[] = [];
 		const manager = {
 			query: async (sql: string) => {
 				transactionCalls.push(sql);
+				if (sql.includes('pg_advisory_xact_lock')) return [];
+				if (sql.includes('SELECT "userId" FROM "nook_community_voice_presence"')) return [];
 				if (sql.includes('DELETE FROM "nook_community_voice_signal"')) return [];
 				if (sql.includes('INSERT INTO "nook_community_voice_presence"')) return [];
 				throw new Error(`Unexpected transaction query: ${sql}`);
@@ -70,8 +73,56 @@ describe('Nook Community Voice session generations', () => {
 		} as unknown as NookAccessService;
 
 		await joinNookCommunityVoice(db, access, 'community', 'voice', 'user');
-		assert.equal(transactionCalls.length, 2);
-		assert.match(transactionCalls[0] ?? '', /DELETE FROM "nook_community_voice_signal"/);
-		assert.match(transactionCalls[1] ?? '', /INSERT INTO "nook_community_voice_presence"/);
+		assert.equal(transactionCalls.length, 4);
+		assert.match(transactionCalls[0] ?? '', /pg_advisory_xact_lock/);
+		assert.match(transactionCalls[1] ?? '', /SELECT "userId" FROM "nook_community_voice_presence"/);
+		assert.match(transactionCalls[2] ?? '', /DELETE FROM "nook_community_voice_signal"/);
+		assert.match(transactionCalls[3] ?? '', /INSERT INTO "nook_community_voice_presence"/);
+	});
+
+	test('adult-boundary rejection happens before a Voice presence is installed', async () => {
+		let presenceInserted = false;
+		const manager = {
+			query: async (sql: string) => {
+				if (sql.includes('pg_advisory_xact_lock')) return [];
+				if (sql.includes('SELECT "userId" FROM "nook_community_voice_presence"')) return [{ userId: 'adult' }];
+				if (sql.includes('FROM "nook_feature_flag"')) return [{ enabled: true }];
+				if (sql.includes('FROM "user" u')) return [
+					{ id: 'minor', host: null, isDeleted: false, isSuspended: false, nookCountryCode: '*', nookVerifiedAgeGroup: '13_15', nookPolicyId: null },
+					{ id: 'adult', host: null, isDeleted: false, isSuspended: false, nookCountryCode: '*', nookVerifiedAgeGroup: '18_PLUS', nookPolicyId: null },
+				];
+				if (sql.includes('FROM "nook_policy"')) return [
+					{ id: 'minor-policy', country: '*', ageGroup: '13_15', accountStates: ['active'], permissions: { call_with_adult: false }, priority: 0, enabled: true },
+					{ id: 'adult-policy', country: '*', ageGroup: '18_PLUS', accountStates: ['active'], permissions: { call_with_adult: true }, priority: 0, enabled: true },
+				];
+				if (sql.includes('INSERT INTO "nook_community_voice_presence"')) {
+					presenceInserted = true;
+					return [];
+				}
+				throw new Error(`Unexpected transaction query: ${sql}`);
+			},
+		};
+		const db = {
+			query: async (sql: string) => {
+				if (sql.includes('FROM "user"')) return [{ id: 'minor', isDeleted: false, isSuspended: false }];
+				if (sql.includes('FROM "channel" c')) return [{ userId: 'minor', joinMode: 'open', discoverable: true, initialized: true }];
+				if (sql.includes('SELECT "baseRole", "state" FROM "nook_community_member"')) return [{ baseRole: 'owner', state: 'active' }];
+				if (sql.includes('FROM "nook_community_channel" WHERE "communityId"')) return [{ id: 'voice', communityId: 'community', parentId: null, name: 'Voice', topic: null, kind: 'voice', position: 0, allowedRoleIds: [], archivedAt: null }];
+				if (sql.includes('DELETE FROM "nook_community_voice_presence" WHERE "lastSeenAt"')) return [];
+				if (sql.includes('DELETE FROM "nook_community_voice_signal" WHERE "createdAt"')) return [];
+				throw new Error(`Unexpected query: ${sql}`);
+			},
+			transaction: async <T>(callback: (transactionManager: typeof manager) => Promise<T>) => await callback(manager),
+		} as unknown as DataSource;
+		const access = {
+			isFeatureEnabled: async () => true,
+			evaluate: async (_user: unknown, permission: 'voice_call') => ({ allowed: true, permission, policyId: null, reason: 'allowed' as const }),
+		} as unknown as NookAccessService;
+
+		await assert.rejects(
+			() => joinNookCommunityVoice(db, access, 'community', 'voice', 'minor'),
+			(error: unknown) => error instanceof NookCommunityCommunicationError && error.code === 'ADULT_BOUNDARY',
+		);
+		assert.equal(presenceInserted, false);
 	});
 });

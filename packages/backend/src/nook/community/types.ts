@@ -4,6 +4,7 @@
  */
 
 export type NookCommunityJoinMode = 'open' | 'approval' | 'invite' | 'private';
+export type NookCommunityAgeMode = 'minors_only' | 'mixed' | 'adults_only';
 export type NookCommunityBaseRole = 'owner' | 'admin' | 'moderator' | 'member';
 export type NookCommunityMemberState = 'active' | 'banned';
 
@@ -28,6 +29,7 @@ export interface NookCommunityContext {
 	communityId: string;
 	ownerId: string | null;
 	joinMode: NookCommunityJoinMode;
+	ageMode: NookCommunityAgeMode;
 	discoverable: boolean;
 }
 
@@ -36,5 +38,6 @@ export interface NookCommunityMembership {
 	userId: string;
 	baseRole: NookCommunityBaseRole;
 	state: NookCommunityMemberState;
+	ageMode: NookCommunityAgeMode;
 	permissions: Set<NookCommunityPermission | '*'>;
 }

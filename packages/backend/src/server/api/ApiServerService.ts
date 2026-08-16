@@ -16,6 +16,7 @@ import { DI } from '@/di-symbols.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { bindThis } from '@/decorators.js';
 import { ensureNookCommunity } from '@/nook/community/access.js';
+import { assertNookCommunityMembershipAdultBoundary, NookCommunityCommunicationError } from '@/nook/community/communication.js';
 import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 import endpoints from './endpoints.js';
 import { ApiCallService } from './ApiCallService.js';
@@ -48,6 +49,16 @@ const nookCommunityPolicyDenied = {
 	kind: 'permission',
 	httpStatusCode: 403,
 } as const;
+
+const nookCommunityCommunicationWritePrefixes = [
+	'nook/community/announcements/',
+	'nook/community/bots/',
+	'nook/community/channels/',
+	'nook/community/events/',
+	'nook/community/pins/',
+	'nook/community/roles/',
+	'nook/community/rules/',
+] as const;
 
 @Injectable()
 export class ApiServerService {
@@ -111,8 +122,33 @@ export class ApiServerService {
 			isDeleted: row.isDeleted,
 			isSuspended: row.isSuspended,
 		} as MiLocalUser;
-		if (!(await this.nookAccessService.evaluate(owner, 'create_community')).allowed) throw new ApiError(nookCommunityPolicyDenied);
+		const createDecision = await this.nookAccessService.evaluate(owner, 'create_community');
+		const joinDecision = await this.nookAccessService.evaluate(owner, 'join_community');
+		if (!createDecision.allowed || !joinDecision.allowed) throw new ApiError(nookCommunityPolicyDenied);
 		await ensureNookCommunity(this.db, communityId);
+	}
+
+	private isNookCommunityCommunicationWrite(endpointName: string, endpointKind: string | undefined, data: unknown): boolean {
+		if (endpointKind == null || !endpointKind.startsWith('write:')) return false;
+		if (nookCommunityCommunicationWritePrefixes.some(prefix => endpointName.startsWith(prefix))) return true;
+		if (endpointName !== 'nook/community/members/update') return false;
+		if (typeof data !== 'object' || data == null) return true;
+		const memberUpdate = data as Record<string, unknown>;
+		const banOnly = memberUpdate.state === 'banned' && memberUpdate.baseRole == null && !Object.hasOwn(memberUpdate, 'nickname');
+		return !banOnly;
+	}
+
+	private async assertNookCommunityCommunicationWriteAllowed(endpointName: string, endpointKind: string | undefined, user: MiLocalUser | null | undefined, data: unknown): Promise<void> {
+		if (user == null || !this.isNookCommunityCommunicationWrite(endpointName, endpointKind, data)) return;
+		if (typeof data !== 'object' || data == null) return;
+		const communityId = (data as Record<string, unknown>).communityId;
+		if (typeof communityId !== 'string') return;
+		try {
+			await assertNookCommunityMembershipAdultBoundary(this.db, communityId, user.id);
+		} catch (error) {
+			if (error instanceof NookCommunityCommunicationError) throw new ApiError(nookCommunityPolicyDenied);
+			throw error;
+		}
 	}
 
 	private async assertNookEndpointAccess(endpointName: string, user: MiLocalUser | null | undefined, data?: unknown, endpointKind?: string): Promise<void> {
@@ -133,6 +169,7 @@ export class ApiServerService {
 		}
 
 		await this.ensureLegacyCommunityWriteAllowed(endpointName, endpointKind, user, data);
+		await this.assertNookCommunityCommunicationWriteAllowed(endpointName, endpointKind, user, data);
 	}
 
 	@bindThis
@@ -168,9 +205,9 @@ export class ApiServerService {
 
 			if (endpoint.meta.requireFile) {
 				fastify.all<{
-					Params: { endpoint: string; },
-					Body: Record<string, unknown>,
-					Querystring: Record<string, unknown>,
+					Params: { endpoint: string; };
+					Body: Record<string, unknown>;
+					Querystring: Record<string, unknown>;
 				}>('/' + endpoint.name, async (request, reply) => {
 					if (request.method === 'GET' && !endpoint.meta.allowGet) {
 						reply.code(405);
@@ -184,9 +221,9 @@ export class ApiServerService {
 				});
 			} else {
 				fastify.all<{
-					Params: { endpoint: string; },
-					Body: Record<string, unknown>,
-					Querystring: Record<string, unknown>,
+					Params: { endpoint: string; };
+					Body: Record<string, unknown>;
+					Querystring: Record<string, unknown>;
 				}>('/' + endpoint.name, { bodyLimit: 1024 * 1024 }, async (request, reply) => {
 					if (request.method === 'GET' && !endpoint.meta.allowGet) {
 						reply.code(405);

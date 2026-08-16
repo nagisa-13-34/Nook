@@ -4,9 +4,12 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
+import type { UsersRepository } from '@/models/_.js';
+import type { MiLocalUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
+import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 import { requireNookCommunityPermission, NookCommunityAccessError } from '@/nook/community/access.js';
 import { assertCanAssignNookCommunityBaseRole, requireManageableNookCommunityMember, NookCommunityAuthorizationError } from '@/nook/community/authorization.js';
 import { updateNookCommunityMember, NookCommunityMemberError } from '@/nook/community/members.js';
@@ -23,7 +26,7 @@ export const paramDef = { type: 'object', properties: {
 
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(@Inject(DI.db) private db: DataSource) {
+	constructor(@Inject(DI.db) private db: DataSource, @Inject(DI.usersRepository) private usersRepository: UsersRepository, private nookAccessService: NookAccessService) {
 		super(meta, paramDef, async (ps, me) => {
 			try {
 				const actor = await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'members.manage');
@@ -37,16 +40,19 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 				throw error;
 			}
-
 			try {
 				await updateNookCommunityMember(this.db, ps.communityId, ps.userId, {
 					...(ps.baseRole != null ? { baseRole: ps.baseRole } : {}),
 					...(ps.state != null ? { state: ps.state } : {}),
 					...(ps.nickname !== undefined ? { nickname: ps.nickname } : {}),
-				});
+				}, ps.state === 'active' ? async () => {
+					const target = await this.usersRepository.findOneBy({ id: ps.userId, host: IsNull() });
+					if (target == null || !(await this.nookAccessService.evaluate(target as MiLocalUser, 'join_community')).allowed) throw new ApiError(meta.errors.forbidden);
+				} : undefined);
 			} catch (error) {
 				if (error instanceof NookCommunityMemberError && error.code === 'OWNER_IMMUTABLE') throw new ApiError(meta.errors.ownerImmutable);
 				if (error instanceof NookCommunityMemberError && error.code === 'NO_SUCH_MEMBER') throw new ApiError(meta.errors.noSuchMember);
+				if (error instanceof NookCommunityMemberError && (error.code === 'AGE_MODE_RESTRICTED' || error.code === 'ADULT_BOUNDARY_RESTRICTED')) throw new ApiError(meta.errors.forbidden);
 				throw error;
 			}
 		});

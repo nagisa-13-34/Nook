@@ -3,6 +3,7 @@
 ### General
 
 ### Client
+- Feat: Communityの年齢モードと成人・未成年の安全境界を追加
 - Feat: NookのPolicyとFeature Flagを管理する画面を追加
 - Feat: 管理画面からユーザーの国・確認済み年齢区分・Policyを設定できるように
 - Feat: Nookブランド表示とスマートフォン向けBottom Navigationを追加

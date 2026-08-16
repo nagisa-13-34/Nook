@@ -100,8 +100,11 @@ jobs:
           test/unit/NookPolicyEngine.ts
           test/unit/nook
           test/unit/nook-community-access.ts
+          test/unit/nook-community-age.ts
           test/unit/nook-community-api-gate.ts
           test/unit/nook-community-authorization.ts
+          test/unit/nook-community-bot-runtime-access.ts
+          test/unit/nook-community-communication.ts
           test/unit/nook-community-endpoint-privacy.ts
           test/unit/nook-community-events.ts
           test/unit/nook-community-members.ts

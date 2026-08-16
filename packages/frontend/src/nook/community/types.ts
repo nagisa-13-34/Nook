@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+export type CommunityAgeMode = 'minors_only' | 'mixed' | 'adults_only';
+
 export interface CommunityMembership {
 	baseRole: 'owner' | 'admin' | 'moderator' | 'member';
 	state: 'active' | 'banned';
@@ -12,6 +14,7 @@ export interface CommunityMembership {
 export interface CommunityDetail {
 	communityId: string;
 	joinMode: 'open' | 'approval' | 'invite' | 'private';
+	ageMode: CommunityAgeMode;
 	discoverable: boolean;
 	memberCount: number;
 	membership: CommunityMembership | null;

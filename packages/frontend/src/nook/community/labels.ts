@@ -5,9 +5,11 @@
 
 const ja = {
 	community: 'コミュニティ', channels: 'チャンネル', announcements: 'お知らせ', events: 'イベント', members: 'メンバー', bots: 'Bot', admin: '管理', join: '参加', apply: '参加申請', invite: '招待', rules: 'ルール', pins: '固定', search: '検索', send: '送信', create: '作成', save: '保存', delete: '削除', voice: 'ボイス', leave: '退出', loading: '読み込み中…', autoTranslate: '自動翻訳', translationLanguage: '翻訳先', music: '音楽Bot', tts: '読み上げBot', copy: 'コピー', role: 'ロール', settings: '設定',
+	joinMode: '参加方式', joinModeOpen: '誰でも参加', joinModeApproval: '承認制', joinModeInvite: '招待制', joinModePrivate: '非公開', discoverable: '検索・発見に表示する', ageMode: '年齢モード', ageModeHint: '参加できる年齢層を指定します。年齢を確認できないアカウントは「未成年のみ」「成人のみ」には参加できません。', ageModeMinorsOnly: '未成年のみ', ageModeMixed: '全年齢', ageModeAdultsOnly: '成人のみ', ageModeConflict: '現在のメンバーに、この年齢モードの条件に合わないアカウントがいるため変更できません。', settingsSaved: '設定を保存しました', settingsSaveFailed: '設定を保存できませんでした',
 };
 const en: typeof ja = {
 	community: 'Community', channels: 'Channels', announcements: 'Announcements', events: 'Events', members: 'Members', bots: 'Bots', admin: 'Admin', join: 'Join', apply: 'Apply', invite: 'Invite', rules: 'Rules', pins: 'Pins', search: 'Search', send: 'Send', create: 'Create', save: 'Save', delete: 'Delete', voice: 'Voice', leave: 'Leave', loading: 'Loading…', autoTranslate: 'Auto translate', translationLanguage: 'Translate to', music: 'Music bot', tts: 'TTS bot', copy: 'Copy', role: 'Role', settings: 'Settings',
+	joinMode: 'Join mode', joinModeOpen: 'Open', joinModeApproval: 'Approval required', joinModeInvite: 'Invite only', joinModePrivate: 'Private', discoverable: 'Show in discovery', ageMode: 'Age mode', ageModeHint: 'Choose which age groups may join. Accounts whose age cannot be verified cannot join minors-only or adults-only Communities.', ageModeMinorsOnly: 'Minors only', ageModeMixed: 'All ages', ageModeAdultsOnly: 'Adults only', ageModeConflict: 'This age mode cannot be applied because one or more current members do not match it.', settingsSaved: 'Settings saved', settingsSaveFailed: 'Could not save settings',
 };
 
 export const communityLabels = typeof navigator !== 'undefined' && navigator.language.toLowerCase().startsWith('ja') ? ja : en;
