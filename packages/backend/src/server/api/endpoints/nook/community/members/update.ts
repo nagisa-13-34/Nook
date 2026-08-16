@@ -28,8 +28,11 @@ export const paramDef = { type: 'object', properties: {
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(@Inject(DI.db) private db: DataSource, @Inject(DI.usersRepository) private usersRepository: UsersRepository, private nookAccessService: NookAccessService) {
 		super(meta, paramDef, async (ps, me) => {
+			const boundaryRecoveryBan = ps.state === 'banned' && ps.baseRole == null && ps.nickname === undefined;
 			try {
-				const actor = await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'members.manage');
+				const actor = await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'members.manage', {
+					allowAdultBoundaryMismatch: boundaryRecoveryBan,
+				});
 				await requireManageableNookCommunityMember(this.db, ps.communityId, actor, ps.userId);
 				if (ps.baseRole != null) assertCanAssignNookCommunityBaseRole(actor, ps.baseRole);
 			} catch (error) {
