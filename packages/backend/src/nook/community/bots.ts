@@ -80,6 +80,15 @@ export async function authenticateNookCommunityBot(db: DataSource, botId: string
 	return bot;
 }
 
+export async function requireNookCommunityBotCreatorActive(db: DataSource, creatorId: string): Promise<void> {
+	const rows = await db.query<Array<{ host: string | null; isDeleted: boolean; isSuspended: boolean }>>(
+		'SELECT "host", "isDeleted", "isSuspended" FROM "user" WHERE "id"=$1 LIMIT 1',
+		[creatorId],
+	);
+	const creator = rows[0];
+	if (creator == null || creator.host != null || creator.isDeleted || creator.isSuspended) throw new NookCommunityBotError('CHANNEL_FORBIDDEN');
+}
+
 export function ensureBotChannelAllowed(bot: NookCommunityBotRecord, channelId: string): void {
 	if (!Array.isArray(bot.allowedChannelIds) || !bot.allowedChannelIds.includes(channelId)) throw new NookCommunityBotError('CHANNEL_FORBIDDEN');
 }
