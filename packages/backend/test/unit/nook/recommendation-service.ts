@@ -30,7 +30,7 @@ function note(id: string, userId: string): MiNote {
 }
 
 describe('RecommendationService', () => {
-	test('local discovery fallback only considers public non-channel local notes', async () => {
+	test('local discovery fallback only considers public non-channel local notes before the snapshot boundary', async () => {
 		const query = {
 			innerJoinAndSelect: vi.fn(),
 			leftJoinAndSelect: vi.fn(),
@@ -44,6 +44,7 @@ describe('RecommendationService', () => {
 		query.andWhere.mockReturnValue(query);
 		query.orderBy.mockReturnValue(query);
 		query.take.mockReturnValue(query);
+		const gen = vi.fn().mockReturnValue('snapshot-boundary');
 
 		const service = new RecommendationService(
 			{ createQueryBuilder: vi.fn().mockReturnValue(query) } as unknown as NotesRepository,
@@ -56,7 +57,7 @@ describe('RecommendationService', () => {
 			} as unknown as QueryService,
 			{} as ChannelFollowingService,
 			{} as ChannelMutingService,
-			{} as IdService,
+			{ gen } as unknown as IdService,
 			{} as NoteEntityService,
 		);
 		const internal = service as unknown as {
@@ -68,9 +69,11 @@ describe('RecommendationService', () => {
 				excludedNoteIds: ReadonlySet<string>,
 			): Promise<MiNote[]>;
 		};
+		const snapshotAt = new Date('2026-08-15T12:00:00.000Z');
 
-		await internal.loadRecentEligibleLocalNotes(me, new Set(), 40, new Date(), new Set());
+		await internal.loadRecentEligibleLocalNotes(me, new Set(), 40, snapshotAt, new Set());
 
+		expect(gen).toHaveBeenCalledWith(snapshotAt.getTime() + 1);
 		expect(query.andWhere).toHaveBeenCalledWith('note.userHost IS NULL');
 		expect(query.andWhere).toHaveBeenCalledWith(
 			'note.visibility = :recommendationPublicVisibility',
@@ -78,6 +81,10 @@ describe('RecommendationService', () => {
 		);
 		expect(query.andWhere).toHaveBeenCalledWith('note.channelId IS NULL');
 		expect(query.andWhere).toHaveBeenCalledWith('note.replyId IS NULL');
+		expect(query.andWhere).toHaveBeenCalledWith(
+			'note.id < :recommendationSnapshotBoundaryId',
+			{ recommendationSnapshotBoundaryId: 'snapshot-boundary' },
+		);
 	});
 
 	test('filters displayed and post-snapshot notes before loading recommendation candidates', async () => {
@@ -175,5 +182,52 @@ describe('RecommendationService', () => {
 		expect(loadEligibleNotes.mock.calls[1]?.[0]).toHaveLength(6);
 		expect(result).toHaveLength(2);
 		expect(packMany).toHaveBeenCalledWith(expect.any(Array), me);
+	});
+
+	test('freezes one globally-diversified recommendation order behind a server cursor', async () => {
+		const candidates = [
+			note('n1', 'author-1'),
+			note('n2', 'author-2'),
+			note('n3', 'author-3'),
+			note('n4', 'author-4'),
+		];
+		const store = new Map<string, string>();
+		const redisClient = {
+			get: vi.fn(async (key: string) => store.get(key) ?? null),
+			set: vi.fn(async (key: string, value: string) => {
+				store.set(key, value);
+				return 'OK';
+			}),
+			del: vi.fn(async (key: string) => store.delete(key) ? 1 : 0),
+		};
+		const packMany = vi.fn().mockImplementation(async (notes: MiNote[]) => notes);
+		const service = new RecommendationService(
+			{} as NotesRepository,
+			{} as FanoutTimelineService,
+			{} as QueryService,
+			{} as ChannelFollowingService,
+			{
+				mutingChannelsCache: { fetch: vi.fn().mockResolvedValue(new Set<string>()) },
+			} as unknown as ChannelMutingService,
+			{} as IdService,
+			{ packMany } as unknown as NoteEntityService,
+			redisClient as never,
+		);
+		const internal = service as unknown as {
+			selectRecommendationNotes(user: MiLocalUser, limit: number, snapshotAt: Date, excludedNoteIds: ReadonlySet<string>): Promise<MiNote[]>;
+			loadEligibleNotes(noteIds: readonly string[], user: MiLocalUser, mutedChannels: Set<string>): Promise<MiNote[]>;
+		};
+		const selectRecommendationNotes = vi.spyOn(internal, 'selectRecommendationNotes').mockResolvedValue(candidates);
+		vi.spyOn(internal, 'loadEligibleNotes').mockImplementation(async (ids) => candidates.filter(candidate => ids.includes(candidate.id)));
+
+		const first = await service.getRecommendationPage(me, 2);
+		expect(first?.notes.map(resultNote => resultNote.id)).toEqual(['n1', 'n2']);
+		expect(first?.cursor).toEqual(expect.any(String));
+		expect(selectRecommendationNotes).toHaveBeenCalledWith(me, 400, expect.any(Date), expect.any(Set));
+
+		const second = await service.getRecommendationPage(me, 2, first?.cursor ?? undefined);
+		expect(second?.notes.map(resultNote => resultNote.id)).toEqual(['n3', 'n4']);
+		expect(second?.cursor).toBeNull();
+		expect(redisClient.del).toHaveBeenCalled();
 	});
 });
