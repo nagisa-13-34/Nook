@@ -4,9 +4,17 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { classifyNookVideoFile, classifyNookVideoNote, hasNookVideo, noteMatchesNookVideoTab } from '@/nook/video-feed.js';
+import { classifyNookVideoFile, classifyNookVideoNote, hasNookVideo, isNookVideoFeedAvailable, noteMatchesNookVideoTab, resolveNookVideoTimelineSource } from '@/nook/video-feed.js';
 
 describe('Nook video feed', () => {
+	test('prefers local timeline and falls back to global timeline', () => {
+		expect(resolveNookVideoTimelineSource(['home', 'local', 'global'])).toBe('local');
+		expect(resolveNookVideoTimelineSource(['home', 'global'])).toBe('global');
+		expect(resolveNookVideoTimelineSource(['home'])).toBeNull();
+		expect(isNookVideoFeedAvailable(['global'])).toBe(true);
+		expect(isNookVideoFeedAvailable(['home'])).toBe(false);
+	});
+
 	test('classifies portrait video as Shorts', () => {
 		expect(classifyNookVideoFile({
 			type: 'video/mp4',
