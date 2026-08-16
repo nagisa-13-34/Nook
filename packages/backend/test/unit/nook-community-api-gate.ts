@@ -72,7 +72,11 @@ describe('Nook Community API feature and policy gate', () => {
 			() => gate(service, 'nook/community/join', user),
 			(error: unknown) => error instanceof ApiError && error.code === 'RESTRICTED_BY_NOOK_POLICY',
 		);
-		assert.deepEqual(evaluated, ['join_community']);
+		await assert.rejects(
+			() => gate(service, 'nook/community/invites/use', user),
+			(error: unknown) => error instanceof ApiError && error.code === 'RESTRICTED_BY_NOOK_POLICY',
+		);
+		assert.deepEqual(evaluated, ['join_community', 'join_community']);
 	});
 
 	test('Voice endpoints require voice_call policy', async () => {
@@ -126,7 +130,7 @@ describe('Nook Community API feature and policy gate', () => {
 		assert.match(sqlCalls[0] ?? '', /LEFT JOIN "nook_community"/);
 	});
 
-	test('first owner legacy Community write requires create_community policy', async () => {
+	test('first owner legacy Community write requires create and join policies', async () => {
 		const sqlCalls: string[] = [];
 		const db = {
 			query: async (sql: string) => {
@@ -139,7 +143,7 @@ describe('Nook Community API feature and policy gate', () => {
 			isFeatureEnabled: async () => true,
 			evaluate: async (_user, permission) => {
 				evaluated.push(permission);
-				return { allowed: permission !== 'create_community', permission, policyId: null, reason: permission === 'create_community' ? 'denied' : 'allowed' };
+				return { allowed: permission !== 'join_community', permission, policyId: null, reason: permission === 'join_community' ? 'denied' : 'allowed' };
 			},
 		}, db);
 
@@ -147,7 +151,7 @@ describe('Nook Community API feature and policy gate', () => {
 			() => gate(service, 'nook/community/settings-update', owner, { communityId: 'legacy' }, 'write:channels'),
 			(error: unknown) => error instanceof ApiError && error.code === 'RESTRICTED_BY_NOOK_POLICY',
 		);
-		assert.deepEqual(evaluated, ['create_community']);
+		assert.deepEqual(evaluated, ['create_community', 'join_community']);
 		assert.equal(sqlCalls.length, 1);
 		assert.match(sqlCalls[0] ?? '', /LEFT JOIN "nook_community"/);
 	});
