@@ -9,6 +9,8 @@ import { DI } from '@/di-symbols.js';
 import { IdService } from '@/core/IdService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { authenticateNookCommunityBot, ensureBotChannelAllowed, NookCommunityBotError } from '@/nook/community/bots.js';
+import { requireNookCommunityChannelAccess, NookCommunityChannelError } from '@/nook/community/channels.js';
+import { NookCommunityAccessError } from '@/nook/community/access.js';
 import { assertNookCommunityChannelAdultBoundary, NookCommunityCommunicationError } from '@/nook/community/communication.js';
 import { requireNookCommunityReplyReference, NookCommunityReferenceError } from '@/nook/community/references.js';
 import type { NookCommunityMessageRecord } from '@/nook/community/messages.js';
@@ -44,13 +46,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 				throw error;
 			}
-			const channels = await this.db.query<Array<{ id: string; kind: string; archivedAt: Date | null }>>(
-				'SELECT "id","kind","archivedAt" FROM "nook_community_channel" WHERE "communityId"=$1 AND "id"=$2 LIMIT 1', [bot.communityId, ps.channelId]);
-			if (channels[0] == null || channels[0].archivedAt != null || channels[0].kind === 'voice' || bot.creatorId == null) throw new ApiError(meta.errors.forbidden);
+			if (bot.creatorId == null) throw new ApiError(meta.errors.forbidden);
 			try {
+				const channel = await requireNookCommunityChannelAccess(this.db, bot.communityId, bot.creatorId, ps.channelId);
+				if (channel.archivedAt != null || channel.kind === 'voice') throw new NookCommunityChannelError('CHANNEL_FORBIDDEN');
 				await assertNookCommunityChannelAdultBoundary(this.db, bot.creatorId, bot.communityId, ps.channelId, 'chat_with_adult');
 			} catch (error) {
-				if (error instanceof NookCommunityCommunicationError) throw new ApiError(meta.errors.forbidden);
+				if (error instanceof NookCommunityAccessError || error instanceof NookCommunityChannelError || error instanceof NookCommunityCommunicationError) throw new ApiError(meta.errors.forbidden);
 				throw error;
 			}
 			try {
