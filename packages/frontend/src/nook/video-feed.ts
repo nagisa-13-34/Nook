@@ -16,7 +16,7 @@ export type NookVideoFile = Readonly<{
 }>;
 
 export type NookVideoNote = Readonly<{
-	files: readonly NookVideoFile[];
+	files?: readonly NookVideoFile[] | null;
 }>;
 
 export function classifyNookVideoFile(file: NookVideoFile): NookVideoTab | null {
@@ -32,7 +32,7 @@ export function classifyNookVideoFile(file: NookVideoFile): NookVideoTab | null 
 }
 
 export function classifyNookVideoNote(note: NookVideoNote): NookVideoTab | null {
-	const primaryVideo = note.files.find(file => file.type.startsWith('video/'));
+	const primaryVideo = note.files?.find(file => file.type.startsWith('video/'));
 	return primaryVideo == null ? null : classifyNookVideoFile(primaryVideo);
 }
 
