@@ -4,13 +4,24 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
+import type { UsersRepository } from '@/models/_.js';
+import type { MiLocalUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
+import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 import { requireNookCommunityPermission, NookCommunityAccessError } from '@/nook/community/access.js';
 import { assertCanAssignNookCommunityBaseRole, requireManageableNookCommunityMember, NookCommunityAuthorizationError } from '@/nook/community/authorization.js';
 import { updateNookCommunityMember, NookCommunityMemberError } from '@/nook/community/members.js';
 import { ApiError } from '../../../../error.js';
+
+const joinRestricted = {
+	message: 'The member is not currently allowed to join Communities.',
+	code: 'RESTRICTED_BY_NOOK_POLICY',
+	id: '8d392fc6-3a7c-4dd0-9b31-1fbe3c8c2165',
+	kind: 'permission',
+	httpStatusCode: 403,
+} as const;
 
 export const meta = { tags: ['channels'], requireCredential: true, kind: 'write:channels', errors: {
 	forbidden: { message: 'You cannot manage this member or assign that role.', code: 'FORBIDDEN', id: 'a986aaf1-12fa-423c-9d48-6ac1662f0cc0' },
@@ -23,7 +34,11 @@ export const paramDef = { type: 'object', properties: {
 
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(@Inject(DI.db) private db: DataSource) {
+	constructor(
+		@Inject(DI.db) private db: DataSource,
+		@Inject(DI.usersRepository) private usersRepository: UsersRepository,
+		private nookAccessService: NookAccessService,
+	) {
 		super(meta, paramDef, async (ps, me) => {
 			try {
 				const actor = await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'members.manage');
@@ -43,7 +58,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					...(ps.baseRole != null ? { baseRole: ps.baseRole } : {}),
 					...(ps.state != null ? { state: ps.state } : {}),
 					...(ps.nickname !== undefined ? { nickname: ps.nickname } : {}),
-				});
+				}, ps.state === 'active' ? async () => {
+					const target = await this.usersRepository.findOneBy({ id: ps.userId, host: IsNull() });
+					if (target == null || !(await this.nookAccessService.evaluate(target as MiLocalUser, 'join_community')).allowed) {
+						throw new ApiError(joinRestricted);
+					}
+				} : undefined);
 			} catch (error) {
 				if (error instanceof NookCommunityMemberError && error.code === 'OWNER_IMMUTABLE') throw new ApiError(meta.errors.ownerImmutable);
 				if (error instanceof NookCommunityMemberError && error.code === 'NO_SUCH_MEMBER') throw new ApiError(meta.errors.noSuchMember);
