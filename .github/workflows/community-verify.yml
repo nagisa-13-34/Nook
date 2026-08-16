@@ -8,10 +8,9 @@ on:
   push:
     branches:
       - main
-      - agent/close-community-join-bypass
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: community-2-verification-${{ github.ref }}
@@ -171,41 +170,8 @@ jobs:
         run: |
           set -euo pipefail
           pnpm build-misskey-js-with-types
-
-          if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF_NAME}" = "agent/close-community-join-bypass" ]; then
-            python - <<'PY'
-          from pathlib import Path
-
-          path = Path('CHANGELOG.md')
-          text = path.read_text(encoding='utf-8')
-          entry = '- Feat: Communityの年齢モードと成人・未成年の安全境界を追加\n'
-          marker = '### Client\n'
-          if entry not in text:
-              if marker not in text:
-                  raise SystemExit('CHANGELOG Client section not found')
-              text = text.replace(marker, marker + entry, 1)
-              path.write_text(text, encoding='utf-8')
-          PY
-
-            changed="$(git diff --name-only)"
-            unexpected="$(printf '%s\n' "$changed" | grep -Ev '^(CHANGELOG\.md|packages/misskey-js/src/autogen/[^/]+\.ts|packages/misskey-js/etc/misskey-js\.api\.md)$' || true)"
-            if [ -n "$unexpected" ]; then
-              echo "::error::Unexpected generated changes:"
-              printf '%s\n' "$unexpected"
-              exit 1
-            fi
-
-            if [ -n "$changed" ]; then
-              git config user.name 'github-actions[bot]'
-              git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-              git add CHANGELOG.md packages/misskey-js/src/autogen packages/misskey-js/etc/misskey-js.api.md
-              git commit -m 'chore: regenerate Community API types'
-              git push origin "HEAD:${GITHUB_REF_NAME}"
-            fi
-          fi
-
-          if ! git diff --exit-code -- packages/misskey-js/src/autogen packages/misskey-js/etc/misskey-js.api.md; then
-            echo "::error::misskey-js generated API types or API report are out of date. Commit the regenerated files."
+          if ! git diff --exit-code -- packages/misskey-js/src/autogen; then
+            echo "::error::misskey-js generated API types are out of date. Commit the regenerated files."
             exit 1
           fi
 
