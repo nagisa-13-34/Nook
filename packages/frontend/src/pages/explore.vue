@@ -8,6 +8,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div v-if="tab === 'featured'">
 		<XFeatured/>
 	</div>
+	<div v-else-if="tab === 'videos'">
+		<XVideos/>
+	</div>
 	<div v-else-if="tab === 'users'">
 		<XUsers/>
 	</div>
@@ -18,8 +21,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, watch, ref, useTemplateRef } from 'vue';
+import { computed, ref } from 'vue';
 import XFeatured from './explore.featured.vue';
+import XVideos from './explore.videos.vue';
 import XUsers from './explore.users.vue';
 import XRoles from './explore.roles.vue';
 import { definePage } from '@/page.js';
@@ -39,6 +43,10 @@ const headerTabs = computed(() => [{
 	key: 'featured',
 	icon: 'ti ti-bolt',
 	title: i18n.ts.featured,
+}, {
+	key: 'videos',
+	icon: 'ti ti-video',
+	title: i18n.ts.nookVideos,
 }, {
 	key: 'users',
 	icon: 'ti ti-users',
