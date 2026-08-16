@@ -7,33 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div v-if="can('community.manage')" class="_panel" :class="$style.box">
 		<h3>{{ l.settings }}</h3>
 		<div :class="$style.settingsGrid">
-			<label :class="$style.field">
-				<span>{{ l.joinMode }}</span>
-				<select v-model="joinMode">
-					<option value="open">{{ l.joinModeOpen }}</option>
-					<option value="approval">{{ l.joinModeApproval }}</option>
-					<option value="invite">{{ l.joinModeInvite }}</option>
-					<option value="private">{{ l.joinModePrivate }}</option>
-				</select>
-			</label>
-			<label :class="$style.field">
-				<span>{{ l.ageMode }}</span>
-				<select v-model="ageMode">
-					<option value="minors_only">{{ l.ageModeMinorsOnly }}</option>
-					<option value="mixed">{{ l.ageModeMixed }}</option>
-					<option value="adults_only">{{ l.ageModeAdultsOnly }}</option>
-				</select>
-				<small :class="$style.hint">{{ l.ageModeHint }}</small>
-			</label>
-			<label :class="$style.checkField">
-				<input v-model="discoverable" type="checkbox">
-				<span>{{ l.discoverable }}</span>
-			</label>
+			<label :class="$style.field"><span>{{ l.joinMode }}</span><select v-model="joinMode"><option value="open">{{ l.joinModeOpen }}</option><option value="approval">{{ l.joinModeApproval }}</option><option value="invite">{{ l.joinModeInvite }}</option><option value="private">{{ l.joinModePrivate }}</option></select></label>
+			<label :class="$style.field"><span>{{ l.ageMode }}</span><select v-model="ageMode"><option value="minors_only">{{ l.ageModeMinorsOnly }}</option><option value="mixed">{{ l.ageModeMixed }}</option><option value="adults_only">{{ l.ageModeAdultsOnly }}</option></select><small :class="$style.hint">{{ l.ageModeHint }}</small></label>
+			<label :class="$style.checkField"><input v-model="discoverable" type="checkbox"> {{ l.discoverable }}</label>
 		</div>
-		<div :class="$style.settingsActions">
-			<button type="button" class="_button" :class="$style.primary" @click="saveSettings">{{ l.save }}</button>
-			<p v-if="settingsMessage" :class="[$style.settingsMessage, { [$style.error]: settingsMessageError }]" :role="settingsMessageError ? 'alert' : 'status'">{{ settingsMessage }}</p>
-		</div>
+		<div :class="$style.settingsActions"><button type="button" class="_button" :class="$style.primary" @click="saveSettings">{{ l.save }}</button><p v-if="settingsMessage" :class="[$style.settingsMessage, { [$style.error]: settingsMessageError }]" :role="settingsMessageError ? 'alert' : 'status'">{{ settingsMessage }}</p></div>
 	</div>
 	<div v-if="can('channels.manage')" class="_panel" :class="$style.box"><h3>{{ l.channels }}</h3><div v-for="channel in channels" :key="channel.id">{{ channel.kind === 'voice' ? '🔊' : '#' }} {{ channel.name }}</div><form @submit.prevent="createChannel"><input v-model="channelName" required maxlength="64" placeholder="Channel name"><select v-model="channelKind"><option value="text">text</option><option value="announcement">announcement</option><option value="media">media</option><option value="forum">forum</option><option v-if="voiceEnabled" value="voice">voice</option></select><button class="_button">{{ l.create }}</button></form></div>
 	<div v-if="can('roles.manage')" class="_panel" :class="$style.box"><h3>{{ l.role }}</h3><div v-for="role in roles" :key="role.id"><span :style="{ color: role.color || undefined }">{{ role.name }}</span> <small>{{ role.permissions.join(', ') }}</small> <button class="_button" @click="deleteRole(role.id)">×</button></div><form @submit.prevent="createRole"><input v-model="roleName" required maxlength="64" placeholder="Role name"><input v-model="rolePermissions" placeholder="messages.post, events.manage"><button class="_button">{{ l.create }}</button></form></div>
@@ -98,12 +76,7 @@ async function saveSettings() {
 	settingsMessage.value = '';
 	settingsMessageError.value = false;
 	try {
-		await nookApi('nook/community/settings-update', {
-			communityId: props.communityId,
-			joinMode: joinMode.value,
-			ageMode: ageMode.value,
-			discoverable: discoverable.value,
-		});
+		await nookApi('nook/community/settings-update', { communityId: props.communityId, joinMode: joinMode.value, ageMode: ageMode.value, discoverable: discoverable.value });
 		settingsMessage.value = l.settingsSaved;
 		emit('refresh');
 	} catch (error) {
@@ -181,82 +154,4 @@ watch(() => props.detail, detail => {
 }, { deep: true });
 onMounted(load);
 </script>
-<style lang="scss" module>
-.box {
-	padding: 16px;
-
-	h3 {
-		margin-top: 0;
-	}
-
-	form {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8px;
-		margin-top: 10px;
-	}
-
-	input,
-	textarea,
-	select {
-		padding: 8px;
-		background: var(--MI_THEME-bg);
-		color: var(--MI_THEME-fg);
-		border: 1px solid var(--MI_THEME-divider);
-		border-radius: 7px;
-	}
-}
-
-.settingsGrid {
-	display: grid;
-	gap: 14px;
-}
-
-.field {
-	display: grid;
-	gap: 6px;
-}
-
-.hint {
-	color: var(--MI_THEME-fgTransparentWeak);
-	line-height: 1.5;
-}
-
-.checkField {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
-.settingsActions {
-	display: flex;
-	align-items: center;
-	flex-wrap: wrap;
-	gap: 12px;
-	margin-top: 16px;
-}
-
-.primary {
-	padding: 9px 15px;
-	background: var(--MI_THEME-accent);
-	color: var(--MI_THEME-fgOnAccent);
-	border-radius: 8px;
-}
-
-.settingsMessage {
-	margin: 0;
-	font-size: 90%;
-	color: var(--MI_THEME-fg);
-
-	&.error {
-		color: var(--MI_THEME-error);
-	}
-}
-
-.token {
-	margin: 10px 0;
-	padding: 8px;
-	background: var(--MI_THEME-bg);
-	overflow-wrap: anywhere;
-}
-</style>
+<style lang="scss" module>.box{padding:16px}.box h3{margin-top:0}.box form{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.box input,.box textarea,.box select{padding:8px;background:var(--MI_THEME-bg);color:var(--MI_THEME-fg);border:1px solid var(--MI_THEME-divider);border-radius:7px}.settingsGrid{display:grid;gap:14px}.field{display:grid;gap:6px}.hint{color:var(--MI_THEME-fgTransparentWeak);line-height:1.5}.checkField{display:flex;align-items:center;gap:8px}.settingsActions{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:16px}.primary{padding:9px 15px;background:var(--MI_THEME-accent);color:var(--MI_THEME-fgOnAccent);border-radius:8px}.settingsMessage{margin:0;font-size:90%;color:var(--MI_THEME-fg)}.error{color:var(--MI_THEME-error)}.token{margin:10px 0;padding:8px;background:var(--MI_THEME-bg);overflow-wrap:anywhere}</style>
