@@ -32,7 +32,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 
 		<div v-if="canFetchMore" :class="$style.more">
-			<MkButton :loading="fetching" @click="loadMore">{{ i18n.ts.loadMore }}</MkButton>
+			<MkButton :wait="fetching" @click="loadMore">{{ i18n.ts.loadMore }}</MkButton>
 		</div>
 	</div>
 </div>
