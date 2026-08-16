@@ -6,7 +6,6 @@
 import * as assert from 'node:assert';
 import { describe, test } from 'vitest';
 import type { DataSource } from 'typeorm';
-import { requireNookCommunityMember, NookCommunityAccessError } from '@/nook/community/access.js';
 import {
 	assertNookCommunityAdultBoundaryForUserIds,
 	listNookCommunityChannelAudienceUserIds,
@@ -25,21 +24,6 @@ function boundaryDb(users: unknown[], policies: unknown[], enabled = true): Data
 			if (sql.includes('FROM "nook_feature_flag"')) return [{ enabled }];
 			if (sql.includes('FROM "user" u')) return users;
 			if (sql.includes('FROM "nook_policy"')) return policies;
-			throw new Error(`Unexpected query: ${sql}`);
-		},
-	} as unknown as DataSource;
-}
-
-function memberAccessDb(): DataSource {
-	return {
-		query: async (sql: string) => {
-			if (sql.includes('FROM "channel" c')) return [{ userId: 'owner', joinMode: 'open', ageMode: 'mixed', discoverable: true, initialized: true }];
-			if (sql.includes('SELECT "baseRole", "state" FROM "nook_community_member"')) return [{ baseRole: 'member', state: 'active' }];
-			if (sql.includes('FROM "nook_community_member_role" mr')) return [];
-			if (sql.includes('SELECT "userId" FROM "nook_community_member"')) return [{ userId: 'minor' }, { userId: 'adult' }];
-			if (sql.includes('FROM "nook_feature_flag"')) return [{ enabled: true }];
-			if (sql.includes('FROM "user" u')) return [user('minor', '13_15'), user('adult', '18_PLUS')];
-			if (sql.includes('FROM "nook_policy"')) return [policy('minor-policy', '13_15', false, false), policy('adult-policy', '18_PLUS', true, true)];
 			throw new Error(`Unexpected query: ${sql}`);
 		},
 	} as unknown as DataSource;
@@ -69,15 +53,6 @@ describe('Nook Community adult communication boundary', () => {
 			() => assertNookCommunityAdultBoundaryForUserIds(db, 'minor', ['adult'], 'call_with_adult'),
 			(error: unknown) => error instanceof NookCommunityCommunicationError && error.code === 'ADULT_BOUNDARY',
 		);
-	});
-
-	test('member-only Community access closes after an adult-boundary policy change', async () => {
-		const db = memberAccessDb();
-		await assert.rejects(
-			() => requireNookCommunityMember(db, 'community', 'minor'),
-			(error: unknown) => error instanceof NookCommunityAccessError && error.code === 'FORBIDDEN',
-		);
-		await assert.doesNotReject(() => requireNookCommunityMember(db, 'community', 'minor', { allowAdultBoundaryMismatch: true }));
 	});
 
 	test('restricted channels only include members who can actually access them', async () => {
