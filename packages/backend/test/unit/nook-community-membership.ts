@@ -108,4 +108,39 @@ describe('Nook Community membership boundaries', () => {
 		assert.equal(calls.some(call => call.sql.includes('INSERT INTO "nook_community_member"')), false);
 		assert.equal(calls.some(call => call.sql.includes('UPDATE "nook_community_join_request" SET "status"')), false);
 	});
+
+	test('approval-request message is rejected before storage when the adult boundary denies communication', async () => {
+		const calls: Array<{ sql: string; params: unknown[] }> = [];
+		const manager = { query: async (sql: string, params: unknown[] = []) => {
+			calls.push({ sql, params });
+			if (sql.includes('SELECT "ageMode" FROM "nook_community"')) return ageModeRow();
+			if (sql.includes('SELECT "userId" FROM "nook_community_member"')) return [{ userId: 'adult' }];
+			if (sql.includes('FROM "nook_feature_flag"')) return [{ enabled: true }];
+			if (sql.includes('FROM "user" u')) return [
+				{ id: 'minor', host: null, isDeleted: false, isSuspended: false, nookCountryCode: '*', nookVerifiedAgeGroup: '13_15', nookPolicyId: null },
+				{ id: 'adult', host: null, isDeleted: false, isSuspended: false, nookCountryCode: '*', nookVerifiedAgeGroup: '18_PLUS', nookPolicyId: null },
+			];
+			if (sql.includes('FROM "nook_policy"')) return [
+				{ id: 'minor-policy', country: '*', ageGroup: '13_15', accountStates: ['active'], permissions: { chat_with_adult: false }, priority: 0, enabled: true },
+				{ id: 'adult-policy', country: '*', ageGroup: '18_PLUS', accountStates: ['active'], permissions: { chat_with_adult: true }, priority: 0, enabled: true },
+			];
+			if (sql.includes('INSERT INTO "nook_community_join_request"')) throw new Error('JOIN_REQUEST_WAS_STORED');
+			throw new Error(`Unexpected transaction query: ${sql}`);
+		} };
+		const db = {
+			query: async (sql: string) => {
+				if (sql.includes('FROM "channel" c')) return [{ userId: 'adult', joinMode: 'approval', ageMode: 'mixed', discoverable: true, initialized: true }];
+				if (sql.includes('SELECT "baseRole", "state" FROM "nook_community_member"')) return [];
+				throw new Error(`Unexpected query: ${sql}`);
+			},
+			transaction: async <T>(callback: (transactionManager: typeof manager) => Promise<T>) => await callback(manager),
+		} as unknown as DataSource;
+		const idService = { gen: () => 'request' } as unknown as IdService;
+
+		await assert.rejects(
+			() => requestNookCommunityJoin(db, idService, 'community', 'minor', 'hello'),
+			(error: unknown) => error instanceof NookCommunityMembershipError && error.code === 'ADULT_BOUNDARY_RESTRICTED',
+		);
+		assert.equal(calls.some(call => call.sql.includes('INSERT INTO "nook_community_join_request"')), false);
+	});
 });
