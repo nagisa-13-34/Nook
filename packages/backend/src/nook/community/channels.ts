@@ -5,9 +5,10 @@
 
 import type { IdService } from '@/core/IdService.js';
 import { NookCommunityAccessError, requireNookCommunityMember } from './access.js';
-import { assertNookCommunityCurrentAgeModeForUser, NookCommunityAgeError } from './age.js';
+import { assertNookCommunityAgeModeForUser, NookCommunityAgeError } from './age.js';
 import { requireNookCommunityChannelReference, requireNookCommunityRoleReferences } from './references.js';
 import type { DataSource } from 'typeorm';
+import type { NookCommunityAgeMode } from './types.js';
 
 export type NookCommunityChannelKind = 'text' | 'announcement' | 'media' | 'forum' | 'voice';
 
@@ -27,21 +28,18 @@ export class NookCommunityChannelError extends Error {
 	constructor(public readonly code: 'NO_SUCH_CHANNEL' | 'CHANNEL_FORBIDDEN') { super(code); }
 }
 
-async function requireNookCommunityChannelAgeModeAccess(db: DataSource, communityId: string, userId: string): Promise<void> {
+async function requireNookCommunityChannelAgeModeAccess(db: DataSource, ageMode: NookCommunityAgeMode, userId: string): Promise<void> {
 	try {
-		await assertNookCommunityCurrentAgeModeForUser(db, communityId, userId);
+		await assertNookCommunityAgeModeForUser(db, ageMode, userId);
 	} catch (error) {
-		if (error instanceof NookCommunityAgeError) {
-			if (error.code === 'NO_SUCH_COMMUNITY') throw new NookCommunityAccessError('NO_SUCH_COMMUNITY');
-			throw new NookCommunityAccessError('FORBIDDEN');
-		}
+		if (error instanceof NookCommunityAgeError) throw new NookCommunityAccessError('FORBIDDEN');
 		throw error;
 	}
 }
 
 export async function listNookCommunityChannels(db: DataSource, communityId: string, userId: string): Promise<NookCommunityChannelRecord[]> {
 	const membership = await requireNookCommunityMember(db, communityId, userId);
-	await requireNookCommunityChannelAgeModeAccess(db, communityId, userId);
+	await requireNookCommunityChannelAgeModeAccess(db, membership.ageMode, userId);
 	const rows = await db.query<NookCommunityChannelRecord[]>(
 		`SELECT "id", "communityId", "parentId", "name", "topic", "kind", "position", "allowedRoleIds", "archivedAt"
 		 FROM "nook_community_channel" WHERE "communityId" = $1 ORDER BY "position" ASC, "createdAt" ASC`, [communityId]);
@@ -53,7 +51,7 @@ export async function listNookCommunityChannels(db: DataSource, communityId: str
 
 export async function requireNookCommunityChannelAccess(db: DataSource, communityId: string, userId: string, channelId: string): Promise<NookCommunityChannelRecord> {
 	const membership = await requireNookCommunityMember(db, communityId, userId);
-	await requireNookCommunityChannelAgeModeAccess(db, communityId, userId);
+	await requireNookCommunityChannelAgeModeAccess(db, membership.ageMode, userId);
 	const rows = await db.query<NookCommunityChannelRecord[]>(
 		`SELECT "id", "communityId", "parentId", "name", "topic", "kind", "position", "allowedRoleIds", "archivedAt"
 		 FROM "nook_community_channel" WHERE "communityId" = $1 AND "id" = $2 LIMIT 1`, [communityId, channelId]);
