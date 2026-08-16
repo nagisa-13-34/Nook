@@ -129,6 +129,7 @@ jobs:
           pnpm --filter frontend exec vitest run --globals --config vitest.config.unit.ts
           test/unit/nook-community-voice.test.ts
           test/unit/nook-timeline.test.ts
+          test/unit/nook-video-feed.test.ts
 
       - name: misskey-js typecheck
         id: misskey_js_typecheck
