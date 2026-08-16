@@ -7,7 +7,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { authenticateNookCommunityBot, ensureBotChannelAllowed, NookCommunityBotError } from '@/nook/community/bots.js';
+import { authenticateNookCommunityBot, ensureBotChannelAllowed, NookCommunityBotError, requireNookCommunityBotCreatorActive } from '@/nook/community/bots.js';
 import { requireNookCommunityChannelAccess, NookCommunityChannelError } from '@/nook/community/channels.js';
 import { NookCommunityAccessError } from '@/nook/community/access.js';
 import { assertNookCommunityChannelAdultBoundary, NookCommunityCommunicationError } from '@/nook/community/communication.js';
@@ -28,6 +28,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			try {
 				bot = await authenticateNookCommunityBot(this.db, ps.botId, secret, 'read:messages');
 				ensureBotChannelAllowed(bot, ps.channelId);
+				if (bot.creatorId == null) throw new NookCommunityBotError('CHANNEL_FORBIDDEN');
+				await requireNookCommunityBotCreatorActive(this.db, bot.creatorId);
 			} catch (error) {
 				if (error instanceof NookCommunityBotError) {
 					if (error.code === 'CHANNEL_FORBIDDEN' || error.code === 'SCOPE_REQUIRED') throw new ApiError(meta.errors.forbidden);
@@ -35,7 +37,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 				throw error;
 			}
-			if (bot.creatorId == null) throw new ApiError(meta.errors.forbidden);
 			try {
 				const channel = await requireNookCommunityChannelAccess(this.db, bot.communityId, bot.creatorId, ps.channelId);
 				if (channel.archivedAt != null || channel.kind === 'voice') throw new NookCommunityChannelError('CHANNEL_FORBIDDEN');
