@@ -38,5 +38,6 @@ export interface NookCommunityMembership {
 	userId: string;
 	baseRole: NookCommunityBaseRole;
 	state: NookCommunityMemberState;
+	ageMode: NookCommunityAgeMode;
 	permissions: Set<NookCommunityPermission | '*'>;
 }
