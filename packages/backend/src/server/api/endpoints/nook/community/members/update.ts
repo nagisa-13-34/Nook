@@ -26,11 +26,7 @@ export const paramDef = { type: 'object', properties: {
 
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
-	constructor(
-		@Inject(DI.db) private db: DataSource,
-		@Inject(DI.usersRepository) private usersRepository: UsersRepository,
-		private nookAccessService: NookAccessService,
-	) {
+	constructor(@Inject(DI.db) private db: DataSource, @Inject(DI.usersRepository) private usersRepository: UsersRepository, private nookAccessService: NookAccessService) {
 		super(meta, paramDef, async (ps, me) => {
 			try {
 				const actor = await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'members.manage');
@@ -44,7 +40,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 				throw error;
 			}
-
 			try {
 				await updateNookCommunityMember(this.db, ps.communityId, ps.userId, {
 					...(ps.baseRole != null ? { baseRole: ps.baseRole } : {}),
@@ -52,14 +47,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					...(ps.nickname !== undefined ? { nickname: ps.nickname } : {}),
 				}, ps.state === 'active' ? async () => {
 					const target = await this.usersRepository.findOneBy({ id: ps.userId, host: IsNull() });
-					if (target == null || !(await this.nookAccessService.evaluate(target as MiLocalUser, 'join_community')).allowed) {
-						throw new ApiError(meta.errors.forbidden);
-					}
+					if (target == null || !(await this.nookAccessService.evaluate(target as MiLocalUser, 'join_community')).allowed) throw new ApiError(meta.errors.forbidden);
 				} : undefined);
 			} catch (error) {
 				if (error instanceof NookCommunityMemberError && error.code === 'OWNER_IMMUTABLE') throw new ApiError(meta.errors.ownerImmutable);
 				if (error instanceof NookCommunityMemberError && error.code === 'NO_SUCH_MEMBER') throw new ApiError(meta.errors.noSuchMember);
-				if (error instanceof NookCommunityMemberError && error.code === 'AGE_MODE_RESTRICTED') throw new ApiError(meta.errors.forbidden);
+				if (error instanceof NookCommunityMemberError && (error.code === 'AGE_MODE_RESTRICTED' || error.code === 'ADULT_BOUNDARY_RESTRICTED')) throw new ApiError(meta.errors.forbidden);
 				throw error;
 			}
 		});
