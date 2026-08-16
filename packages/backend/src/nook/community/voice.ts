@@ -9,6 +9,7 @@ import type { MiLocalUser } from '@/models/User.js';
 import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 import { requireNookCommunityPermission, NookCommunityAccessError } from './access.js';
 import { requireNookCommunityChannelAccess, NookCommunityChannelError } from './channels.js';
+import { assertNookCommunityAdultBoundaryForUserIds, NookCommunityCommunicationError } from './communication.js';
 import type { DataSource } from 'typeorm';
 
 export class NookCommunityVoiceError extends Error {
@@ -186,7 +187,20 @@ export async function joinNookCommunityVoice(db: DataSource, nookAccessService: 
 	if (channel.kind !== 'voice' || channel.archivedAt != null) throw new NookCommunityVoiceError('NOT_VOICE_CHANNEL');
 	await cleanupVoiceRows(db);
 	const sessionId = randomBytes(24).toString('base64url');
+
 	await db.transaction(async manager => {
+		await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`nook-community-voice:${channelId}`]);
+		const peerRows = await manager.query<Array<{ userId: string }>>(
+			'SELECT "userId" FROM "nook_community_voice_presence" WHERE "channelId"=$1 AND "userId"<>$2 AND "lastSeenAt">now()-interval \'45 seconds\'',
+			[channelId, userId],
+		);
+		await assertNookCommunityAdultBoundaryForUserIds(
+			manager,
+			nookAccessService,
+			userId,
+			peerRows.map(peer => peer.userId),
+			'call_with_adult',
+		);
 		await manager.query(
 			'DELETE FROM "nook_community_voice_signal" WHERE "channelId"=$1 AND ("fromUserId"=$2 OR "toUserId"=$2)',
 			[channelId, userId],
@@ -197,6 +211,7 @@ export async function joinNookCommunityVoice(db: DataSource, nookAccessService: 
 			[channelId, userId, sessionId],
 		);
 	});
+
 	const peerState = serializePeerState(await listAuthorizedVoicePeers(db, nookAccessService, channelId, userId));
 	return {
 		sessionId,
@@ -209,10 +224,26 @@ export async function joinNookCommunityVoice(db: DataSource, nookAccessService: 
 
 export async function heartbeatNookCommunityVoice(db: DataSource, nookAccessService: NookAccessService, channelId: string, userId: string, sessionId: string) {
 	const authorization = await authorizeVoiceSession(db, nookAccessService, channelId, userId, sessionId);
-	await db.query('UPDATE "nook_community_voice_presence" SET "lastSeenAt"=now() WHERE "channelId"=$1 AND "userId"=$2 AND "sessionId"=$3', [channelId, userId, sessionId]);
 	await cleanupVoiceRows(db);
-	const [authorizedPeers, configRows, musicRows] = await Promise.all([
-		listAuthorizedVoicePeers(db, nookAccessService, channelId, userId),
+	const authorizedPeers = await listAuthorizedVoicePeers(db, nookAccessService, channelId, userId);
+	try {
+		await assertNookCommunityAdultBoundaryForUserIds(
+			db,
+			nookAccessService,
+			userId,
+			authorizedPeers.map(peer => peer.userId),
+			'call_with_adult',
+		);
+	} catch (error) {
+		if (error instanceof NookCommunityCommunicationError) {
+			await deleteVoiceSession(db, channelId, userId, sessionId);
+			throw new NookCommunityVoiceError('NO_SESSION');
+		}
+		throw error;
+	}
+	await db.query('UPDATE "nook_community_voice_presence" SET "lastSeenAt"=now() WHERE "channelId"=$1 AND "userId"=$2 AND "sessionId"=$3', [channelId, userId, sessionId]);
+
+	const [configRows, musicRows] = await Promise.all([
 		db.query<NookVoiceConfig[]>('SELECT "ttsEnabled","ttsSourceChannelId","ttsLanguage","musicEnabled" FROM "nook_community_voice_config" WHERE "channelId"=$1 LIMIT 1', [channelId]),
 		db.query<NookVoiceMusicState[]>('SELECT "url","title","positionSeconds","playing","updatedAt" FROM "nook_community_voice_music" WHERE "channelId"=$1 LIMIT 1', [channelId]),
 	]);
@@ -245,8 +276,9 @@ export async function sendNookCommunityVoiceSignal(db: DataSource, nookAccessSer
 	if (target == null) throw new NookCommunityVoiceError('NO_TARGET');
 	try {
 		await authorizeVoiceSession(db, nookAccessService, channelId, target.userId, target.sessionId);
+		await assertNookCommunityAdultBoundaryForUserIds(db, nookAccessService, fromUserId, [toUserId], 'call_with_adult');
 	} catch (error) {
-		if (error instanceof NookCommunityVoiceError) throw new NookCommunityVoiceError('NO_TARGET');
+		if (error instanceof NookCommunityVoiceError || error instanceof NookCommunityCommunicationError) throw new NookCommunityVoiceError('NO_TARGET');
 		throw error;
 	}
 	await db.query('INSERT INTO "nook_community_voice_signal" ("id","channelId","fromUserId","toUserId","type","payload") VALUES ($1,$2,$3,$4,$5,$6)', [idService.gen(), channelId, fromUserId, toUserId, type, payload]);
@@ -257,6 +289,19 @@ export async function consumeNookCommunityVoiceSignals(db: DataSource, nookAcces
 	return await db.transaction(async manager => {
 		const rows = await manager.query<Array<{ id: string; fromUserId: string; type: string; payload: string; createdAt: Date }>>('SELECT "id","fromUserId","type","payload","createdAt" FROM "nook_community_voice_signal" WHERE "channelId"=$1 AND "toUserId"=$2 ORDER BY "createdAt" ASC LIMIT 100 FOR UPDATE SKIP LOCKED', [channelId, userId]);
 		if (rows.length > 0) await manager.query('DELETE FROM "nook_community_voice_signal" WHERE "id" = ANY($1::varchar[])', [rows.map(row => row.id)]);
+		if (rows.length === 0) return rows;
+		try {
+			await assertNookCommunityAdultBoundaryForUserIds(
+				manager,
+				nookAccessService,
+				userId,
+				rows.map(row => row.fromUserId),
+				'call_with_adult',
+			);
+		} catch (error) {
+			if (error instanceof NookCommunityCommunicationError) return [];
+			throw error;
+		}
 		return rows;
 	});
 }
