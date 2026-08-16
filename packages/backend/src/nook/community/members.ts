@@ -60,7 +60,6 @@ export async function updateNookCommunityMember(
 	const context = await ensureNookCommunity(db, communityId);
 	if (context.ownerId === userId) throw new NookCommunityMemberError('OWNER_IMMUTABLE');
 	await db.transaction(async manager => {
-		const ageMode = input.state === 'active' ? await lockNookCommunityAgeMode(manager, communityId) : null;
 		const currentRows = await manager.query<Array<{ state: 'active' | 'banned' }>>(
 			'SELECT "state" FROM "nook_community_member" WHERE "communityId" = $1 AND "userId" = $2 FOR UPDATE',
 			[communityId, userId],
@@ -70,8 +69,9 @@ export async function updateNookCommunityMember(
 		if (input.state === 'active' && current.state === 'banned') {
 			if (beforeActivate == null) throw new NookCommunityMemberError('ACTIVATION_CHECK_REQUIRED');
 			await beforeActivate();
+			const ageMode = await lockNookCommunityAgeMode(manager, communityId);
 			try {
-				await assertNookCommunityAgeModeForUser(manager, ageMode ?? 'mixed', userId);
+				await assertNookCommunityAgeModeForUser(manager, ageMode, userId);
 			} catch (error) {
 				if (error instanceof NookCommunityAgeError && error.code === 'AGE_MODE_RESTRICTED') {
 					throw new NookCommunityMemberError('AGE_MODE_RESTRICTED');
