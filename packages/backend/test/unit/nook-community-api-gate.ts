@@ -121,6 +121,42 @@ describe('Nook Community API feature and policy gate', () => {
 		assert.deepEqual(evaluated, ['voice_call']);
 	});
 
+	test('Community-wide rich writes cannot bypass the adult boundary, while a ban-only recovery remains available', async () => {
+		const minor = { id: 'minor', isDeleted: false, isSuspended: false } as unknown as MiLocalUser;
+		const db = {
+			query: async (sql: string) => {
+				if (sql.includes('LEFT JOIN "nook_community" nc')) return [{ ownerId: 'owner', initialized: true, isDeleted: false, isSuspended: false }];
+				if (sql.includes('SELECT "userId" FROM "nook_community_member"')) return [{ userId: 'minor' }, { userId: 'adult' }];
+				if (sql.includes('FROM "nook_feature_flag"')) return [{ enabled: true }];
+				if (sql.includes('FROM "user" u')) return [
+					{ id: 'minor', host: null, isDeleted: false, isSuspended: false, nookCountryCode: '*', nookVerifiedAgeGroup: '13_15', nookPolicyId: null },
+					{ id: 'adult', host: null, isDeleted: false, isSuspended: false, nookCountryCode: '*', nookVerifiedAgeGroup: '18_PLUS', nookPolicyId: null },
+				];
+				if (sql.includes('FROM "nook_policy"')) return [
+					{ id: 'minor-policy', country: '*', ageGroup: '13_15', accountStates: ['active'], permissions: { chat_with_adult: false }, priority: 0, enabled: true },
+					{ id: 'adult-policy', country: '*', ageGroup: '18_PLUS', accountStates: ['active'], permissions: { chat_with_adult: true }, priority: 0, enabled: true },
+				];
+				throw new Error(`Unexpected query: ${sql}`);
+			},
+		} as unknown as DataSource;
+		const service = createService({
+			isFeatureEnabled: async () => true,
+			evaluate: async (_user, permission) => ({ allowed: true, permission, policyId: null, reason: 'allowed' }),
+		}, db);
+
+		await assert.rejects(
+			() => gate(service, 'nook/community/announcements/create', minor, { communityId: 'community' }, 'write:channels'),
+			(error: unknown) => error instanceof ApiError && error.code === 'RESTRICTED_BY_NOOK_POLICY',
+		);
+		await assert.rejects(
+			() => gate(service, 'nook/community/members/update', minor, { communityId: 'community', userId: 'adult', nickname: 'signal' }, 'write:channels'),
+			(error: unknown) => error instanceof ApiError && error.code === 'RESTRICTED_BY_NOOK_POLICY',
+		);
+		await assert.doesNotReject(
+			() => gate(service, 'nook/community/members/update', minor, { communityId: 'community', userId: 'adult', state: 'banned' }, 'write:channels'),
+		);
+	});
+
 	test('read-only Community access never initializes a legacy companion row', async () => {
 		let databaseCalls = 0;
 		const db = { query: async () => { databaseCalls += 1; return []; } } as unknown as DataSource;
