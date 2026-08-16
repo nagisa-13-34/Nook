@@ -23,6 +23,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			v-for="note in activeNotes"
 			:key="note.id"
 			:note="note"
+			:withHardMute="true"
 			:class="$style.note"
 		/>
 
@@ -39,17 +40,22 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, provide, ref, watch } from 'vue';
 import type * as Misskey from 'misskey-js';
 import MkButton from '@/components/MkButton.vue';
 import MkNote from '@/components/MkNote.vue';
 import MkTab from '@/components/MkTab.vue';
+import { useGlobalEvent } from '@/events.js';
 import { i18n } from '@/i18n.js';
-import { hasNookVideo, noteMatchesNookVideoTab } from '@/nook/video-feed.js';
+import { hasNookVideo, noteMatchesNookVideoTab, resolveNookVideoTimelineSource } from '@/nook/video-feed.js';
 import type { NookVideoTab } from '@/nook/video-feed.js';
+import { store } from '@/store.js';
+import { availableBasicTimelines } from '@/timelines.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 
-const FETCH_LIMIT = 100;
+const FETCH_LIMIT = 50;
+const MAX_BACKFILL_PAGES = 4;
+const TARGET_TAB_NOTES = 12;
 
 const tab = ref<NookVideoTab>('shorts');
 const videoNotes = ref<Misskey.entities.Note[]>([]);
@@ -58,36 +64,82 @@ const error = ref(false);
 const canFetchMore = ref(true);
 const untilId = ref<string | null>(null);
 
+const source = computed(() => resolveNookVideoTimelineSource(availableBasicTimelines()));
+const withSensitive = computed(() => store.r.tl.value.filter.withSensitive);
 const activeNotes = computed(() => videoNotes.value.filter(note => noteMatchesNookVideoTab(note, tab.value)));
+
+provide('inTimeline', true);
+provide('tl_withSensitive', withSensitive);
+
+async function fetchVideoPage(cursor: string | null): Promise<Misskey.entities.Note[]> {
+	const pagination = cursor == null ? {} : { untilId: cursor };
+
+	if (source.value === 'local') {
+		return await misskeyApi('notes/local-timeline', {
+			withFiles: true,
+			withRenotes: false,
+			withReplies: false,
+			allowPartial: false,
+			limit: FETCH_LIMIT,
+			...pagination,
+		});
+	}
+
+	if (source.value === 'global') {
+		return await misskeyApi('notes/global-timeline', {
+			withFiles: true,
+			withRenotes: false,
+			limit: FETCH_LIMIT,
+			...pagination,
+		});
+	}
+
+	return [];
+}
 
 async function loadMore(): Promise<void> {
 	if (fetching.value || !canFetchMore.value) return;
+	if (source.value == null) {
+		canFetchMore.value = false;
+		return;
+	}
 
 	fetching.value = true;
 	error.value = false;
 
+	const requestedTab = tab.value;
+	const initialMatchingCount = videoNotes.value.filter(note => noteMatchesNookVideoTab(note, requestedTab)).length;
+
 	try {
-		const page = await misskeyApi('notes/local-timeline', {
-			withFiles: true,
-			withRenotes: false,
-			withReplies: false,
-			allowPartial: true,
-			limit: FETCH_LIMIT,
-			...(untilId.value == null ? {} : { untilId: untilId.value }),
-		});
+		for (let pagesFetched = 0; pagesFetched < MAX_BACKFILL_PAGES && canFetchMore.value; pagesFetched++) {
+			const previousUntilId = untilId.value;
+			const page = await fetchVideoPage(previousUntilId);
 
-		if (page.length === 0) {
-			canFetchMore.value = false;
-			return;
-		}
+			if (page.length === 0) {
+				canFetchMore.value = false;
+				break;
+			}
 
-		untilId.value = page.at(-1)?.id ?? untilId.value;
+			const nextUntilId = page.at(-1)?.id;
+			if (nextUntilId == null || nextUntilId === previousUntilId) {
+				canFetchMore.value = false;
+				break;
+			}
+			untilId.value = nextUntilId;
 
-		const seen = new Set(videoNotes.value.map(note => note.id));
-		for (const note of page) {
-			if (seen.has(note.id) || !hasNookVideo(note)) continue;
-			seen.add(note.id);
-			videoNotes.value.push(note);
+			const seen = new Set(videoNotes.value.map(note => note.id));
+			for (const note of page) {
+				if (seen.has(note.id) || !hasNookVideo(note)) continue;
+				seen.add(note.id);
+				videoNotes.value.push(note);
+			}
+
+			if (page.length < FETCH_LIMIT) {
+				canFetchMore.value = false;
+			}
+
+			const matchingCount = videoNotes.value.filter(note => noteMatchesNookVideoTab(note, requestedTab)).length;
+			if (matchingCount - initialMatchingCount >= TARGET_TAB_NOTES) break;
 		}
 	} catch {
 		error.value = true;
@@ -99,11 +151,25 @@ async function loadMore(): Promise<void> {
 async function reload(): Promise<void> {
 	videoNotes.value = [];
 	untilId.value = null;
-	canFetchMore.value = true;
+	canFetchMore.value = source.value != null;
 	await loadMore();
 }
 
-onMounted(loadMore);
+watch(tab, () => {
+	if (activeNotes.value.length === 0 && canFetchMore.value) void loadMore();
+});
+
+watch(source, () => {
+	void reload();
+});
+
+useGlobalEvent('noteDeleted', (noteId) => {
+	videoNotes.value = videoNotes.value.filter(note => note.id !== noteId);
+});
+
+onMounted(() => {
+	void loadMore();
+});
 </script>
 
 <style lang="scss" module>
