@@ -22,15 +22,12 @@ export const meta = {
 		alreadyMember: { message: 'You are already a member.', code: 'ALREADY_MEMBER', id: '069192cf-411b-4c2e-992c-216c633283ba' },
 		banned: { message: 'You are banned from this community.', code: 'BANNED', id: '9a32b1d7-1f9a-46e8-ba22-4b64946631e0' },
 		inviteRequired: { message: 'An invite is required.', code: 'INVITE_REQUIRED', id: '78f9b12b-744b-490c-91c0-cbdae467d323' },
-		ageRestricted: { message: 'Your verified age does not match this Community age mode.', code: 'AGE_MODE_RESTRICTED', id: '53b99440-7859-48c3-bd83-d0668771764b', kind: 'permission', httpStatusCode: 403 },
+		ageRestricted: { message: 'Your verified age or communication policy does not allow joining this Community.', code: 'AGE_MODE_RESTRICTED', id: '53b99440-7859-48c3-bd83-d0668771764b', kind: 'permission', httpStatusCode: 403 },
 	},
 } as const;
-export const paramDef = {
-	type: 'object', properties: {
-		communityId: { type: 'string', format: 'misskey:id' },
-		message: { type: 'string', maxLength: 1024, nullable: true },
-	}, required: ['communityId'],
-} as const;
+export const paramDef = { type: 'object', properties: {
+	communityId: { type: 'string', format: 'misskey:id' }, message: { type: 'string', maxLength: 1024, nullable: true },
+}, required: ['communityId'] } as const;
 
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
@@ -56,7 +53,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					if (error.code === 'ALREADY_MEMBER') throw new ApiError(meta.errors.alreadyMember);
 					if (error.code === 'BANNED') throw new ApiError(meta.errors.banned);
 					if (error.code === 'INVITE_REQUIRED') throw new ApiError(meta.errors.inviteRequired);
-					if (error.code === 'AGE_MODE_RESTRICTED') throw new ApiError(meta.errors.ageRestricted);
+					if (error.code === 'AGE_MODE_RESTRICTED' || error.code === 'ADULT_BOUNDARY_RESTRICTED') throw new ApiError(meta.errors.ageRestricted);
 				}
 				throw error;
 			}
