@@ -18,6 +18,7 @@ export const meta = {
 		properties: {
 			communityId: { type: 'string' },
 			joinMode: { type: 'string', enum: ['open', 'approval', 'invite', 'private'] },
+			ageMode: { type: 'string', enum: ['minors_only', 'mixed', 'adults_only'] },
 			discoverable: { type: 'boolean' },
 			memberCount: { type: 'number' },
 			membership: {
@@ -30,7 +31,7 @@ export const meta = {
 				required: ['baseRole', 'state', 'permissions'],
 			},
 		},
-		required: ['communityId', 'joinMode', 'discoverable', 'memberCount', 'membership'],
+		required: ['communityId', 'joinMode', 'ageMode', 'discoverable', 'memberCount', 'membership'],
 	},
 	errors: {
 		noSuchCommunity: { message: 'No such community.', code: 'NO_SUCH_COMMUNITY', id: 'c80f450a-e1ae-4813-862a-c6019e0f051f' },
@@ -61,6 +62,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				return {
 					communityId: ps.communityId,
 					joinMode: context.joinMode,
+					ageMode: context.ageMode,
 					discoverable: context.discoverable,
 					memberCount: Number(countRows[0]?.count ?? 0),
 					membership: membership == null ? null : {
