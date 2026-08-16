@@ -86,8 +86,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		super(meta, paramDef, async (ps, me) => {
 			const communityEnabled = await this.nookAccessService.isFeatureEnabled('community');
 			if (communityEnabled) {
-				const [createDecision, joinDecision] = await this.nookAccessService.evaluateMany(me, ['create_community', 'join_community']);
-				if (!createDecision?.allowed || !joinDecision?.allowed) {
+				const createDecision = await this.nookAccessService.evaluate(me, 'create_community');
+				const joinDecision = await this.nookAccessService.evaluate(me, 'join_community');
+				if (!createDecision.allowed || !joinDecision.allowed) {
 					throw new ApiError(meta.errors.communityRestricted);
 				}
 			}
