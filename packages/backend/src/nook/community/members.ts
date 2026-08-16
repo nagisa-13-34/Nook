@@ -8,7 +8,7 @@ import type { DataSource } from 'typeorm';
 import type { NookCommunityBaseRole } from './types.js';
 
 export class NookCommunityMemberError extends Error {
-	constructor(public readonly code: 'OWNER_IMMUTABLE' | 'NO_SUCH_MEMBER') { super(code); }
+	constructor(public readonly code: 'OWNER_IMMUTABLE' | 'NO_SUCH_MEMBER' | 'ACTIVATION_CHECK_REQUIRED') { super(code); }
 }
 
 interface NookCommunityMemberListRecord {
@@ -49,9 +49,19 @@ export async function listNookCommunityMembers(db: DataSource, communityId: stri
 	return members;
 }
 
-export async function updateNookCommunityMember(db: DataSource, communityId: string, userId: string, input: { baseRole?: Exclude<NookCommunityBaseRole, 'owner'>; state?: 'active' | 'banned'; nickname?: string | null }): Promise<void> {
+export async function updateNookCommunityMember(
+	db: DataSource,
+	communityId: string,
+	userId: string,
+	input: { baseRole?: Exclude<NookCommunityBaseRole, 'owner'>; state?: 'active' | 'banned'; nickname?: string | null },
+	beforeActivate?: () => Promise<void>,
+): Promise<void> {
 	const context = await ensureNookCommunity(db, communityId);
 	if (context.ownerId === userId) throw new NookCommunityMemberError('OWNER_IMMUTABLE');
+	if (input.state === 'active') {
+		if (beforeActivate == null) throw new NookCommunityMemberError('ACTIVATION_CHECK_REQUIRED');
+		await beforeActivate();
+	}
 	await db.transaction(async manager => {
 		const rows = await manager.query<Array<{ userId: string }>>(
 			`UPDATE "nook_community_member" SET
