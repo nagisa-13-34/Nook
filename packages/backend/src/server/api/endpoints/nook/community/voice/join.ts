@@ -8,10 +8,8 @@ import { DataSource } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { NookAccessService } from '@/nook/policy/NookAccessService.js';
+import { NookCommunityCommunicationError } from '@/nook/community/communication.js';
 import { joinNookCommunityVoice, NookCommunityVoiceError } from '@/nook/community/voice.js';
-import { requireNookCommunityPermission, NookCommunityAccessError } from '@/nook/community/access.js';
-import { requireNookCommunityChannelAccess, NookCommunityChannelError } from '@/nook/community/channels.js';
-import { assertNookCommunityAdultBoundaryForUserIds, NookCommunityCommunicationError } from '@/nook/community/communication.js';
 import { ApiError } from '../../../../error.js';
 
 export const meta = {
@@ -54,31 +52,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			try {
-				await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'voice.join');
-				const channel = await requireNookCommunityChannelAccess(this.db, ps.communityId, me.id, ps.channelId);
-				if (channel.kind !== 'voice' || channel.archivedAt != null) throw new NookCommunityVoiceError('NOT_VOICE_CHANNEL');
-
-				return await this.db.transaction(async manager => {
-					await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`nook-community-voice:${ps.channelId}`]);
-					const peers = await manager.query<Array<{ userId: string }>>(
-						`SELECT "userId" FROM "nook_community_voice_presence"
-						 WHERE "channelId" = $1 AND "userId" <> $2 AND "lastSeenAt" > now() - interval '45 seconds'`,
-						[ps.channelId, me.id],
-					);
-					await assertNookCommunityAdultBoundaryForUserIds(
-						manager,
-						this.nookAccessService,
-						me.id,
-						peers.map(peer => peer.userId),
-						'call_with_adult',
-					);
-					return await joinNookCommunityVoice(manager as unknown as DataSource, this.nookAccessService, ps.communityId, ps.channelId, me.id);
-				});
+				return await joinNookCommunityVoice(this.db, this.nookAccessService, ps.communityId, ps.channelId, me.id);
 			} catch (error) {
 				if (error instanceof NookCommunityVoiceError && error.code === 'NOT_VOICE_CHANNEL') throw new ApiError(meta.errors.notVoice);
-				if (error instanceof NookCommunityVoiceError || error instanceof NookCommunityAccessError || error instanceof NookCommunityChannelError || error instanceof NookCommunityCommunicationError) {
-					throw new ApiError(meta.errors.forbidden);
-				}
+				if (error instanceof NookCommunityVoiceError || error instanceof NookCommunityCommunicationError) throw new ApiError(meta.errors.forbidden);
 				throw error;
 			}
 		});
