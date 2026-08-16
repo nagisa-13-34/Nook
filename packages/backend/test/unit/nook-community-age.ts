@@ -9,6 +9,7 @@ import type { DataSource } from 'typeorm';
 import {
 	assertNookCommunityAgeModeForAllMembers,
 	assertNookCommunityAgeModeForUser,
+	assertNookCommunityCurrentAgeModeForUser,
 	isNookCommunityAgeModeAllowed,
 	NookCommunityAgeError,
 } from '@/nook/community/age.js';
@@ -36,6 +37,34 @@ describe('Nook Community age mode', () => {
 			() => assertNookCommunityAgeModeForUser(db, 'adults_only', 'remote'),
 			(error: unknown) => error instanceof NookCommunityAgeError && error.code === 'AGE_MODE_RESTRICTED',
 		);
+	});
+
+	test('runtime access rechecks the current verified age against the Community mode', async () => {
+		const db = {
+			query: async (sql: string) => {
+				if (sql.includes('COALESCE(nc."ageMode"')) {
+					return [{ ageMode: 'minors_only', host: null, nookVerifiedAgeGroup: '18_PLUS' }];
+				}
+				throw new Error(`Unexpected query: ${sql}`);
+			},
+		} as unknown as DataSource;
+
+		await assert.rejects(
+			() => assertNookCommunityCurrentAgeModeForUser(db, 'community', 'member'),
+			(error: unknown) => error instanceof NookCommunityAgeError && error.code === 'AGE_MODE_RESTRICTED',
+		);
+	});
+
+	test('runtime access keeps mixed and legacy Communities unrestricted', async () => {
+		const db = {
+			query: async (sql: string) => {
+				assert.ok(sql.includes('FROM "channel" c'));
+				assert.ok(sql.includes('COALESCE(nc."ageMode", \'mixed\')'));
+				return [{ ageMode: 'mixed', host: null, nookVerifiedAgeGroup: null }];
+			},
+		} as unknown as DataSource;
+
+		await assert.doesNotReject(() => assertNookCommunityCurrentAgeModeForUser(db, 'community', 'member'));
 	});
 
 	test('age mode changes fail when an existing active member does not fit', async () => {
