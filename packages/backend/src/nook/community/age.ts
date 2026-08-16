@@ -58,11 +58,12 @@ export async function assertNookCommunityCurrentAgeModeForUser(
 		host: string | null;
 		nookVerifiedAgeGroup: NookAgeGroup | null;
 	}>>(
-		`SELECT nc."ageMode", u."host", up."nookVerifiedAgeGroup"
-		 FROM "nook_community" nc
+		`SELECT COALESCE(nc."ageMode", 'mixed') AS "ageMode", u."host", up."nookVerifiedAgeGroup"
+		 FROM "channel" c
+		 LEFT JOIN "nook_community" nc ON nc."channelId" = c."id"
 		 LEFT JOIN "user" u ON u."id" = $2
 		 LEFT JOIN "user_profile" up ON up."userId" = u."id"
-		 WHERE nc."channelId" = $1
+		 WHERE c."id" = $1
 		 LIMIT 1`,
 		[communityId, userId],
 	);
