@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { assertNookCommunityAgeModeForUser, NookCommunityAgeError } from './age.js';
 import { baseRolePermissions, isNookCommunityPermission } from './permissions.js';
 import type { DataSource } from 'typeorm';
 import type { NookCommunityBaseRole, NookCommunityContext, NookCommunityMembership, NookCommunityPermission } from './types.js';
@@ -19,6 +20,10 @@ interface NookCommunityContextRow {
 	ageMode: NookCommunityContext['ageMode'] | null;
 	discoverable: boolean | null;
 	initialized: boolean;
+}
+
+interface NookCommunityAccessOptions {
+	allowAgeModeMismatch?: boolean;
 }
 
 async function readNookCommunityContextRow(db: DataSource, communityId: string): Promise<NookCommunityContextRow> {
@@ -126,14 +131,24 @@ export async function getNookCommunityMembership(db: DataSource, communityId: st
 	};
 }
 
-export async function requireNookCommunityMember(db: DataSource, communityId: string, userId: string): Promise<NookCommunityMembership> {
+async function assertNookCommunityMembershipAgeMode(db: DataSource, membership: NookCommunityMembership): Promise<void> {
+	try {
+		await assertNookCommunityAgeModeForUser(db, membership.ageMode, membership.userId);
+	} catch (error) {
+		if (error instanceof NookCommunityAgeError) throw new NookCommunityAccessError('FORBIDDEN');
+		throw error;
+	}
+}
+
+export async function requireNookCommunityMember(db: DataSource, communityId: string, userId: string, options: NookCommunityAccessOptions = {}): Promise<NookCommunityMembership> {
 	const membership = await getNookCommunityMembership(db, communityId, userId);
 	if (membership == null || membership.state !== 'active') throw new NookCommunityAccessError('NOT_MEMBER');
+	if (!options.allowAgeModeMismatch) await assertNookCommunityMembershipAgeMode(db, membership);
 	return membership;
 }
 
-export async function requireNookCommunityPermission(db: DataSource, communityId: string, userId: string, permission: NookCommunityPermission): Promise<NookCommunityMembership> {
-	const membership = await requireNookCommunityMember(db, communityId, userId);
+export async function requireNookCommunityPermission(db: DataSource, communityId: string, userId: string, permission: NookCommunityPermission, options: NookCommunityAccessOptions = {}): Promise<NookCommunityMembership> {
+	const membership = await requireNookCommunityMember(db, communityId, userId, options);
 	if (!membership.permissions.has('*') && !membership.permissions.has(permission)) throw new NookCommunityAccessError('FORBIDDEN');
 	return membership;
 }
