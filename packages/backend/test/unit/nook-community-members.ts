@@ -35,7 +35,8 @@ describe('Nook Community member state', () => {
 		const manager = {
 			query: async (sql: string) => {
 				calls.push(sql);
-				if (sql.includes('UPDATE "nook_community_member"')) return [{ userId: 'member' }];
+				if (sql.includes('SELECT "state" FROM "nook_community_member"')) return [{ state: 'active' }];
+				if (sql.includes('UPDATE "nook_community_member"')) return [];
 				if (sql.includes('DELETE FROM "nook_community_event_rsvp"')) return [];
 				throw new Error(`Unexpected transaction query: ${sql}`);
 			},
@@ -53,36 +54,48 @@ describe('Nook Community member state', () => {
 		assert.equal(calls.some(sql => sql.includes('DELETE FROM "nook_community_event_rsvp"')), true);
 	});
 
-	test('reactivating a member fails closed without a policy guard', async () => {
-		let transactionStarted = false;
+	test('banned to active fails closed without a policy guard', async () => {
+		const calls: string[] = [];
+		const manager = {
+			query: async (sql: string) => {
+				calls.push(sql);
+				if (sql.includes('SELECT "state" FROM "nook_community_member"')) return [{ state: 'banned' }];
+				if (sql.includes('UPDATE "nook_community_member"')) return [];
+				throw new Error(`Unexpected transaction query: ${sql}`);
+			},
+		};
 		const db = {
 			query: async (sql: string) => {
 				if (sql.includes('FROM "channel" c')) return [{ userId: 'owner', joinMode: 'open', discoverable: true, initialized: true }];
 				throw new Error(`Unexpected query: ${sql}`);
 			},
-			transaction: async () => {
-				transactionStarted = true;
-			},
+			transaction: async <T>(callback: (transactionManager: typeof manager) => Promise<T>) => await callback(manager),
 		} as unknown as DataSource;
 
 		await assert.rejects(
 			() => updateNookCommunityMember(db, 'community', 'member', { state: 'active' }),
 			(error: unknown) => error instanceof NookCommunityMemberError && error.code === 'ACTIVATION_CHECK_REQUIRED',
 		);
-		assert.equal(transactionStarted, false);
+		assert.equal(calls.some(sql => sql.includes('UPDATE "nook_community_member"')), false);
 	});
 
 	test('reactivation policy denial happens before the membership write', async () => {
-		let transactionStarted = false;
+		const calls: string[] = [];
 		let policyChecked = false;
+		const manager = {
+			query: async (sql: string) => {
+				calls.push(sql);
+				if (sql.includes('SELECT "state" FROM "nook_community_member"')) return [{ state: 'banned' }];
+				if (sql.includes('UPDATE "nook_community_member"')) return [];
+				throw new Error(`Unexpected transaction query: ${sql}`);
+			},
+		};
 		const db = {
 			query: async (sql: string) => {
 				if (sql.includes('FROM "channel" c')) return [{ userId: 'owner', joinMode: 'open', discoverable: true, initialized: true }];
 				throw new Error(`Unexpected query: ${sql}`);
 			},
-			transaction: async () => {
-				transactionStarted = true;
-			},
+			transaction: async <T>(callback: (transactionManager: typeof manager) => Promise<T>) => await callback(manager),
 		} as unknown as DataSource;
 
 		await assert.rejects(
@@ -93,6 +106,28 @@ describe('Nook Community member state', () => {
 			/POLICY_DENIED/,
 		);
 		assert.equal(policyChecked, true);
-		assert.equal(transactionStarted, false);
+		assert.equal(calls.some(sql => sql.includes('UPDATE "nook_community_member"')), false);
+	});
+
+	test('already active member updates do not require a reactivation policy guard', async () => {
+		const calls: string[] = [];
+		const manager = {
+			query: async (sql: string) => {
+				calls.push(sql);
+				if (sql.includes('SELECT "state" FROM "nook_community_member"')) return [{ state: 'active' }];
+				if (sql.includes('UPDATE "nook_community_member"')) return [];
+				throw new Error(`Unexpected transaction query: ${sql}`);
+			},
+		};
+		const db = {
+			query: async (sql: string) => {
+				if (sql.includes('FROM "channel" c')) return [{ userId: 'owner', joinMode: 'open', discoverable: true, initialized: true }];
+				throw new Error(`Unexpected query: ${sql}`);
+			},
+			transaction: async <T>(callback: (transactionManager: typeof manager) => Promise<T>) => await callback(manager),
+		} as unknown as DataSource;
+
+		await updateNookCommunityMember(db, 'community', 'member', { state: 'active', nickname: 'new name' });
+		assert.equal(calls.some(sql => sql.includes('UPDATE "nook_community_member"')), true);
 	});
 });
