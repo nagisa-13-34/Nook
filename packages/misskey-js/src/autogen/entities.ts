@@ -768,3 +768,5 @@ export type NookTranslateRequest = operations['nook___translate']['requestBody']
 export type NookTranslateResponse = operations['nook___translate']['responses']['200']['content']['application/json'];
 export type NotesRecommendedRequest = operations['notes___recommended']['requestBody']['content']['application/json'];
 export type NotesRecommendedResponse = operations['notes___recommended']['responses']['200']['content']['application/json'];
+export type NotesRecommendedPageRequest = operations['notes___recommended-page']['requestBody']['content']['application/json'];
+export type NotesRecommendedPageResponse = operations['notes___recommended-page']['responses']['200']['content']['application/json'];

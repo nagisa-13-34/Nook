@@ -25,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			/>
 		</div>
 
-		<MkError v-if="loadMoreError" @retry="loadMore"/>
+		<MkError v-if="loadMoreError" @retry="retryLoadMore"/>
 		<button
 			v-else-if="hasMore"
 			v-appear="prefer.s.enableInfiniteScroll ? loadMore : null"
@@ -55,10 +55,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 const PAGE_SIZE = 20;
 const MAX_RECOMMENDATION_LIMIT = 400;
 
-type RecommendationPageRequest = Misskey.Endpoints['notes/recommended']['req'] & {
-	snapshotAt: number;
-	excludeNoteIds: string[];
-};
+type RecommendationPageRequest = Misskey.Endpoints['notes/recommended-page']['req'];
 
 const props = withDefaults(defineProps<{
 	withSensitive?: boolean;
@@ -79,15 +76,20 @@ const loadingMore = ref(false);
 const error = ref(false);
 const loadMoreError = ref(false);
 const hasMore = ref(true);
-const snapshotAt = ref<number | null>(null);
+const cursor = ref<string | null>(null);
 const requestGeneration = ref(0);
+
+function isInvalidRecommendationCursorError(err: unknown): boolean {
+	if (typeof err !== 'object' || err == null || !('code' in err)) return false;
+	return (err as { code?: unknown }).code === 'INVALID_RECOMMENDATION_CURSOR';
+}
 
 async function fetchPage(reset: boolean): Promise<void> {
 	if (!reset && (!hasMore.value || loading.value || loadingMore.value)) return;
 
 	if (reset) {
 		requestGeneration.value++;
-		snapshotAt.value = Date.now();
+		cursor.value = null;
 		loading.value = true;
 		loadingMore.value = false;
 		error.value = false;
@@ -100,7 +102,6 @@ async function fetchPage(reset: boolean): Promise<void> {
 	}
 
 	const generation = requestGeneration.value;
-	const currentSnapshotAt = snapshotAt.value ?? Date.now();
 	const remaining = MAX_RECOMMENDATION_LIMIT - notes.value.length;
 	const limit = Math.min(PAGE_SIZE, remaining);
 
@@ -113,16 +114,16 @@ async function fetchPage(reset: boolean): Promise<void> {
 
 	const request: RecommendationPageRequest = {
 		limit,
-		snapshotAt: currentSnapshotAt,
-		excludeNoteIds: notes.value.map(note => note.id),
+		...(reset || cursor.value == null ? {} : { cursor: cursor.value }),
 	};
 
 	try {
-		const pageNotes = await misskeyApi('notes/recommended', request);
+		const page = await misskeyApi('notes/recommended-page', request);
 		if (generation !== requestGeneration.value) return;
 
-		notes.value = reset ? pageNotes : mergeNookRecommendationPage(notes.value, pageNotes);
-		hasMore.value = pageNotes.length === limit && notes.value.length < MAX_RECOMMENDATION_LIMIT;
+		notes.value = reset ? page.notes : mergeNookRecommendationPage(notes.value, page.notes);
+		cursor.value = page.cursor;
+		hasMore.value = page.cursor != null && notes.value.length < MAX_RECOMMENDATION_LIMIT;
 	} catch (err) {
 		if (generation !== requestGeneration.value) return;
 		if (isNookRecommendationUnavailableError(err)) {
@@ -132,6 +133,10 @@ async function fetchPage(reset: boolean): Promise<void> {
 		if (reset) {
 			error.value = true;
 		} else {
+			if (isInvalidRecommendationCursorError(err)) {
+				cursor.value = null;
+				hasMore.value = false;
+			}
 			loadMoreError.value = true;
 		}
 	} finally {
@@ -151,6 +156,14 @@ async function reload(): Promise<void> {
 
 async function loadMore(): Promise<void> {
 	await fetchPage(false);
+}
+
+async function retryLoadMore(): Promise<void> {
+	if (cursor.value == null) {
+		await reload();
+		return;
+	}
+	await loadMore();
 }
 
 useGlobalEvent('noteDeleted', (noteId) => {
@@ -180,9 +193,7 @@ defineExpose({
 }
 
 .more {
-	display: block;
-	margin: var(--MI-margin) auto;
-	padding: 8px 16px;
-	border-radius: 32px;
+	width: 100%;
+	padding: 16px;
 }
 </style>

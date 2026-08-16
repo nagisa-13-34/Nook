@@ -7,6 +7,7 @@ import { describe, expect, test, vi } from 'vitest';
 import type { RecommendationService } from '@/core/RecommendationService.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { NookAccessService } from '@/nook/policy/NookAccessService.js';
+import RecommendedPageEndpoint from '@/server/api/endpoints/notes/recommended-page.js';
 import RecommendedEndpoint from '@/server/api/endpoints/notes/recommended.js';
 
 const me = { id: 'viewer' } as MiLocalUser;
@@ -77,7 +78,7 @@ describe('notes/recommended', () => {
 		});
 	});
 
-	test('passes snapshot and displayed note ids to the next recommendation page', async () => {
+	test('passes snapshot and displayed note ids to the legacy recommendation page', async () => {
 		const getRecommendations = vi.fn().mockResolvedValue([]);
 		const endpoint = new RecommendedEndpoint(
 			{ getRecommendations } as unknown as RecommendationService,
@@ -102,6 +103,53 @@ describe('notes/recommended', () => {
 		expect(getRecommendations).toHaveBeenCalledWith(me, 20, {
 			snapshotAt: new Date(snapshotAt),
 			excludeNoteIds: ['n1', 'n2'],
+		});
+	});
+});
+
+describe('notes/recommended-page', () => {
+	const allowedAccess = {
+		isFeatureEnabled: vi.fn().mockResolvedValue(true),
+		evaluate: vi.fn().mockResolvedValue({
+			allowed: true,
+			permission: 'recommendation',
+			policyId: 'default',
+			reason: 'allowed',
+		}),
+	} as unknown as NookAccessService;
+
+	test('starts a server recommendation session without a client timestamp', async () => {
+		const getRecommendationPage = vi.fn().mockResolvedValue({ notes: [], cursor: 'cursor-1' });
+		const endpoint = new RecommendedPageEndpoint(
+			{ getRecommendationPage } as unknown as RecommendationService,
+			allowedAccess,
+		);
+
+		await expect(endpoint.exec({ limit: 20 }, me, null)).resolves.toEqual({ notes: [], cursor: 'cursor-1' });
+		expect(getRecommendationPage).toHaveBeenCalledWith(me, 20, undefined);
+	});
+
+	test('passes only the opaque cursor when loading the next page', async () => {
+		const getRecommendationPage = vi.fn().mockResolvedValue({ notes: [], cursor: null });
+		const endpoint = new RecommendedPageEndpoint(
+			{ getRecommendationPage } as unknown as RecommendationService,
+			allowedAccess,
+		);
+
+		await endpoint.exec({ limit: 20, cursor: 'cursor-1' }, me, null);
+		expect(getRecommendationPage).toHaveBeenCalledWith(me, 20, 'cursor-1');
+	});
+
+	test('rejects an expired or invalid server cursor', async () => {
+		const getRecommendationPage = vi.fn().mockResolvedValue(null);
+		const endpoint = new RecommendedPageEndpoint(
+			{ getRecommendationPage } as unknown as RecommendationService,
+			allowedAccess,
+		);
+
+		await expect(endpoint.exec({ cursor: 'expired' }, me, null)).rejects.toMatchObject({
+			code: 'INVALID_RECOMMENDATION_CURSOR',
+			httpStatusCode: 400,
 		});
 	});
 });
