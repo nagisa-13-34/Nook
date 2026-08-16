@@ -6,13 +6,14 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { IdService } from '@/core/IdService.js';
 import { ensureNookCommunity, getNookCommunityMembership } from './access.js';
+import { assertNookCommunityAgeModeForUser, lockNookCommunityAgeMode, NookCommunityAgeError } from './age.js';
 import type { DataSource } from 'typeorm';
 import type { NookCommunityBaseRole } from './types.js';
 
 export type NookCommunityJoinResult = 'joined' | 'pending';
 
 export class NookCommunityMembershipError extends Error {
-	constructor(public readonly code: 'ALREADY_MEMBER' | 'BANNED' | 'NOT_MEMBER' | 'INVITE_REQUIRED' | 'OWNER_CANNOT_LEAVE' | 'NO_SUCH_REQUEST' | 'NO_SUCH_INVITE' | 'INVITE_EXPIRED' | 'INVITE_EXHAUSTED') {
+	constructor(public readonly code: 'ALREADY_MEMBER' | 'BANNED' | 'NOT_MEMBER' | 'INVITE_REQUIRED' | 'OWNER_CANNOT_LEAVE' | 'NO_SUCH_REQUEST' | 'NO_SUCH_INVITE' | 'INVITE_EXPIRED' | 'INVITE_EXHAUSTED' | 'AGE_MODE_RESTRICTED') {
 		super(code);
 	}
 }
@@ -25,25 +26,40 @@ export function generateNookCommunityInviteToken(): string {
 	return randomBytes(24).toString('base64url');
 }
 
+async function assertMembershipAgeMode(db: Pick<DataSource, 'query'>, communityId: string, userId: string): Promise<void> {
+	try {
+		const ageMode = await lockNookCommunityAgeMode(db, communityId);
+		await assertNookCommunityAgeModeForUser(db, ageMode, userId);
+	} catch (error) {
+		if (error instanceof NookCommunityAgeError && error.code === 'AGE_MODE_RESTRICTED') {
+			throw new NookCommunityMembershipError('AGE_MODE_RESTRICTED');
+		}
+		throw error;
+	}
+}
+
 export async function addNookCommunityMember(db: DataSource, communityId: string, userId: string, baseRole: NookCommunityBaseRole = 'member'): Promise<void> {
 	await ensureNookCommunity(db, communityId);
-	const rows = await db.query<Array<{ userId: string }>>(
-		`INSERT INTO "nook_community_member" ("communityId", "userId", "baseRole", "state")
-		 VALUES ($1, $2, $3, 'active')
-		 ON CONFLICT ("communityId", "userId") DO UPDATE
-		 SET "baseRole" = CASE WHEN "nook_community_member"."baseRole" = 'owner' THEN 'owner' ELSE EXCLUDED."baseRole" END,
-		     "state" = 'active'
-		 WHERE "nook_community_member"."state" <> 'banned'
-		 RETURNING "userId"`,
-		[communityId, userId, baseRole],
-	);
-	if (rows[0] == null) throw new NookCommunityMembershipError('BANNED');
-	await db.query(
-		`UPDATE "nook_community_join_request"
-		 SET "status" = 'approved', "respondedAt" = COALESCE("respondedAt", now())
-		 WHERE "communityId" = $1 AND "userId" = $2 AND "status" = 'pending'`,
-		[communityId, userId],
-	);
+	await db.transaction(async manager => {
+		await assertMembershipAgeMode(manager, communityId, userId);
+		const rows = await manager.query<Array<{ userId: string }>>(
+			`INSERT INTO "nook_community_member" ("communityId", "userId", "baseRole", "state")
+			 VALUES ($1, $2, $3, 'active')
+			 ON CONFLICT ("communityId", "userId") DO UPDATE
+			 SET "baseRole" = CASE WHEN "nook_community_member"."baseRole" = 'owner' THEN 'owner' ELSE EXCLUDED."baseRole" END,
+			     "state" = 'active'
+			 WHERE "nook_community_member"."state" <> 'banned'
+			 RETURNING "userId"`,
+			[communityId, userId, baseRole],
+		);
+		if (rows[0] == null) throw new NookCommunityMembershipError('BANNED');
+		await manager.query(
+			`UPDATE "nook_community_join_request"
+			 SET "status" = 'approved', "respondedAt" = COALESCE("respondedAt", now())
+			 WHERE "communityId" = $1 AND "userId" = $2 AND "status" = 'pending'`,
+			[communityId, userId],
+		);
+	});
 }
 
 export async function requestNookCommunityJoin(db: DataSource, idService: IdService, communityId: string, userId: string, message: string | null): Promise<NookCommunityJoinResult> {
@@ -118,6 +134,7 @@ export async function respondNookCommunityJoinRequest(
 
 		if (approve) {
 			if (beforeApprove != null) await beforeApprove(request.userId);
+			await assertMembershipAgeMode(manager, request.communityId, request.userId);
 			const memberRows = await manager.query<Array<{ userId: string }>>(
 				`INSERT INTO "nook_community_member" ("communityId", "userId", "baseRole", "state")
 				 VALUES ($1, $2, 'member', 'active')
@@ -168,6 +185,7 @@ export async function useNookCommunityInvite(db: DataSource, token: string, user
 		if (existing?.state === 'banned') throw new NookCommunityMembershipError('BANNED');
 		if (existing?.state === 'active') throw new NookCommunityMembershipError('ALREADY_MEMBER');
 
+		await assertMembershipAgeMode(manager, invite.communityId, userId);
 		const memberRows = await manager.query<Array<{ userId: string }>>(
 			`INSERT INTO "nook_community_member" ("communityId", "userId", "baseRole", "state")
 			 VALUES ($1, $2, $3, 'active')
