@@ -8,7 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<MkTab
 		v-model="tab"
 		:tabs="[
-			{ key: 'shorts', label: 'Shorts' },
+			{ key: 'shorts', label: i18n.ts.nookShorts },
 			{ key: 'videos', label: i18n.ts.nookVideos },
 		]"
 		:class="$style.tabs"
@@ -32,7 +32,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 
 		<div v-if="canFetchMore" :class="$style.more">
-			<MkButton :loading="fetching" @click="loadMore">{{ i18n.ts.more }}</MkButton>
+			<MkButton :loading="fetching" @click="loadMore">{{ i18n.ts.loadMore }}</MkButton>
 		</div>
 	</div>
 </div>
