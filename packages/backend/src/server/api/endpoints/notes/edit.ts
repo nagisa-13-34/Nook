@@ -13,7 +13,7 @@ import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import { MiNote } from '@/models/Note.js';
 import type { IMentionedRemoteUsers, NoteEditRevision } from '@/models/Note.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
-import type { NotesRepository, UserProfilesRepository, UsersRepository } from '@/models/_.js';
+import type { MiMeta, NotesRepository, UserProfilesRepository, UsersRepository } from '@/models/_.js';
 import { extractMentions } from '@/misc/extract-mentions.js';
 import { extractHashtags } from '@/misc/extract-hashtags.js';
 import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mfm.js';
@@ -27,12 +27,13 @@ import { RoleService } from '@/core/RoleService.js';
 import { SearchService } from '@/core/SearchService.js';
 import { HashtagService } from '@/core/HashtagService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
+import { UtilityService } from '@/core/UtilityService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { ApDeliverManagerService } from '@/core/activitypub/ApDeliverManagerService.js';
 import { RelayService } from '@/core/RelayService.js';
 import { NookAccessService } from '@/nook/policy/NookAccessService.js';
 
-const MAX_EDIT_HISTORY = 100;
+const MAX_EDIT_HISTORY = 20;
 
 export const meta = {
 	tags: ['notes'],
@@ -81,9 +82,15 @@ export const meta = {
 			id: 'c3cad4aa-0ef5-4d57-bdf6-b488292f3c3f',
 		},
 		cannotExpandAudience: {
-			message: 'Editing this note cannot add new mentioned recipients without changing visibility.',
+			message: 'Editing a note cannot add new mentioned users.',
 			code: 'CANNOT_EXPAND_NOTE_AUDIENCE_BY_EDIT',
 			id: '7d483f99-79c7-4b05-9ca7-273a60f2929d',
+		},
+		cannotKeepPublicVisibility: {
+			message: 'The edited content cannot keep this note public under the current policy.',
+			code: 'CANNOT_KEEP_PUBLIC_VISIBILITY_BY_EDIT',
+			id: '918d36cc-4b4f-4512-a85f-8bbd8e967e47',
+			httpStatusCode: 403,
 		},
 		restrictedByNookPolicy: {
 			message: 'You are not allowed to edit a note under the current Nook policy.',
@@ -110,6 +117,9 @@ type MinimumUser = Pick<MiUser, 'id' | 'host' | 'username' | 'uri'>;
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
+		@Inject(DI.meta)
+		private instanceMeta: MiMeta,
+
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
 
@@ -127,6 +137,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private searchService: SearchService,
 		private hashtagService: HashtagService,
 		private globalEventService: GlobalEventService,
+		private utilityService: UtilityService,
 		private apRendererService: ApRendererService,
 		private apDeliverManagerService: ApDeliverManagerService,
 		private relayService: RelayService,
@@ -138,8 +149,18 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.restrictedByNookPolicy);
 			}
 
+			const currentNote = await this.notesRepository.findOneBy({ id: ps.noteId });
+			if (currentNote == null) throw new ApiError(meta.errors.noSuchNote);
+			this.assertEditableOwner(currentNote, me);
+			if (this.isPureRenote(currentNote, currentNote.text, currentNote.cw)) {
+				throw new ApiError(meta.errors.pureRenote);
+			}
+
 			const text = ps.text == null || ps.text.trim() === '' ? null : ps.text.trim();
-			const cw = ps.cw == null || ps.cw.trim() === '' ? null : ps.cw.trim();
+			const cw = ps.cw;
+			if (currentNote.text === text && currentNote.cw === cw) {
+				return await this.noteEntityService.pack(currentNote, me, { detail: true });
+			}
 
 			if (this.noteCreateService.checkProhibitedWordsContain({ text, cw })) {
 				throw new ApiError(meta.errors.containsProhibitedWords);
@@ -154,25 +175,27 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				.map(tag => normalizeForSearch(tag));
 			const emojis = extractCustomEmojisFromMfm(combinedTokens);
 			const bodyMentionedUsers = await this.extractMentionedUsers(me, combinedTokens);
+			const userPolicies = await this.roleService.getUserPolicies(me.id);
 
-			const mentionLimit = (await this.roleService.getUserPolicies(me.id)).mentionLimit;
-			if (bodyMentionedUsers.length > mentionLimit) {
+			if (bodyMentionedUsers.length > userPolicies.mentionLimit) {
 				throw new ApiError(meta.errors.containsTooManyMentions);
 			}
 
-			const note = await this.notesRepository.manager.transaction(async transactionalEntityManager => {
+			const result = await this.notesRepository.manager.transaction(async transactionalEntityManager => {
 				const lockedNote = await transactionalEntityManager.findOne(MiNote, {
 					where: { id: ps.noteId },
 					lock: { mode: 'pessimistic_write' },
 				});
 
 				if (lockedNote == null) throw new ApiError(meta.errors.noSuchNote);
-				if (lockedNote.userId !== me.id || lockedNote.userHost !== null || lockedNote.uri !== null) {
-					throw new ApiError(meta.errors.notOwner);
+				this.assertEditableOwner(lockedNote, me);
+				if (this.isPureRenote(lockedNote, lockedNote.text, lockedNote.cw)) {
+					throw new ApiError(meta.errors.pureRenote);
 				}
 
-				const wasPureRenote = this.isPureRenote(lockedNote, lockedNote.text, lockedNote.cw);
-				if (wasPureRenote) throw new ApiError(meta.errors.pureRenote);
+				if (lockedNote.text === text && lockedNote.cw === cw) {
+					return { note: lockedNote, changed: false } as const;
+				}
 
 				if (text == null && lockedNote.fileIds.length === 0 && !lockedNote.hasPoll && lockedNote.renoteId == null) {
 					throw new ApiError(meta.errors.contentRequired);
@@ -181,20 +204,28 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					throw new ApiError(meta.errors.pureRenote);
 				}
 
-				if (lockedNote.visibility === 'followers' || lockedNote.visibility === 'specified') {
-					const previousAudience = new Set(lockedNote.mentions);
-					if (bodyMentionedUsers.some(user => !previousAudience.has(user.id))) {
-						throw new ApiError(meta.errors.cannotExpandAudience);
+				const previousAudience = new Set(lockedNote.mentions);
+				if (bodyMentionedUsers.some(user => !previousAudience.has(user.id))) {
+					throw new ApiError(meta.errors.cannotExpandAudience);
+				}
+
+				if (lockedNote.visibility === 'public' && lockedNote.channelId == null) {
+					const containsSensitiveWords = this.utilityService.isKeyWordIncluded(
+						this.utilityService.concatNoteContentsForKeyWordCheck({ text, cw }),
+						this.instanceMeta.sensitiveWords,
+					);
+					if (containsSensitiveWords || userPolicies.canPublicNote === false) {
+						throw new ApiError(meta.errors.cannotKeepPublicVisibility);
 					}
 				}
 
-				const mentionedUsers = [...bodyMentionedUsers];
+				const mentionedUsers: MinimumUser[] = [...bodyMentionedUsers];
 				const structuralUserIds = [
 					...(lockedNote.replyUserId == null || lockedNote.replyUserId === me.id ? [] : [lockedNote.replyUserId]),
 					...(lockedNote.visibility === 'specified' ? lockedNote.visibleUserIds : []),
 				];
 				if (structuralUserIds.length > 0) {
-					const structuralUsers = await transactionalEntityManager.findBy(this.usersRepository.target, {
+					const structuralUsers = await this.usersRepository.findBy({
 						id: In([...new Set(structuralUserIds)]),
 					});
 					for (const user of structuralUsers) {
@@ -202,11 +233,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					}
 				}
 
-				if (mentionedUsers.length > mentionLimit) {
+				if (mentionedUsers.length > userPolicies.mentionLimit) {
 					throw new ApiError(meta.errors.containsTooManyMentions);
 				}
 
-				const mentionedRemoteUsers = await this.serializeRemoteMentions(mentionedUsers);
 				const editedAt = new Date();
 				const revision: NoteEditRevision = {
 					editedAt: editedAt.toISOString(),
@@ -214,29 +244,27 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					cw: lockedNote.cw,
 				};
 
-				if (lockedNote.text === text && lockedNote.cw === cw) return lockedNote;
-
 				lockedNote.text = text;
 				lockedNote.cw = cw;
 				lockedNote.tags = tags;
 				lockedNote.emojis = emojis;
 				lockedNote.mentions = mentionedUsers.map(user => user.id);
-				lockedNote.mentionedRemoteUsers = mentionedRemoteUsers;
+				lockedNote.mentionedRemoteUsers = await this.serializeRemoteMentions(mentionedUsers);
 				lockedNote.editedAt = editedAt;
 				lockedNote.editHistory = [...(lockedNote.editHistory ?? []), revision].slice(-MAX_EDIT_HISTORY);
 
 				await transactionalEntityManager.save(MiNote, lockedNote);
-				return lockedNote;
+				return { note: lockedNote, changed: true } as const;
 			});
 
-			if (note.text !== text || note.cw !== cw) {
-				// This branch is only reachable for a no-op edit returned before assignment.
-				return await this.noteEntityService.pack(note, me, { detail: true });
+			if (!result.changed) {
+				return await this.noteEntityService.pack(result.note, me, { detail: true });
 			}
 
+			const note = result.note;
 			await this.refreshSearchIndex(note);
 			if (note.visibility === 'public' || note.visibility === 'home') {
-				this.hashtagService.updateHashtags(me, note.tags);
+				await this.hashtagService.updateHashtags(me, note.tags);
 			}
 
 			this.globalEventService.publishNoteStream(note, 'updated', {
@@ -251,6 +279,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			return await this.noteEntityService.pack(note, me, { detail: true });
 		});
+	}
+
+	private assertEditableOwner(note: MiNote, user: MiLocalUser): void {
+		if (note.userId !== user.id || note.userHost !== null || note.uri !== null) {
+			throw new ApiError(meta.errors.notOwner);
+		}
 	}
 
 	private isPureRenote(note: MiNote, text: string | null, cw: string | null): boolean {
@@ -275,7 +309,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		if (mentionedUsers.length === 0) return '[]';
 		const profiles = await this.userProfilesRepository.findBy({ userId: In(mentionedUsers.map(user => user.id)) });
 		return JSON.stringify(mentionedUsers
-			.filter(user => this.userEntityService.isRemoteUser(user as MiUser))
+			.filter(user => user.host != null)
 			.map(user => {
 				const profile = profiles.find(candidate => candidate.userId === user.id);
 				return {
@@ -298,9 +332,11 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		);
 		const manager = this.apDeliverManagerService.createDeliverManager(user, activity);
 
-		const remoteMentionIds = note.mentions.length === 0 ? [] : await this.usersRepository.findBy({ id: In(note.mentions) });
-		for (const mentioned of remoteMentionIds) {
-			if (this.userEntityService.isRemoteUser(mentioned)) manager.addDirectRecipe(mentioned as MiRemoteUser);
+		if (note.mentions.length > 0) {
+			const mentionedUsers = await this.usersRepository.findBy({ id: In(note.mentions) });
+			for (const mentioned of mentionedUsers) {
+				if (this.userEntityService.isRemoteUser(mentioned)) manager.addDirectRecipe(mentioned as MiRemoteUser);
+			}
 		}
 
 		for (const targetId of [note.replyUserId, note.renoteUserId]) {
