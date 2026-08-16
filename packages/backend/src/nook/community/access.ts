@@ -4,6 +4,7 @@
  */
 
 import { assertNookCommunityAgeModeForUser, NookCommunityAgeError } from './age.js';
+import { assertNookCommunityMembershipAdultBoundary, NookCommunityCommunicationError } from './communication.js';
 import { baseRolePermissions, isNookCommunityPermission } from './permissions.js';
 import type { DataSource } from 'typeorm';
 import type { NookCommunityBaseRole, NookCommunityContext, NookCommunityMembership, NookCommunityPermission } from './types.js';
@@ -24,6 +25,7 @@ interface NookCommunityContextRow {
 
 interface NookCommunityAccessOptions {
 	allowAgeModeMismatch?: boolean;
+	allowAdultBoundaryMismatch?: boolean;
 }
 
 async function readNookCommunityContextRow(db: DataSource, communityId: string): Promise<NookCommunityContextRow> {
@@ -140,10 +142,20 @@ async function assertNookCommunityMembershipAgeMode(db: DataSource, membership: 
 	}
 }
 
+async function assertNookCommunityMembershipCommunicationBoundary(db: DataSource, membership: NookCommunityMembership): Promise<void> {
+	try {
+		await assertNookCommunityMembershipAdultBoundary(db, membership.communityId, membership.userId);
+	} catch (error) {
+		if (error instanceof NookCommunityCommunicationError) throw new NookCommunityAccessError('FORBIDDEN');
+		throw error;
+	}
+}
+
 export async function requireNookCommunityMember(db: DataSource, communityId: string, userId: string, options: NookCommunityAccessOptions = {}): Promise<NookCommunityMembership> {
 	const membership = await getNookCommunityMembership(db, communityId, userId);
 	if (membership == null || membership.state !== 'active') throw new NookCommunityAccessError('NOT_MEMBER');
 	if (!options.allowAgeModeMismatch) await assertNookCommunityMembershipAgeMode(db, membership);
+	if (!options.allowAdultBoundaryMismatch) await assertNookCommunityMembershipCommunicationBoundary(db, membership);
 	return membership;
 }
 
