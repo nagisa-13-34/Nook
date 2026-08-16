@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { classifyNookVideoFile, hasNookVideo, noteMatchesNookVideoTab } from '@/nook/video-feed.js';
+import { classifyNookVideoFile, classifyNookVideoNote, hasNookVideo, noteMatchesNookVideoTab } from '@/nook/video-feed.js';
 
 describe('Nook video feed', () => {
 	test('classifies portrait video as Shorts', () => {
@@ -36,15 +36,17 @@ describe('Nook video feed', () => {
 		})).toBeNull();
 	});
 
-	test('matches a note when any attached video belongs to the selected tab', () => {
+	test('uses the first attached video to classify a post once', () => {
 		const note = {
 			files: [
 				{ type: 'image/png', properties: { width: 800, height: 600 } },
 				{ type: 'video/mp4', properties: { width: 720, height: 1280 } },
+				{ type: 'video/mp4', properties: { width: 1920, height: 1080 } },
 			],
 		};
 
 		expect(hasNookVideo(note)).toBe(true);
+		expect(classifyNookVideoNote(note)).toBe('shorts');
 		expect(noteMatchesNookVideoTab(note, 'shorts')).toBe(true);
 		expect(noteMatchesNookVideoTab(note, 'videos')).toBe(false);
 	});
