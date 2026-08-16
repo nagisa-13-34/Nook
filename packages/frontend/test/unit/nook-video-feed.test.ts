@@ -36,6 +36,14 @@ describe('Nook video feed', () => {
 		})).toBeNull();
 	});
 
+	test('treats notes without files as non-video notes', () => {
+		expect(classifyNookVideoNote({})).toBeNull();
+		expect(classifyNookVideoNote({ files: null })).toBeNull();
+		expect(hasNookVideo({})).toBe(false);
+		expect(noteMatchesNookVideoTab({}, 'shorts')).toBe(false);
+		expect(noteMatchesNookVideoTab({}, 'videos')).toBe(false);
+	});
+
 	test('uses the first attached video to classify a post once', () => {
 		const note = {
 			files: [
