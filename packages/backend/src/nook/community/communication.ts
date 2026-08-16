@@ -4,7 +4,7 @@
  */
 
 import type { DataSource } from 'typeorm';
-import { NookAccessService } from '@/nook/policy/NookAccessService.js';
+import { defaultNookFeatureFlags } from '@/nook/feature-flags/NookFeatureFlags.js';
 import { NookPolicyEngine } from '@/nook/policy/NookPolicyEngine.js';
 import { isNookAdultAgeGroup } from '@/nook/policy/PolicyTypes.js';
 import type { NookAccountState, NookAgeGroup, NookPermission, NookPolicy, NookPolicySubject } from '@/nook/policy/PolicyTypes.js';
@@ -59,16 +59,23 @@ function hasAgeBoundary(senderAgeGroup: NookAgeGroup, recipient: CommunityUserRo
 	return { sender: senderNeedsPermission, recipient: recipientNeedsPermission };
 }
 
+async function isPolicyEnforcementEnabled(db: NookCommunityQueryExecutor): Promise<boolean> {
+	const rows = await db.query<Array<{ enabled: boolean }>>(
+		'SELECT "enabled" FROM "nook_feature_flag" WHERE "name" = $1 LIMIT 1',
+		['policy_enforcement'],
+	);
+	return rows[0]?.enabled ?? defaultNookFeatureFlags.policy_enforcement;
+}
+
 export async function assertNookCommunityAdultBoundaryForUserIds(
 	db: NookCommunityQueryExecutor,
-	nookAccessService: NookAccessService,
 	actorUserId: string,
 	targetUserIds: readonly string[],
 	permission: NookCommunityAdultBoundaryPermission,
 ): Promise<void> {
 	const uniqueTargetIds = [...new Set(targetUserIds.filter(userId => userId !== actorUserId))];
 	if (uniqueTargetIds.length === 0) return;
-	if (!(await nookAccessService.isFeatureEnabled('policy_enforcement'))) return;
+	if (!(await isPolicyEnforcementEnabled(db))) return;
 
 	const requestedUserIds = [actorUserId, ...uniqueTargetIds];
 	const [users, policies] = await Promise.all([
@@ -111,6 +118,28 @@ export async function assertNookCommunityAdultBoundaryForUserIds(
 			}
 		}
 	}
+}
+
+export async function listNookCommunityActiveMemberUserIds(
+	db: NookCommunityQueryExecutor,
+	communityId: string,
+): Promise<string[]> {
+	const rows = await db.query<Array<{ userId: string }>>(
+		`SELECT "userId" FROM "nook_community_member" WHERE "communityId" = $1 AND "state" = 'active'
+		 UNION
+		 SELECT "userId" FROM "channel" WHERE "id" = $1 AND "userId" IS NOT NULL`,
+		[communityId],
+	);
+	return rows.map(row => row.userId);
+}
+
+export async function assertNookCommunityMembershipAdultBoundary(
+	db: NookCommunityQueryExecutor,
+	communityId: string,
+	userId: string,
+): Promise<void> {
+	const activeUserIds = await listNookCommunityActiveMemberUserIds(db, communityId);
+	await assertNookCommunityAdultBoundaryForUserIds(db, userId, activeUserIds, 'chat_with_adult');
 }
 
 export async function listNookCommunityChannelAudienceUserIds(
@@ -169,12 +198,11 @@ export async function listNookCommunityChannelAudienceUserIds(
 
 export async function assertNookCommunityChannelAdultBoundary(
 	db: NookCommunityQueryExecutor,
-	nookAccessService: NookAccessService,
 	actorUserId: string,
 	communityId: string,
 	channelId: string,
 	permission: NookCommunityAdultBoundaryPermission,
 ): Promise<void> {
 	const audienceUserIds = await listNookCommunityChannelAudienceUserIds(db, communityId, channelId);
-	await assertNookCommunityAdultBoundaryForUserIds(db, nookAccessService, actorUserId, audienceUserIds, permission);
+	await assertNookCommunityAdultBoundaryForUserIds(db, actorUserId, audienceUserIds, permission);
 }
