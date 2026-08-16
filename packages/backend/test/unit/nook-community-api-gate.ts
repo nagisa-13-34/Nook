@@ -9,6 +9,7 @@ import type { DataSource } from 'typeorm';
 import type { MiLocalUser } from '@/models/User.js';
 import type { NookAccessService } from '@/nook/policy/NookAccessService.js';
 import { ApiServerService } from '@/server/api/ApiServerService.js';
+import ChannelCreateEndpoint from '@/server/api/endpoints/channels/create.js';
 import { ApiError } from '@/server/api/error.js';
 
 function createService(access: Pick<NookAccessService, 'isFeatureEnabled' | 'evaluate'>, db: DataSource = {} as DataSource): ApiServerService {
@@ -77,6 +78,31 @@ describe('Nook Community API feature and policy gate', () => {
 			(error: unknown) => error instanceof ApiError && error.code === 'RESTRICTED_BY_NOOK_POLICY',
 		);
 		assert.deepEqual(evaluated, ['join_community', 'join_community']);
+	});
+
+	test('Community creation requires both create and join policies', async () => {
+		const evaluated: string[] = [];
+		const access = {
+			isFeatureEnabled: async () => true,
+			evaluate: async (_user: MiLocalUser, permission: 'create_community' | 'join_community') => {
+				evaluated.push(permission);
+				return { allowed: permission !== 'join_community', permission, policyId: null, reason: permission === 'join_community' ? 'denied' as const : 'allowed' as const };
+			},
+		};
+		const endpoint = new ChannelCreateEndpoint(
+			{} as DataSource,
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+			access as NookAccessService,
+		);
+
+		await assert.rejects(
+			() => endpoint.exec({ name: 'community' }, owner, null),
+			(error: unknown) => error instanceof ApiError && error.code === 'RESTRICTED_BY_NOOK_POLICY',
+		);
+		assert.deepEqual(evaluated, ['create_community', 'join_community']);
 	});
 
 	test('Voice endpoints require voice_call policy', async () => {
