@@ -95,7 +95,7 @@ describe('Nook Community API feature and policy gate', () => {
 			{} as never,
 			{} as never,
 			{} as never,
-			access as NookAccessService,
+			access as unknown as NookAccessService,
 		);
 
 		await assert.rejects(
