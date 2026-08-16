@@ -58,6 +58,28 @@ export class IdService {
 		}
 	}
 
+	/**
+	 * 指定時刻までに生成され得るIDより大きい、検索用の排他的上限IDを生成します。
+	 * 現在時刻への丸めは行いません。
+	 */
+	@bindThis
+	public genTimeUpperBound(time: number): string {
+		if (!Number.isFinite(time)) throw new Error('Failed to create ID time upper bound: Invalid Date');
+		const t = this.method === 'objectid'
+			? (Math.floor(time / 1000) + 1) * 1000
+			: time + 1;
+
+		switch (this.method) {
+			case 'aid': return genAid(t);
+			case 'aidx': return genAidx(t);
+			case 'meid': return genMeid(t);
+			case 'meidg': return genMeidg(t);
+			case 'ulid': return ulid(t);
+			case 'objectid': return genObjectId(t);
+			default: throw new Error('unrecognized id generation method');
+		}
+	}
+
 	@bindThis
 	public parse(id: string): { date: Date; } {
 		switch (this.method) {

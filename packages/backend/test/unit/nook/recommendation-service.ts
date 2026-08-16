@@ -44,7 +44,7 @@ describe('RecommendationService', () => {
 		query.andWhere.mockReturnValue(query);
 		query.orderBy.mockReturnValue(query);
 		query.take.mockReturnValue(query);
-		const gen = vi.fn().mockReturnValue('snapshot-boundary');
+		const genTimeUpperBound = vi.fn().mockReturnValue('snapshot-boundary');
 
 		const service = new RecommendationService(
 			{ createQueryBuilder: vi.fn().mockReturnValue(query) } as unknown as NotesRepository,
@@ -57,7 +57,7 @@ describe('RecommendationService', () => {
 			} as unknown as QueryService,
 			{} as ChannelFollowingService,
 			{} as ChannelMutingService,
-			{ gen } as unknown as IdService,
+			{ genTimeUpperBound } as unknown as IdService,
 			{} as NoteEntityService,
 		);
 		const internal = service as unknown as {
@@ -73,7 +73,7 @@ describe('RecommendationService', () => {
 
 		await internal.loadRecentEligibleLocalNotes(me, new Set(), 40, snapshotAt, new Set());
 
-		expect(gen).toHaveBeenCalledWith(snapshotAt.getTime() + 1);
+		expect(genTimeUpperBound).toHaveBeenCalledWith(snapshotAt.getTime());
 		expect(query.andWhere).toHaveBeenCalledWith('note.userHost IS NULL');
 		expect(query.andWhere).toHaveBeenCalledWith(
 			'note.visibility = :recommendationPublicVisibility',
@@ -184,12 +184,14 @@ describe('RecommendationService', () => {
 		expect(packMany).toHaveBeenCalledWith(expect.any(Array), me);
 	});
 
-	test('freezes one globally-diversified recommendation order behind a server cursor', async () => {
+	test('keeps recommendation cursors replay-safe while preserving one frozen order', async () => {
 		const candidates = [
 			note('n1', 'author-1'),
 			note('n2', 'author-2'),
 			note('n3', 'author-3'),
 			note('n4', 'author-4'),
+			note('n5', 'author-5'),
+			note('n6', 'author-6'),
 		];
 		const store = new Map<string, string>();
 		const redisClient = {
@@ -198,7 +200,6 @@ describe('RecommendationService', () => {
 				store.set(key, value);
 				return 'OK';
 			}),
-			del: vi.fn(async (key: string) => store.delete(key) ? 1 : 0),
 		};
 		const packMany = vi.fn().mockImplementation(async (notes: MiNote[]) => notes);
 		const service = new RecommendationService(
@@ -227,7 +228,15 @@ describe('RecommendationService', () => {
 
 		const second = await service.getRecommendationPage(me, 2, first?.cursor ?? undefined);
 		expect(second?.notes.map(resultNote => resultNote.id)).toEqual(['n3', 'n4']);
-		expect(second?.cursor).toBeNull();
-		expect(redisClient.del).toHaveBeenCalled();
+		expect(second?.cursor).toEqual(expect.any(String));
+		expect(second?.cursor).not.toBe(first?.cursor);
+
+		const retriedSecond = await service.getRecommendationPage(me, 2, first?.cursor ?? undefined);
+		expect(retriedSecond).toEqual(second);
+
+		const third = await service.getRecommendationPage(me, 2, second?.cursor ?? undefined);
+		expect(third?.notes.map(resultNote => resultNote.id)).toEqual(['n5', 'n6']);
+		expect(third?.cursor).toBeNull();
+		expect(redisClient.set).toHaveBeenCalledTimes(1);
 	});
 });
