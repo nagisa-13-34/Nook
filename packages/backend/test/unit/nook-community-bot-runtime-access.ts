@@ -12,8 +12,9 @@ import { ApiError } from '@/server/api/error.js';
 import BotMessagesListEndpoint from '@/server/api/endpoints/nook/community/bots/messages-list.js';
 import BotPostEndpoint from '@/server/api/endpoints/nook/community/bots/post.js';
 
-function createBotDb(secret: string): DataSource {
-	return {
+function createBotDb(secret: string, creatorState: 'active' | 'suspended' = 'active') {
+	let channelAccessQueries = 0;
+	const db = {
 		query: async (sql: string) => {
 			if (sql.includes('FROM "nook_community_bot"')) {
 				return [{
@@ -33,7 +34,13 @@ function createBotDb(secret: string): DataSource {
 				}];
 			}
 			if (sql.startsWith('UPDATE "nook_community_bot" SET "lastUsedAt"')) return [];
-			if (sql.includes('FROM "channel" c')) return [{ userId: 'owner', joinMode: 'open', ageMode: 'mixed', discoverable: true, initialized: true }];
+			if (sql.startsWith('SELECT "host", "isDeleted", "isSuspended" FROM "user"')) {
+				return [{ host: null, isDeleted: false, isSuspended: creatorState === 'suspended' }];
+			}
+			if (sql.includes('FROM "channel" c')) {
+				channelAccessQueries++;
+				return [{ userId: 'owner', joinMode: 'open', ageMode: 'mixed', discoverable: true, initialized: true }];
+			}
 			if (sql.includes('SELECT "baseRole", "state" FROM "nook_community_member"')) return [{ baseRole: 'member', state: 'active' }];
 			if (sql.includes('INNER JOIN "nook_community_role" r')) return [];
 			if (sql.includes('FROM "nook_community_channel" WHERE "communityId"')) {
@@ -43,12 +50,13 @@ function createBotDb(secret: string): DataSource {
 			throw new Error(`Unexpected query: ${sql}`);
 		},
 	} as unknown as DataSource;
+	return { db, getChannelAccessQueries: () => channelAccessQueries };
 }
 
 describe('Nook Community Bot runtime channel access', () => {
 	test('a Bot cannot keep reading or posting after its creator loses access to a restricted channel', async () => {
 		const secret = 's'.repeat(32);
-		const db = createBotDb(secret);
+		const { db } = createBotDb(secret);
 		const list = new BotMessagesListEndpoint(db);
 		const post = new BotPostEndpoint(db, { gen: () => 'message' } as unknown as IdService);
 
@@ -60,5 +68,22 @@ describe('Nook Community Bot runtime channel access', () => {
 			() => post.exec({ botId: 'bot', secret, channelId: 'staff', body: 'hello' }, null, null),
 			(error: unknown) => error instanceof ApiError && error.code === 'BOT_FORBIDDEN',
 		);
+	});
+
+	test('a suspended creator disables Bot reads and writes before channel authorization', async () => {
+		const secret = 's'.repeat(32);
+		const state = createBotDb(secret, 'suspended');
+		const list = new BotMessagesListEndpoint(state.db);
+		const post = new BotPostEndpoint(state.db, { gen: () => 'message' } as unknown as IdService);
+
+		await assert.rejects(
+			() => list.exec({ botId: 'bot', secret, channelId: 'staff' }, null, null),
+			(error: unknown) => error instanceof ApiError && error.code === 'BOT_FORBIDDEN',
+		);
+		await assert.rejects(
+			() => post.exec({ botId: 'bot', secret, channelId: 'staff', body: 'hello' }, null, null),
+			(error: unknown) => error instanceof ApiError && error.code === 'BOT_FORBIDDEN',
+		);
+		assert.equal(state.getChannelAccessQueries(), 0);
 	});
 });
