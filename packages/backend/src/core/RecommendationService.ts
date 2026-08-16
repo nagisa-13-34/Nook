@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import * as Redis from 'ioredis';
 import { DI } from '@/di-symbols.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { isChannelRelated } from '@/misc/is-channel-related.js';
@@ -29,10 +31,25 @@ const HOME_CANDIDATE_LIMIT = 160;
 const LOCAL_CANDIDATE_LIMIT = 240;
 const LOCAL_FALLBACK_SCAN_PAGES = 10;
 const MIN_CANDIDATE_MULTIPLIER = 3;
+const RECOMMENDATION_SESSION_MAX_ITEMS = 400;
+const RECOMMENDATION_SESSION_TTL_SECONDS = 60 * 60 * 2;
+const RECOMMENDATION_SESSION_KEY_PREFIX = 'nook:recommendation-session:';
 
 export type RecommendationPageOptions = {
 	snapshotAt?: Date;
 	excludeNoteIds?: readonly MiNote['id'][];
+};
+
+export type RecommendationSessionPage = {
+	notes: Packed<'Note'>[];
+	cursor: string | null;
+};
+
+type RecommendationSessionState = {
+	userId: MiLocalUser['id'];
+	snapshotAt: number;
+	noteIds: MiNote['id'][];
+	position: number;
 };
 
 @Injectable()
@@ -47,6 +64,10 @@ export class RecommendationService {
 		private channelMutingService: ChannelMutingService,
 		private idService: IdService,
 		private noteEntityService: NoteEntityService,
+
+		@Optional()
+		@Inject(DI.redis)
+		private redisClient?: Redis.Redis,
 	) {
 	}
 
@@ -57,7 +78,73 @@ export class RecommendationService {
 		const snapshotAt = requestedSnapshotTime != null && Number.isFinite(requestedSnapshotTime)
 			? new Date(Math.min(requestedSnapshotTime, requestStartedAt.getTime()))
 			: requestStartedAt;
-		const excludedNoteIds = new Set(options.excludeNoteIds ?? []);
+		const selected = await this.selectRecommendationNotes(me, limit, snapshotAt, new Set(options.excludeNoteIds ?? []));
+		return await this.noteEntityService.packMany(selected, me);
+	}
+
+	@bindThis
+	public async getRecommendationPage(me: MiLocalUser, limit: number, cursor?: string): Promise<RecommendationSessionPage | null> {
+		const redisClient = this.redisClient;
+		if (redisClient == null) throw new Error('Recommendation sessions require Redis.');
+
+		if (cursor == null) {
+			const snapshotAt = new Date();
+			const selected = await this.selectRecommendationNotes(me, RECOMMENDATION_SESSION_MAX_ITEMS, snapshotAt, new Set());
+			const pageNotes = selected.slice(0, limit);
+			const packed = await this.noteEntityService.packMany(pageNotes, me);
+
+			if (selected.length <= limit) {
+				return { notes: packed, cursor: null };
+			}
+
+			const nextCursor = randomUUID();
+			await this.saveRecommendationSession(nextCursor, {
+				userId: me.id,
+				snapshotAt: snapshotAt.getTime(),
+				noteIds: selected.map(note => note.id),
+				position: limit,
+			});
+
+			return { notes: packed, cursor: nextCursor };
+		}
+
+		const rawSession = await redisClient.get(this.recommendationSessionKey(cursor));
+		if (rawSession == null) return null;
+		const session = this.parseRecommendationSession(rawSession, me);
+		if (session == null) return null;
+
+		const remainingIds = session.noteIds.slice(session.position);
+		const mutedChannels = await this.channelMutingService.mutingChannelsCache.fetch(me.id);
+		const eligibleNotes = await this.loadEligibleNotes(remainingIds, me, mutedChannels);
+		const eligibleById = new Map(eligibleNotes.map(note => [note.id, note]));
+		const pageNotes: MiNote[] = [];
+		let nextPosition = session.position;
+
+		while (nextPosition < session.noteIds.length && pageNotes.length < limit) {
+			const note = eligibleById.get(session.noteIds[nextPosition]);
+			nextPosition++;
+			if (note != null) pageNotes.push(note);
+		}
+
+		const packed = await this.noteEntityService.packMany(pageNotes, me);
+		if (nextPosition >= session.noteIds.length) {
+			await redisClient.del(this.recommendationSessionKey(cursor));
+			return { notes: packed, cursor: null };
+		}
+
+		await this.saveRecommendationSession(cursor, {
+			...session,
+			position: nextPosition,
+		});
+		return { notes: packed, cursor };
+	}
+
+	private async selectRecommendationNotes(
+		me: MiLocalUser,
+		limit: number,
+		snapshotAt: Date,
+		excludedNoteIds: ReadonlySet<MiNote['id']>,
+	): Promise<MiNote[]> {
 		const isPageCandidate = (noteId: MiNote['id']): boolean => {
 			if (excludedNoteIds.has(noteId)) return false;
 			try {
@@ -119,11 +206,38 @@ export class RecommendationService {
 		const finalNoteById = new Map(finalNotes.map(note => [note.id, note]));
 		const finalRanked = ranked.filter(candidate => finalNoteById.has(candidate.noteId));
 		const selected = selectDiverseRecommendations(finalRanked, limit);
-		const orderedNotes = selected
+		return selected
 			.map(candidate => finalNoteById.get(candidate.noteId))
 			.filter((note): note is MiNote => note != null);
+	}
 
-		return await this.noteEntityService.packMany(orderedNotes, me);
+	private recommendationSessionKey(cursor: string): string {
+		return `${RECOMMENDATION_SESSION_KEY_PREFIX}${cursor}`;
+	}
+
+	private async saveRecommendationSession(cursor: string, state: RecommendationSessionState): Promise<void> {
+		const redisClient = this.redisClient;
+		if (redisClient == null) throw new Error('Recommendation sessions require Redis.');
+		await redisClient.set(
+			this.recommendationSessionKey(cursor),
+			JSON.stringify(state),
+			'EX',
+			RECOMMENDATION_SESSION_TTL_SECONDS,
+		);
+	}
+
+	private parseRecommendationSession(raw: string, me: MiLocalUser): RecommendationSessionState | null {
+		try {
+			const parsed = JSON.parse(raw) as Partial<RecommendationSessionState>;
+			if (parsed.userId !== me.id) return null;
+			if (!Number.isFinite(parsed.snapshotAt)) return null;
+			if (!Array.isArray(parsed.noteIds) || parsed.noteIds.length > RECOMMENDATION_SESSION_MAX_ITEMS) return null;
+			if (!parsed.noteIds.every(noteId => typeof noteId === 'string')) return null;
+			if (!Number.isInteger(parsed.position) || parsed.position == null || parsed.position < 0 || parsed.position > parsed.noteIds.length) return null;
+			return parsed as RecommendationSessionState;
+		} catch {
+			return null;
+		}
 	}
 
 	private addSource(map: Map<MiNote['id'], Set<RecommendationSource>>, noteIds: readonly MiNote['id'][], source: RecommendationSource): void {
@@ -159,13 +273,15 @@ export class RecommendationService {
 	): Promise<MiNote[]> {
 		const result: MiNote[] = [];
 		let beforeId: MiNote['id'] | null = null;
+		const snapshotBoundaryId = this.idService.gen(snapshotAt.getTime() + 1);
 
 		for (let page = 0; page < LOCAL_FALLBACK_SCAN_PAGES && result.length < limit; page++) {
 			const query = this.createEligibleQuery(me)
 				.andWhere('note.userHost IS NULL')
 				.andWhere('note.visibility = :recommendationPublicVisibility', { recommendationPublicVisibility: 'public' })
 				.andWhere('note.channelId IS NULL')
-				.andWhere('note.replyId IS NULL');
+				.andWhere('note.replyId IS NULL')
+				.andWhere('note.id < :recommendationSnapshotBoundaryId', { recommendationSnapshotBoundaryId: snapshotBoundaryId });
 
 			if (beforeId != null) {
 				query.andWhere('note.id < :recommendationBeforeId', { recommendationBeforeId: beforeId });
