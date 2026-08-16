@@ -21,7 +21,7 @@ export const meta = {
 		forbidden: { message: 'You cannot manage members.', code: 'FORBIDDEN', id: 'b694e638-afb8-4ddd-a7ec-23e0b33d542d' },
 		noSuchRequest: { message: 'No such pending request.', code: 'NO_SUCH_REQUEST', id: 'e4eeab0e-d3e6-4ed8-a78a-c0a5e560ce2c' },
 		banned: { message: 'The requested user is banned from this community.', code: 'BANNED', id: 'd2432c91-d535-42d9-9a38-b47e41017dd0' },
-		joinRestricted: { message: 'The requested user is not currently allowed to join Communities.', code: 'RESTRICTED_BY_NOOK_POLICY', id: '755b5523-bf06-49b9-93aa-0a6bcf817af6', kind: 'permission', httpStatusCode: 403 },
+		joinRestricted: { message: 'The requested user is not currently allowed to join this Community.', code: 'RESTRICTED_BY_NOOK_POLICY', id: '755b5523-bf06-49b9-93aa-0a6bcf817af6', kind: 'permission', httpStatusCode: 403 },
 	},
 } as const;
 export const paramDef = { type: 'object', properties: {
@@ -60,10 +60,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			} catch (error) {
 				if (error instanceof NookCommunityMembershipError && error.code === 'NO_SUCH_REQUEST') throw new ApiError(meta.errors.noSuchRequest);
 				if (error instanceof NookCommunityMembershipError && error.code === 'BANNED') throw new ApiError(meta.errors.banned);
+				if (error instanceof NookCommunityMembershipError && error.code === 'AGE_MODE_RESTRICTED') throw new ApiError(meta.errors.joinRestricted);
 				throw error;
 			}
 			if (ps.approve) {
-				// Approval already committed membership; backing Channel lookup/follow is best-effort only.
 				try {
 					const [channel, user] = await Promise.all([
 						this.channelsRepository.findOneBy({ id: result.communityId }),
