@@ -4,11 +4,12 @@
  */
 
 import { ensureNookCommunity } from './access.js';
+import { assertNookCommunityAgeModeForUser, lockNookCommunityAgeMode, NookCommunityAgeError } from './age.js';
 import type { DataSource } from 'typeorm';
 import type { NookCommunityBaseRole } from './types.js';
 
 export class NookCommunityMemberError extends Error {
-	constructor(public readonly code: 'OWNER_IMMUTABLE' | 'NO_SUCH_MEMBER' | 'ACTIVATION_CHECK_REQUIRED') { super(code); }
+	constructor(public readonly code: 'OWNER_IMMUTABLE' | 'NO_SUCH_MEMBER' | 'ACTIVATION_CHECK_REQUIRED' | 'AGE_MODE_RESTRICTED') { super(code); }
 }
 
 interface NookCommunityMemberListRecord {
@@ -59,6 +60,7 @@ export async function updateNookCommunityMember(
 	const context = await ensureNookCommunity(db, communityId);
 	if (context.ownerId === userId) throw new NookCommunityMemberError('OWNER_IMMUTABLE');
 	await db.transaction(async manager => {
+		const ageMode = input.state === 'active' ? await lockNookCommunityAgeMode(manager, communityId) : null;
 		const currentRows = await manager.query<Array<{ state: 'active' | 'banned' }>>(
 			'SELECT "state" FROM "nook_community_member" WHERE "communityId" = $1 AND "userId" = $2 FOR UPDATE',
 			[communityId, userId],
@@ -68,6 +70,14 @@ export async function updateNookCommunityMember(
 		if (input.state === 'active' && current.state === 'banned') {
 			if (beforeActivate == null) throw new NookCommunityMemberError('ACTIVATION_CHECK_REQUIRED');
 			await beforeActivate();
+			try {
+				await assertNookCommunityAgeModeForUser(manager, ageMode ?? 'mixed', userId);
+			} catch (error) {
+				if (error instanceof NookCommunityAgeError && error.code === 'AGE_MODE_RESTRICTED') {
+					throw new NookCommunityMemberError('AGE_MODE_RESTRICTED');
+				}
+				throw error;
+			}
 		}
 
 		await manager.query(
