@@ -21,6 +21,7 @@ function membership(baseRole: NookCommunityMembership['baseRole'], permissions: 
 		userId: 'actor',
 		baseRole,
 		state: 'active',
+		ageMode: 'mixed',
 		permissions: new Set(permissions),
 	};
 }
