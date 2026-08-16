@@ -111,7 +111,8 @@ export class ApiServerService {
 			isDeleted: row.isDeleted,
 			isSuspended: row.isSuspended,
 		} as MiLocalUser;
-		if (!(await this.nookAccessService.evaluate(owner, 'create_community')).allowed) throw new ApiError(nookCommunityPolicyDenied);
+		const [createDecision, joinDecision] = await this.nookAccessService.evaluateMany(owner, ['create_community', 'join_community']);
+		if (!createDecision?.allowed || !joinDecision?.allowed) throw new ApiError(nookCommunityPolicyDenied);
 		await ensureNookCommunity(this.db, communityId);
 	}
 
