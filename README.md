@@ -32,6 +32,9 @@ Misskey / MFM / ActivityPub との互換性を重視しながら、Nook 独自�
 #### Community と Chat
 
 - Community MVP
+- `minors_only` / `mixed` / `adults_only` の Community 年齢モード
+- Community 作成・参加・招待・承認・メンバー再有効化での年齢モード適用
+- Community message、voice、bot、restricted audience などへの成人・未成年間コミュニケーション境界の適用
 - Chat のポリシー適用
 - Room chat のポリシー適用
 - Follow のポリシー適用
@@ -47,6 +50,7 @@ ActivityPub の基礎仕様を変更せず、ポリシー判定を明示的か�
 
 - アカウント状態 / 年齢グループ / 国を考慮したポリシー選択
 - 保護対象ユーザーとのコミュニケーション判定
+- Community の年齢モードと成人・未成年間のコミュニケーション境界
 - 年齢情報が不明な remote user に対する保守的な扱い
 - 参加人数に比例した DB クエリ増加を避ける room policy の一括評価
 - 重要なポリシー境界に対する unit / endpoint テスト
@@ -259,6 +263,9 @@ It keeps Misskey / MFM / ActivityPub compatibility as a priority while adding a 
 #### Community and Chat
 
 - Community MVP
+- Community age modes: `minors_only`, `mixed`, and `adults_only`
+- Age-mode enforcement across Community creation, joining, invites, approvals, and member reactivation
+- Adult/minor communication boundaries for Community messages, voice, bots, restricted audiences, and other member-facing write surfaces
 - Chat policy enforcement
 - Room chat policy enforcement
 - Follow policy enforcement
@@ -274,6 +281,7 @@ Current policy work includes:
 
 - account-state / age-group / country-aware policy selection
 - protected-user communication checks
+- Community age modes and adult/minor communication boundaries
 - remote-user conservative handling when age information is unavailable
 - batched room policy evaluation to avoid participant-scaled database queries
 - unit and endpoint coverage for important policy boundaries
