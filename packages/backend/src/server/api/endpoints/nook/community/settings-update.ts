@@ -33,10 +33,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	constructor(@Inject(DI.db) private db: DataSource) {
 		super(meta, paramDef, async (ps, me) => {
 			try {
-				await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'community.manage', {
-					allowAgeModeMismatch: true,
-					allowAdultBoundaryMismatch: true,
-				});
+				await requireNookCommunityPermission(this.db, ps.communityId, me.id, 'community.manage', { allowAgeModeMismatch: true });
 			} catch (error) {
 				if (error instanceof NookCommunityAccessError) {
 					if (error.code === 'NO_SUCH_COMMUNITY') throw new ApiError(meta.errors.noSuchCommunity);
