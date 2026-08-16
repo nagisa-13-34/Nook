@@ -21,7 +21,7 @@ export const meta = {
 		inviteExhausted: { message: 'The invite has reached its use limit.', code: 'INVITE_EXHAUSTED', id: '297c1dfe-639b-4145-b0b9-d6c2869b0439' },
 		banned: { message: 'You are banned from this community.', code: 'BANNED', id: '4fa781bd-7628-451c-8320-6a0d0e3e3832' },
 		alreadyMember: { message: 'You are already a member of this community.', code: 'ALREADY_MEMBER', id: '554006ff-2431-442d-b637-d2e778adcdba' },
-		ageRestricted: { message: 'Your verified age does not match this Community age mode.', code: 'AGE_MODE_RESTRICTED', id: 'ca6582c6-ae60-4969-bf7d-f00cf56dbcb4', kind: 'permission', httpStatusCode: 403 },
+		ageRestricted: { message: 'Your verified age or communication policy does not allow joining this Community.', code: 'AGE_MODE_RESTRICTED', id: 'ca6582c6-ae60-4969-bf7d-f00cf56dbcb4', kind: 'permission', httpStatusCode: 403 },
 	},
 } as const;
 export const paramDef = { type: 'object', properties: { token: { type: 'string', minLength: 16, maxLength: 256 } }, required: ['token'] } as const;
@@ -42,7 +42,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					if (error.code === 'NO_SUCH_INVITE') throw new ApiError(meta.errors.noSuchInvite);
 					if (error.code === 'BANNED') throw new ApiError(meta.errors.banned);
 					if (error.code === 'ALREADY_MEMBER') throw new ApiError(meta.errors.alreadyMember);
-					if (error.code === 'AGE_MODE_RESTRICTED') throw new ApiError(meta.errors.ageRestricted);
+					if (error.code === 'AGE_MODE_RESTRICTED' || error.code === 'ADULT_BOUNDARY_RESTRICTED') throw new ApiError(meta.errors.ageRestricted);
 				}
 				throw error;
 			}
