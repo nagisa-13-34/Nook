@@ -82,7 +82,6 @@ async function loadMore(): Promise<void> {
 		}
 
 		untilId.value = page.at(-1)?.id ?? untilId.value;
-		canFetchMore.value = page.length === FETCH_LIMIT;
 
 		const seen = new Set(videoNotes.value.map(note => note.id));
 		for (const note of page) {
