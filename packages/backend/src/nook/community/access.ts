@@ -93,6 +93,7 @@ export async function getNookCommunityMembership(db: DataSource, communityId: st
 			userId,
 			baseRole: 'owner',
 			state: 'active',
+			ageMode: context.ageMode,
 			permissions: baseRolePermissions('owner'),
 		};
 	}
@@ -120,6 +121,7 @@ export async function getNookCommunityMembership(db: DataSource, communityId: st
 		userId,
 		baseRole,
 		state: member.state,
+		ageMode: context.ageMode,
 		permissions,
 	};
 }
