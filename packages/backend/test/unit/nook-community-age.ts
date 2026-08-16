@@ -6,13 +6,14 @@
 import * as assert from 'node:assert';
 import { describe, test } from 'vitest';
 import type { DataSource } from 'typeorm';
+import { NookCommunityAccessError } from '@/nook/community/access.js';
 import {
 	assertNookCommunityAgeModeForAllMembers,
 	assertNookCommunityAgeModeForUser,
-	assertNookCommunityCurrentAgeModeForUser,
 	isNookCommunityAgeModeAllowed,
 	NookCommunityAgeError,
 } from '@/nook/community/age.js';
+import { requireNookCommunityChannelAccess } from '@/nook/community/channels.js';
 
 describe('Nook Community age mode', () => {
 	test('mixed accepts every age group while restricted modes reject unknown', () => {
@@ -39,32 +40,46 @@ describe('Nook Community age mode', () => {
 		);
 	});
 
-	test('runtime access rechecks the current verified age against the Community mode', async () => {
+	test('restricted channel access rechecks age after a member has already joined', async () => {
 		const db = {
 			query: async (sql: string) => {
-				if (sql.includes('COALESCE(nc."ageMode"')) {
-					return [{ ageMode: 'minors_only', host: null, nookVerifiedAgeGroup: '18_PLUS' }];
+				if (sql.includes('FROM "channel" c')) {
+					return [{ userId: 'member', joinMode: 'open', ageMode: 'minors_only', discoverable: true, initialized: true }];
 				}
+				if (sql.includes('SELECT "baseRole", "state" FROM "nook_community_member"')) return [];
+				if (sql.includes('FROM "user" u')) return [{ host: null, nookVerifiedAgeGroup: '18_PLUS' }];
 				throw new Error(`Unexpected query: ${sql}`);
 			},
 		} as unknown as DataSource;
 
 		await assert.rejects(
-			() => assertNookCommunityCurrentAgeModeForUser(db, 'community', 'member'),
-			(error: unknown) => error instanceof NookCommunityAgeError && error.code === 'AGE_MODE_RESTRICTED',
+			() => requireNookCommunityChannelAccess(db, 'community', 'member', 'general'),
+			(error: unknown) => error instanceof NookCommunityAccessError && error.code === 'FORBIDDEN',
 		);
 	});
 
-	test('runtime access keeps mixed and legacy Communities unrestricted', async () => {
+	test('mixed and legacy Communities do not require an age lookup for channel access', async () => {
+		let ageLookups = 0;
 		const db = {
 			query: async (sql: string) => {
-				assert.ok(sql.includes('FROM "channel" c'));
-				assert.ok(sql.includes('COALESCE(nc."ageMode", \'mixed\')'));
-				return [{ ageMode: 'mixed', host: null, nookVerifiedAgeGroup: null }];
+				if (sql.includes('FROM "channel" c')) {
+					return [{ userId: 'member', joinMode: null, ageMode: null, discoverable: null, initialized: false }];
+				}
+				if (sql.includes('SELECT "baseRole", "state" FROM "nook_community_member"')) return [];
+				if (sql.includes('FROM "user" u')) {
+					ageLookups++;
+					return [{ host: null, nookVerifiedAgeGroup: null }];
+				}
+				if (sql.includes('FROM "nook_community_channel" WHERE "communityId"')) {
+					return [{ id: 'general', communityId: 'community', parentId: null, name: 'General', topic: null, kind: 'text', position: 0, allowedRoleIds: [], archivedAt: null }];
+				}
+				throw new Error(`Unexpected query: ${sql}`);
 			},
 		} as unknown as DataSource;
 
-		await assert.doesNotReject(() => assertNookCommunityCurrentAgeModeForUser(db, 'community', 'member'));
+		const channel = await requireNookCommunityChannelAccess(db, 'community', 'member', 'general');
+		assert.equal(channel.id, 'general');
+		assert.equal(ageLookups, 0);
 	});
 
 	test('age mode changes fail when an existing active member does not fit', async () => {
