@@ -41,11 +41,13 @@ describe('Nook Community Voice session generations', () => {
 		assert.equal(calls.some(call => call.sql.includes('DELETE FROM "nook_community_voice_signal"')), true);
 	});
 
-	test('rejoin clears old signals before installing the new presence session', async () => {
+	test('rejoin serializes the age-boundary check before installing the new presence session', async () => {
 		const transactionCalls: string[] = [];
 		const manager = {
 			query: async (sql: string) => {
 				transactionCalls.push(sql);
+				if (sql.includes('pg_advisory_xact_lock')) return [];
+				if (sql.includes('SELECT "userId" FROM "nook_community_voice_presence"')) return [];
 				if (sql.includes('DELETE FROM "nook_community_voice_signal"')) return [];
 				if (sql.includes('INSERT INTO "nook_community_voice_presence"')) return [];
 				throw new Error(`Unexpected transaction query: ${sql}`);
@@ -70,8 +72,10 @@ describe('Nook Community Voice session generations', () => {
 		} as unknown as NookAccessService;
 
 		await joinNookCommunityVoice(db, access, 'community', 'voice', 'user');
-		assert.equal(transactionCalls.length, 2);
-		assert.match(transactionCalls[0] ?? '', /DELETE FROM "nook_community_voice_signal"/);
-		assert.match(transactionCalls[1] ?? '', /INSERT INTO "nook_community_voice_presence"/);
+		assert.equal(transactionCalls.length, 4);
+		assert.match(transactionCalls[0] ?? '', /pg_advisory_xact_lock/);
+		assert.match(transactionCalls[1] ?? '', /SELECT "userId" FROM "nook_community_voice_presence"/);
+		assert.match(transactionCalls[2] ?? '', /DELETE FROM "nook_community_voice_signal"/);
+		assert.match(transactionCalls[3] ?? '', /INSERT INTO "nook_community_voice_presence"/);
 	});
 });
