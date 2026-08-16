@@ -9,7 +9,7 @@ import { ensureNookCommunity, getNookCommunityMembership } from './access.js';
 import { assertNookCommunityAgeModeForUser, lockNookCommunityAgeMode, NookCommunityAgeError } from './age.js';
 import { assertNookCommunityMembershipAdultBoundary, NookCommunityCommunicationError } from './communication.js';
 import type { DataSource } from 'typeorm';
-import type { NookCommunityAgeMode, NookCommunityBaseRole } from './types.js';
+import type { NookCommunityAgeMode, NookCommunityBaseRole, NookCommunityJoinMode } from './types.js';
 
 export type NookCommunityJoinResult = 'joined' | 'pending';
 
@@ -47,10 +47,29 @@ async function assertMembershipRestrictions(
 	}
 }
 
-export async function addNookCommunityMember(db: DataSource, communityId: string, userId: string, baseRole: NookCommunityBaseRole = 'member'): Promise<void> {
+async function assertNookCommunityJoinModeLocked(
+	db: Pick<DataSource, 'query'>,
+	communityId: string,
+	expectedJoinMode: NookCommunityJoinMode,
+): Promise<void> {
+	const rows = await db.query<Array<{ joinMode: NookCommunityJoinMode }>>(
+		'SELECT "joinMode" FROM "nook_community" WHERE "channelId" = $1 LIMIT 1',
+		[communityId],
+	);
+	if (rows[0]?.joinMode !== expectedJoinMode) throw new NookCommunityMembershipError('INVITE_REQUIRED');
+}
+
+export async function addNookCommunityMember(
+	db: DataSource,
+	communityId: string,
+	userId: string,
+	baseRole: NookCommunityBaseRole = 'member',
+	expectedJoinMode?: NookCommunityJoinMode,
+): Promise<void> {
 	await ensureNookCommunity(db, communityId);
 	await db.transaction(async manager => {
 		const ageMode = await lockNookCommunityAgeMode(manager, communityId);
+		if (expectedJoinMode != null) await assertNookCommunityJoinModeLocked(manager, communityId, expectedJoinMode);
 		await assertMembershipRestrictions(manager, communityId, userId, ageMode);
 		const rows = await manager.query<Array<{ userId: string }>>(
 			`INSERT INTO "nook_community_member" ("communityId", "userId", "baseRole", "state")
@@ -78,12 +97,13 @@ export async function requestNookCommunityJoin(db: DataSource, idService: IdServ
 	if (current?.state === 'active') throw new NookCommunityMembershipError('ALREADY_MEMBER');
 	if (current?.state === 'banned') throw new NookCommunityMembershipError('BANNED');
 	if (context.joinMode === 'open') {
-		await addNookCommunityMember(db, communityId, userId);
+		await addNookCommunityMember(db, communityId, userId, 'member', 'open');
 		return 'joined';
 	}
 	if (context.joinMode === 'invite' || context.joinMode === 'private') throw new NookCommunityMembershipError('INVITE_REQUIRED');
 	await db.transaction(async manager => {
 		const ageMode = await lockNookCommunityAgeMode(manager, communityId);
+		await assertNookCommunityJoinModeLocked(manager, communityId, 'approval');
 		await assertMembershipRestrictions(manager, communityId, userId, ageMode);
 		await manager.query(
 			`INSERT INTO "nook_community_join_request" ("id", "communityId", "userId", "message")
