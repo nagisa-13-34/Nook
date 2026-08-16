@@ -58,20 +58,26 @@ export async function updateNookCommunityMember(
 ): Promise<void> {
 	const context = await ensureNookCommunity(db, communityId);
 	if (context.ownerId === userId) throw new NookCommunityMemberError('OWNER_IMMUTABLE');
-	if (input.state === 'active') {
-		if (beforeActivate == null) throw new NookCommunityMemberError('ACTIVATION_CHECK_REQUIRED');
-		await beforeActivate();
-	}
 	await db.transaction(async manager => {
-		const rows = await manager.query<Array<{ userId: string }>>(
+		const currentRows = await manager.query<Array<{ state: 'active' | 'banned' }>>(
+			'SELECT "state" FROM "nook_community_member" WHERE "communityId" = $1 AND "userId" = $2 FOR UPDATE',
+			[communityId, userId],
+		);
+		const current = currentRows[0];
+		if (current == null) throw new NookCommunityMemberError('NO_SUCH_MEMBER');
+		if (input.state === 'active' && current.state === 'banned') {
+			if (beforeActivate == null) throw new NookCommunityMemberError('ACTIVATION_CHECK_REQUIRED');
+			await beforeActivate();
+		}
+
+		await manager.query(
 			`UPDATE "nook_community_member" SET
 			 "baseRole" = COALESCE($3, "baseRole"),
 			 "state" = COALESCE($4, "state"),
 			 "nickname" = CASE WHEN $5::boolean THEN $6 ELSE "nickname" END
-			 WHERE "communityId" = $1 AND "userId" = $2 RETURNING "userId"`,
+			 WHERE "communityId" = $1 AND "userId" = $2`,
 			[communityId, userId, input.baseRole ?? null, input.state ?? null, Object.prototype.hasOwnProperty.call(input, 'nickname'), input.nickname ?? null],
 		);
-		if (rows[0] == null) throw new NookCommunityMemberError('NO_SUCH_MEMBER');
 		if (input.state === 'banned') {
 			await manager.query(
 				`DELETE FROM "nook_community_event_rsvp" r
