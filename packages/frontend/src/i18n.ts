@@ -13,10 +13,12 @@ const nookLocale = lang === 'ja-JP'
 	? {
 		nookBookmarks: 'ブックマーク',
 		nookBookmarksEmpty: '保存した投稿はここに表示されます。',
+		nookShorts: 'ショート',
 	} as const
 	: {
 		nookBookmarks: 'Bookmarks',
 		nookBookmarksEmpty: 'Posts you save will appear here.',
+		nookShorts: 'Shorts',
 	} as const;
 
 type NookLocale = Locale & typeof nookLocale;
