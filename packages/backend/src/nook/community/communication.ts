@@ -12,6 +12,7 @@ import { baseRolePermissions, isNookCommunityPermission } from './permissions.js
 import type { NookCommunityBaseRole } from './types.js';
 
 export type NookCommunityAdultBoundaryPermission = Extract<NookPermission, 'chat_with_adult' | 'call_with_adult'>;
+type NookCommunityQueryExecutor = Pick<DataSource, 'query'>;
 
 export class NookCommunityCommunicationError extends Error {
 	constructor(public readonly code: 'ADULT_BOUNDARY' | 'NO_SUCH_CHANNEL' | 'NO_LOCAL_ACTOR') {
@@ -59,7 +60,7 @@ function hasAgeBoundary(senderAgeGroup: NookAgeGroup, recipient: CommunityUserRo
 }
 
 export async function assertNookCommunityAdultBoundaryForUserIds(
-	db: DataSource,
+	db: NookCommunityQueryExecutor,
 	nookAccessService: NookAccessService,
 	actorUserId: string,
 	targetUserIds: readonly string[],
@@ -113,7 +114,7 @@ export async function assertNookCommunityAdultBoundaryForUserIds(
 }
 
 export async function listNookCommunityChannelAudienceUserIds(
-	db: DataSource,
+	db: NookCommunityQueryExecutor,
 	communityId: string,
 	channelId: string,
 ): Promise<string[]> {
@@ -167,7 +168,7 @@ export async function listNookCommunityChannelAudienceUserIds(
 }
 
 export async function assertNookCommunityChannelAdultBoundary(
-	db: DataSource,
+	db: NookCommunityQueryExecutor,
 	nookAccessService: NookAccessService,
 	actorUserId: string,
 	communityId: string,
