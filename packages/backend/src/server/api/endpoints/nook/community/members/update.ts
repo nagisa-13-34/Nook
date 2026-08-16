@@ -15,14 +15,6 @@ import { assertCanAssignNookCommunityBaseRole, requireManageableNookCommunityMem
 import { updateNookCommunityMember, NookCommunityMemberError } from '@/nook/community/members.js';
 import { ApiError } from '../../../../error.js';
 
-const joinRestricted = {
-	message: 'The member is not currently allowed to join Communities.',
-	code: 'RESTRICTED_BY_NOOK_POLICY',
-	id: '8d392fc6-3a7c-4dd0-9b31-1fbe3c8c2165',
-	kind: 'permission',
-	httpStatusCode: 403,
-} as const;
-
 export const meta = { tags: ['channels'], requireCredential: true, kind: 'write:channels', errors: {
 	forbidden: { message: 'You cannot manage this member or assign that role.', code: 'FORBIDDEN', id: 'a986aaf1-12fa-423c-9d48-6ac1662f0cc0' },
 	ownerImmutable: { message: 'The community owner cannot be changed here.', code: 'OWNER_IMMUTABLE', id: 'ce738f4b-6a0a-4e78-a18e-21711f49714a' },
@@ -61,7 +53,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}, ps.state === 'active' ? async () => {
 					const target = await this.usersRepository.findOneBy({ id: ps.userId, host: IsNull() });
 					if (target == null || !(await this.nookAccessService.evaluate(target as MiLocalUser, 'join_community')).allowed) {
-						throw new ApiError(joinRestricted);
+						throw new ApiError(meta.errors.forbidden);
 					}
 				} : undefined);
 			} catch (error) {
