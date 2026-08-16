@@ -6,7 +6,7 @@
 import * as assert from 'node:assert';
 import { describe, test } from 'vitest';
 import type { DataSource } from 'typeorm';
-import { listNookCommunityMembers, updateNookCommunityMember } from '@/nook/community/members.js';
+import { listNookCommunityMembers, updateNookCommunityMember, NookCommunityMemberError } from '@/nook/community/members.js';
 
 describe('Nook Community member state', () => {
 	test('legacy Channel owner is listed synthetically without database writes', async () => {
@@ -51,5 +51,48 @@ describe('Nook Community member state', () => {
 
 		await updateNookCommunityMember(db, 'community', 'member', { state: 'banned' });
 		assert.equal(calls.some(sql => sql.includes('DELETE FROM "nook_community_event_rsvp"')), true);
+	});
+
+	test('reactivating a member fails closed without a policy guard', async () => {
+		let transactionStarted = false;
+		const db = {
+			query: async (sql: string) => {
+				if (sql.includes('FROM "channel" c')) return [{ userId: 'owner', joinMode: 'open', discoverable: true, initialized: true }];
+				throw new Error(`Unexpected query: ${sql}`);
+			},
+			transaction: async () => {
+				transactionStarted = true;
+			},
+		} as unknown as DataSource;
+
+		await assert.rejects(
+			() => updateNookCommunityMember(db, 'community', 'member', { state: 'active' }),
+			(error: unknown) => error instanceof NookCommunityMemberError && error.code === 'ACTIVATION_CHECK_REQUIRED',
+		);
+		assert.equal(transactionStarted, false);
+	});
+
+	test('reactivation policy denial happens before the membership write', async () => {
+		let transactionStarted = false;
+		let policyChecked = false;
+		const db = {
+			query: async (sql: string) => {
+				if (sql.includes('FROM "channel" c')) return [{ userId: 'owner', joinMode: 'open', discoverable: true, initialized: true }];
+				throw new Error(`Unexpected query: ${sql}`);
+			},
+			transaction: async () => {
+				transactionStarted = true;
+			},
+		} as unknown as DataSource;
+
+		await assert.rejects(
+			() => updateNookCommunityMember(db, 'community', 'member', { state: 'active' }, async () => {
+				policyChecked = true;
+				throw new Error('POLICY_DENIED');
+			}),
+			/POLICY_DENIED/,
+		);
+		assert.equal(policyChecked, true);
+		assert.equal(transactionStarted, false);
 	});
 });
