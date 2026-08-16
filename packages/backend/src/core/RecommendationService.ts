@@ -49,6 +49,10 @@ type RecommendationSessionState = {
 	userId: MiLocalUser['id'];
 	snapshotAt: number;
 	noteIds: MiNote['id'][];
+};
+
+type RecommendationCursorState = {
+	sessionId: string;
 	position: number;
 };
 
@@ -97,28 +101,30 @@ export class RecommendationService {
 				return { notes: packed, cursor: null };
 			}
 
-			const nextCursor = randomUUID();
-			await this.saveRecommendationSession(nextCursor, {
+			const sessionId = randomUUID();
+			await this.saveRecommendationSession(sessionId, {
 				userId: me.id,
 				snapshotAt: snapshotAt.getTime(),
 				noteIds: selected.map(note => note.id),
-				position: limit,
 			});
 
-			return { notes: packed, cursor: nextCursor };
+			return { notes: packed, cursor: this.createRecommendationCursor(sessionId, limit) };
 		}
 
-		const rawSession = await redisClient.get(this.recommendationSessionKey(cursor));
+		const cursorState = this.parseRecommendationCursor(cursor);
+		if (cursorState == null) return null;
+
+		const rawSession = await redisClient.get(this.recommendationSessionKey(cursorState.sessionId));
 		if (rawSession == null) return null;
 		const session = this.parseRecommendationSession(rawSession, me);
-		if (session == null) return null;
+		if (session == null || cursorState.position > session.noteIds.length) return null;
 
-		const remainingIds = session.noteIds.slice(session.position);
+		const remainingIds = session.noteIds.slice(cursorState.position);
 		const mutedChannels = await this.channelMutingService.mutingChannelsCache.fetch(me.id);
 		const eligibleNotes = await this.loadEligibleNotes(remainingIds, me, mutedChannels);
 		const eligibleById = new Map(eligibleNotes.map(note => [note.id, note]));
 		const pageNotes: MiNote[] = [];
-		let nextPosition = session.position;
+		let nextPosition = cursorState.position;
 
 		while (nextPosition < session.noteIds.length && pageNotes.length < limit) {
 			const note = eligibleById.get(session.noteIds[nextPosition]);
@@ -128,15 +134,13 @@ export class RecommendationService {
 
 		const packed = await this.noteEntityService.packMany(pageNotes, me);
 		if (nextPosition >= session.noteIds.length) {
-			await redisClient.del(this.recommendationSessionKey(cursor));
 			return { notes: packed, cursor: null };
 		}
 
-		await this.saveRecommendationSession(cursor, {
-			...session,
-			position: nextPosition,
-		});
-		return { notes: packed, cursor };
+		return {
+			notes: packed,
+			cursor: this.createRecommendationCursor(cursorState.sessionId, nextPosition),
+		};
 	}
 
 	private async selectRecommendationNotes(
@@ -211,15 +215,27 @@ export class RecommendationService {
 			.filter((note): note is MiNote => note != null);
 	}
 
-	private recommendationSessionKey(cursor: string): string {
-		return `${RECOMMENDATION_SESSION_KEY_PREFIX}${cursor}`;
+	private recommendationSessionKey(sessionId: string): string {
+		return `${RECOMMENDATION_SESSION_KEY_PREFIX}${sessionId}`;
 	}
 
-	private async saveRecommendationSession(cursor: string, state: RecommendationSessionState): Promise<void> {
+	private createRecommendationCursor(sessionId: string, position: number): string {
+		return `${sessionId}:${position}`;
+	}
+
+	private parseRecommendationCursor(cursor: string): RecommendationCursorState | null {
+		const match = /^([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}):([0-9]{1,3})$/i.exec(cursor);
+		if (match == null) return null;
+		const position = Number(match[2]);
+		if (!Number.isInteger(position) || position < 1 || position > RECOMMENDATION_SESSION_MAX_ITEMS) return null;
+		return { sessionId: match[1], position };
+	}
+
+	private async saveRecommendationSession(sessionId: string, state: RecommendationSessionState): Promise<void> {
 		const redisClient = this.redisClient;
 		if (redisClient == null) throw new Error('Recommendation sessions require Redis.');
 		await redisClient.set(
-			this.recommendationSessionKey(cursor),
+			this.recommendationSessionKey(sessionId),
 			JSON.stringify(state),
 			'EX',
 			RECOMMENDATION_SESSION_TTL_SECONDS,
@@ -233,7 +249,6 @@ export class RecommendationService {
 			if (!Number.isFinite(parsed.snapshotAt)) return null;
 			if (!Array.isArray(parsed.noteIds) || parsed.noteIds.length > RECOMMENDATION_SESSION_MAX_ITEMS) return null;
 			if (!parsed.noteIds.every(noteId => typeof noteId === 'string')) return null;
-			if (!Number.isInteger(parsed.position) || parsed.position == null || parsed.position < 0 || parsed.position > parsed.noteIds.length) return null;
 			return parsed as RecommendationSessionState;
 		} catch {
 			return null;
@@ -273,7 +288,7 @@ export class RecommendationService {
 	): Promise<MiNote[]> {
 		const result: MiNote[] = [];
 		let beforeId: MiNote['id'] | null = null;
-		const snapshotBoundaryId = this.idService.gen(snapshotAt.getTime() + 1);
+		const snapshotBoundaryId = this.idService.genTimeUpperBound(snapshotAt.getTime());
 
 		for (let page = 0; page < LOCAL_FALLBACK_SCAN_PAGES && result.length < limit; page++) {
 			const query = this.createEligibleQuery(me)
