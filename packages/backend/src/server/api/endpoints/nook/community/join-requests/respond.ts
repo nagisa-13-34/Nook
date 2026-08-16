@@ -45,22 +45,16 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			let result: { communityId: string; userId: string };
 			try {
 				result = await respondNookCommunityJoinRequest(
-					this.db,
-					ps.communityId,
-					ps.requestId,
-					me.id,
-					ps.approve,
+					this.db, ps.communityId, ps.requestId, me.id, ps.approve,
 					ps.approve ? async userId => {
 						const user = await this.usersRepository.findOneBy({ id: userId, host: IsNull() });
-						if (user == null || !(await this.nookAccessService.evaluate(user as MiLocalUser, 'join_community')).allowed) {
-							throw new ApiError(meta.errors.joinRestricted);
-						}
+						if (user == null || !(await this.nookAccessService.evaluate(user as MiLocalUser, 'join_community')).allowed) throw new ApiError(meta.errors.joinRestricted);
 					} : undefined,
 				);
 			} catch (error) {
 				if (error instanceof NookCommunityMembershipError && error.code === 'NO_SUCH_REQUEST') throw new ApiError(meta.errors.noSuchRequest);
 				if (error instanceof NookCommunityMembershipError && error.code === 'BANNED') throw new ApiError(meta.errors.banned);
-				if (error instanceof NookCommunityMembershipError && error.code === 'AGE_MODE_RESTRICTED') throw new ApiError(meta.errors.joinRestricted);
+				if (error instanceof NookCommunityMembershipError && (error.code === 'AGE_MODE_RESTRICTED' || error.code === 'ADULT_BOUNDARY_RESTRICTED')) throw new ApiError(meta.errors.joinRestricted);
 				throw error;
 			}
 			if (ps.approve) {
