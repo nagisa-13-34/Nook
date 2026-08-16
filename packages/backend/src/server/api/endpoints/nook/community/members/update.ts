@@ -59,6 +59,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			} catch (error) {
 				if (error instanceof NookCommunityMemberError && error.code === 'OWNER_IMMUTABLE') throw new ApiError(meta.errors.ownerImmutable);
 				if (error instanceof NookCommunityMemberError && error.code === 'NO_SUCH_MEMBER') throw new ApiError(meta.errors.noSuchMember);
+				if (error instanceof NookCommunityMemberError && error.code === 'AGE_MODE_RESTRICTED') throw new ApiError(meta.errors.forbidden);
 				throw error;
 			}
 		});
