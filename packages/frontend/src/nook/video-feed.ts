@@ -31,10 +31,15 @@ export function classifyNookVideoFile(file: NookVideoFile): NookVideoTab | null 
 	return height > width ? 'shorts' : 'videos';
 }
 
+export function classifyNookVideoNote(note: NookVideoNote): NookVideoTab | null {
+	const primaryVideo = note.files.find(file => file.type.startsWith('video/'));
+	return primaryVideo == null ? null : classifyNookVideoFile(primaryVideo);
+}
+
 export function noteMatchesNookVideoTab(note: NookVideoNote, tab: NookVideoTab): boolean {
-	return note.files.some(file => classifyNookVideoFile(file) === tab);
+	return classifyNookVideoNote(note) === tab;
 }
 
 export function hasNookVideo(note: NookVideoNote): boolean {
-	return note.files.some(file => classifyNookVideoFile(file) != null);
+	return classifyNookVideoNote(note) != null;
 }
