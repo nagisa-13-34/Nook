@@ -16,6 +16,7 @@ export class NookCommunityAccessError extends Error {
 interface NookCommunityContextRow {
 	userId: string | null;
 	joinMode: NookCommunityContext['joinMode'] | null;
+	ageMode: NookCommunityContext['ageMode'] | null;
 	discoverable: boolean | null;
 	initialized: boolean;
 }
@@ -24,6 +25,7 @@ async function readNookCommunityContextRow(db: DataSource, communityId: string):
 	const rows = await db.query<NookCommunityContextRow[]>(
 		`SELECT c."userId",
 		 nc."joinMode",
+		 nc."ageMode",
 		 nc."discoverable",
 		 (nc."channelId" IS NOT NULL) AS "initialized"
 		 FROM "channel" c
@@ -42,6 +44,7 @@ function contextFromRow(communityId: string, row: NookCommunityContextRow): Nook
 		communityId,
 		ownerId: row.userId,
 		joinMode: row.joinMode ?? 'open',
+		ageMode: row.ageMode ?? 'mixed',
 		discoverable: row.discoverable ?? true,
 	};
 }
