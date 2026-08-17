@@ -53,7 +53,9 @@ jobs:
           cache: pnpm
 
       - name: Apply integration patch
-        run: python scripts/apply-note-edit.py
+        run: |
+          python scripts/apply-note-edit.py
+          python scripts/fix-note-edit-types.py
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -100,7 +102,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git rm .github/workflows/note-edit-apply-v2.yml scripts/apply-note-edit.py
+          git rm .github/workflows/note-edit-apply-v2.yml scripts/apply-note-edit.py scripts/fix-note-edit-types.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add packages/backend packages/frontend packages/misskey-js/src/autogen packages/misskey-js/src/streaming.types.ts
