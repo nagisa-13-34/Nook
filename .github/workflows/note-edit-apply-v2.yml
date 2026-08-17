@@ -56,6 +56,7 @@ jobs:
         run: |
           python scripts/apply-note-edit.py
           python scripts/fix-note-edit-types.py
+          python scripts/fix-note-edit-followup.py
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -90,19 +91,39 @@ jobs:
           pnpm --filter misskey-js eslint
 
       - name: Verify migration
+        shell: bash
         run: |
-          pnpm --filter backend build
-          pnpm --filter backend migrate
-          pnpm --filter backend check-migrations
-          pnpm --filter backend revert
-          pnpm --filter backend migrate
-          pnpm --filter backend check-migrations
+          set -euo pipefail
+
+          run_checked() {
+            local label="$1"
+            shift
+            local log
+            log="$(mktemp)"
+            set +e
+            "$@" 2>&1 | tee "$log"
+            local status=${PIPESTATUS[0]}
+            set -e
+            if [ "$status" -ne 0 ]; then
+              local tail_output
+              tail_output="$(tail -n 80 "$log" | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g')"
+              echo "::error title=Verify migration failed::${label} failed (exit ${status}). Tail: ${tail_output}"
+              exit "$status"
+            fi
+          }
+
+          run_checked "backend build" pnpm --filter backend build
+          run_checked "migration run" pnpm --filter backend migrate
+          run_checked "migration clean check after migrate" pnpm --filter backend check-migrations
+          run_checked "migration revert" pnpm --filter backend revert
+          run_checked "migration run after revert" pnpm --filter backend migrate
+          run_checked "migration clean check after rerun" pnpm --filter backend check-migrations
 
       - name: Commit generated integration
         shell: bash
         run: |
           set -euo pipefail
-          git rm .github/workflows/note-edit-apply-v2.yml scripts/apply-note-edit.py scripts/fix-note-edit-types.py
+          git rm .github/workflows/note-edit-apply-v2.yml scripts/apply-note-edit.py scripts/fix-note-edit-types.py scripts/fix-note-edit-followup.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add packages/backend packages/frontend packages/misskey-js/src/autogen packages/misskey-js/src/streaming.types.ts
