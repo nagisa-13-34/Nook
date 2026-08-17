@@ -63,5 +63,7 @@ jobs:
         run: |
           pnpm --filter backend build:e2e
           NODE_ENV=test pnpm --filter backend compile-config
+      - name: Initialize E2E schema
+        run: NODE_ENV=test pnpm --filter backend exec tsx -e "import('./test/utils.ts').then(async ({ initTestDb }) => { const db = await initTestDb(false); await db.destroy(); })"
       - name: Run Note edit E2E
         run: NODE_ENV=test pnpm --filter backend exec vitest run --config vitest.config.e2e.ts ./test/e2e/note-edit.ts
