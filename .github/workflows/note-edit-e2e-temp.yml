@@ -60,6 +60,8 @@ jobs:
           pnpm --filter misskey-js build
           pnpm --filter misskey-bubble-game build
       - name: Build backend E2E
-        run: pnpm --filter backend build:e2e
+        run: |
+          pnpm --filter backend build:e2e
+          NODE_ENV=test pnpm --filter backend compile-config
       - name: Run Note edit E2E
-        run: pnpm --filter backend exec vitest run --config vitest.config.e2e.ts test/e2e/note-edit.ts
+        run: NODE_ENV=test pnpm --filter backend exec vitest run --config vitest.config.e2e.ts ./test/e2e/note-edit.ts
