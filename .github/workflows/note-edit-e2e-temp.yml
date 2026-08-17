@@ -1,0 +1,65 @@
+name: Note edit E2E temporary validation
+
+on:
+  push:
+    branches:
+      - agent/note-body-edit
+
+permissions:
+  contents: read
+
+jobs:
+  note-edit-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: test-misskey
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 54312:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d test-misskey"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 56312:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Prepare test configuration
+        run: |
+          mkdir -p .config
+          cp .github/misskey/test.yml .config/test.yml
+          cp .github/misskey/test.yml .config/default.yml
+      - name: Build shared packages
+        run: |
+          pnpm build-pre
+          pnpm --filter i18n build
+          pnpm --filter misskey-reversi build
+          pnpm --filter misskey-js build
+          pnpm --filter misskey-bubble-game build
+      - name: Build backend E2E
+        run: pnpm --filter backend build:e2e
+      - name: Run Note edit E2E
+        run: pnpm --filter backend exec vitest run --config vitest.config.e2e.ts test/e2e/note-edit.ts
