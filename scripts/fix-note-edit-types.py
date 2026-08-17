@@ -33,3 +33,9 @@ replace(
     "))).filter((mentioned): mentioned is MiUser => mentioned != null);",
     "))).filter((mentioned): mentioned is MiLocalUser | MiRemoteUser => mentioned != null);",
 )
+
+replace(
+    'packages/frontend/src/utility/get-note-menu.ts',
+    "\t\tconst edited = await os.apiWithDialog('notes/edit', {\n\t\t\tnoteId: appearNote.id,\n\t\t\ttext: result.text.trim() === '' ? null : result.text,\n\t\t\tcw: result.useCw ? result.cw : null,\n\t\t});",
+    "\t\tconst text = result.text ?? '';\n\t\tconst cw = result.cw ?? '';\n\t\tconst edited = await os.apiWithDialog('notes/edit', {\n\t\t\tnoteId: appearNote.id,\n\t\t\ttext: text.trim() === '' ? null : text,\n\t\t\tcw: result.useCw === true ? cw : null,\n\t\t});",
+)
