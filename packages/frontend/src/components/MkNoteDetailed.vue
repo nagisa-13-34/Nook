@@ -134,6 +134,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<div :class="$style.noteFooterInfo">
 					<MkA :to="notePage(appearNote)">
 						<MkTime :time="appearNote.createdAt" mode="detail" colored/>
+			<span v-if="appearNote.editedAt" style="margin-left: 0.5em;" :title="i18n.ts.edit"><i class="ti ti-pencil"></i> <MkTime :time="appearNote.editedAt" mode="detail"/></span>
 					</MkA>
 					<span style="margin-left: 0.5em;">
 						<span style="border: 1px solid var(--MI_THEME-divider); margin-right: 0.5em;"></span>

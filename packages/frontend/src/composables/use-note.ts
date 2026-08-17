@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { ref, computed } from 'vue';
+import { ref, computed, reactive, watch } from 'vue';
 import type { Ref } from 'vue';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
@@ -130,7 +130,7 @@ export function useNote(
 
 	// 基本状態
 	const isRenote = Misskey.note.isPureRenote(rawNote);
-	const appearNote = getAppearNote(rawNote) ?? rawNote;
+	const appearNote = reactive(getAppearNote(rawNote) ?? rawNote) as Misskey.entities.Note;
 
 	// キャプチャ（ストリーム購読）
 	const { $note: $appearNote, subscribe: subscribeManuallyToNoteCapture } = useNoteCapture({
@@ -160,6 +160,13 @@ export function useNote(
 	const canRenote = computed(() => ['public', 'home'].includes(appearNote.visibility) || (appearNote.visibility === 'followers' && appearNote.userId === $i?.id));
 	const renoteCollapsed = ref(prefer.s.collapseRenotes && isRenote && (($i && ($i.id === rawNote.userId || $i.id === appearNote.userId)) || ($appearNote.myReaction != null)));
 
+	watch(() => [appearNote.text, appearNote.cw], () => {
+		translation.value = null;
+		muted.value = $i ? calculateMuteStatus(appearNote, $i, $i.mutedWords, inTimeline && !tl_withSensitive.value) : false;
+		hardMuted.value = props.withHardMute && $i ? calculateMuteStatus(appearNote, $i, $i.hardMutedWords, inTimeline && !tl_withSensitive.value, true) : false;
+		collapsed.value = appearNote.cw == null && isLong.value;
+	});
+
 	const pleaseLoginContext = computed<OpenOnRemoteOptions>(() => ({
 		type: 'lookup',
 		url: `https://${host}/notes/${appearNote.id}`,
@@ -170,6 +177,12 @@ export function useNote(
 		if (noteId === rawNote.id || noteId === appearNote.id) {
 			isDeleted.value = true;
 		}
+	});
+	useGlobalEvent('noteEdited', (editedNote) => {
+		if (editedNote.id !== appearNote.id) return;
+		appearNote.text = editedNote.text;
+		appearNote.cw = editedNote.cw;
+		appearNote.editedAt = editedNote.editedAt;
 	});
 
 	// ツールチップのセットアップ (Mockでない場合のみ)

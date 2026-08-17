@@ -6,6 +6,7 @@
 // Nook-specific endpoints are kept separate from the large upstream endpoint list.
 // EndpointsModule and endpoints.ts merge this object with endpoint-list.ts.
 
+export * as 'notes/edit' from './endpoints/notes/edit.js';
 export * as 'notes/recommended' from './endpoints/notes/recommended.js';
 export * as 'notes/recommended-page' from './endpoints/notes/recommended-page.js';
 export * as 'nook/features' from './endpoints/nook/features.js';

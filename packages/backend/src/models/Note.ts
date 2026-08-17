@@ -10,6 +10,12 @@ import { MiUser } from './User.js';
 import { MiChannel } from './Channel.js';
 import type { MiDriveFile } from './DriveFile.js';
 
+export type NoteEditRevision = Readonly<{
+	editedAt: string;
+	text: string | null;
+	cw: string | null;
+}>;
+
 // Note: When you create a new index for existing column of this table,
 // it might be better to index concurrently under isConcurrentIndexMigrationEnabled flag
 // by editing generated migration file since this table is very large,
@@ -76,6 +82,16 @@ export class MiNote {
 		length: 512, nullable: true,
 	})
 	public cw: string | null;
+
+	@Column('timestamp with time zone', {
+		nullable: true,
+	})
+	public editedAt: Date | null;
+
+	@Column('jsonb', {
+		default: () => "'[]'",
+	})
+	public editHistory: NoteEditRevision[];
 
 	@Column({
 		...id(),

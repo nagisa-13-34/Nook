@@ -300,7 +300,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		const mentions = extractMentions(tokens);
 		const users = (await Promise.all(mentions.map(mention =>
 			this.remoteUserResolveService.resolveUser(mention.username, mention.host ?? user.host).catch(() => null),
-		))).filter((mentioned): mentioned is MiUser => mentioned != null);
+		))).filter((mentioned): mentioned is MiLocalUser | MiRemoteUser => mentioned != null);
 
 		return users.filter((mentioned, index, all) => index === all.findIndex(other => other.id === mentioned.id));
 	}
@@ -327,9 +327,11 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	}
 
 	private async deliverUpdate(user: MiLocalUser, note: MiNote): Promise<void> {
-		const activity = this.apRendererService.addContext(
-			this.apRendererService.renderUpdate(await this.apRendererService.renderNote(note, false), user),
-		);
+		const renderedNote = await this.apRendererService.renderNote(note, false);
+		const update = this.apRendererService.renderUpdate(renderedNote, user);
+		update.to = renderedNote.to;
+		update.cc = renderedNote.cc;
+		const activity = this.apRendererService.addContext(update);
 		const manager = this.apDeliverManagerService.createDeliverManager(user, activity);
 
 		if (note.mentions.length > 0) {

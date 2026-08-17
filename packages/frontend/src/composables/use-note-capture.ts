@@ -114,7 +114,7 @@ function pollingSubscribe(props: {
 }
 
 function realtimeSubscribe(props: {
-	note: Pick<Misskey.entities.Note, 'id' | 'createdAt'>;
+	note: Misskey.entities.Note;
 }): void {
 	const note = props.note;
 	const connection = useStream();
@@ -147,6 +147,14 @@ function realtimeSubscribe(props: {
 					userId: body.userId,
 					choice: body.choice,
 				});
+				break;
+			}
+
+			case 'updated': {
+				note.text = body.text;
+				note.cw = body.cw;
+				note.editedAt = body.editedAt;
+				globalEvents.emit('noteEdited', note);
 				break;
 			}
 

@@ -209,6 +209,41 @@ export function getNoteMenu(props: {
 		});
 	}
 
+	async function edit(): Promise<void> {
+		if ($i == null) return;
+		const { canceled, result } = await os.form(i18n.ts.edit, {
+			text: {
+				type: 'string',
+				required: false,
+				default: appearNote.text ?? '',
+				multiline: true,
+				label: i18n.ts.note,
+			},
+			useCw: {
+				type: 'boolean',
+				default: appearNote.cw != null,
+				label: i18n.ts.useCw,
+			},
+			cw: {
+				type: 'string',
+				required: false,
+				default: appearNote.cw ?? '',
+				multiline: true,
+				label: i18n.ts.annotation,
+			},
+		});
+		if (canceled) return;
+
+		const text = result.text ?? '';
+		const cw = result.cw ?? '';
+		const edited = await os.apiWithDialog('notes/edit', {
+			noteId: appearNote.id,
+			text: text.trim() === '' ? null : text,
+			cw: result.useCw === true ? cw : null,
+		});
+		globalEvents.emit('noteEdited', edited);
+	}
+
 	function delEdit(): void {
 		os.confirm({
 			type: 'warning',
@@ -511,6 +546,10 @@ export function getNoteMenu(props: {
 			menuItems.push({ type: 'divider' });
 			if (appearNote.userId === $i.id) {
 				menuItems.push({
+					icon: 'ti ti-pencil',
+					text: i18n.ts.edit,
+					action: edit,
+				}, {
 					icon: 'ti ti-edit',
 					text: i18n.ts.deleteAndEdit,
 					action: delEdit,

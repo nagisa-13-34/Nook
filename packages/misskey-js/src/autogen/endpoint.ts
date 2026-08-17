@@ -763,6 +763,8 @@ import type {
 	NookFeaturesResponse,
 	NookTranslateRequest,
 	NookTranslateResponse,
+	NotesEditRequest,
+	NotesEditResponse,
 	NotesRecommendedRequest,
 	NotesRecommendedResponse,
 	NotesRecommendedPageRequest,
@@ -1269,6 +1271,7 @@ export type Endpoints = {
 	'nook/community/voice/signals': { req: NookCommunityVoiceSignalsRequest; res: NookCommunityVoiceSignalsResponse };
 	'nook/features': { req: EmptyRequest; res: NookFeaturesResponse };
 	'nook/translate': { req: NookTranslateRequest; res: NookTranslateResponse };
+	'notes/edit': { req: NotesEditRequest; res: NotesEditResponse };
 	'notes/recommended': { req: NotesRecommendedRequest; res: NotesRecommendedResponse };
 	'notes/recommended-page': { req: NotesRecommendedPageRequest; res: NotesRecommendedPageResponse };
 };

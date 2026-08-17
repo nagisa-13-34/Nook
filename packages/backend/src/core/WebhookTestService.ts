@@ -78,6 +78,8 @@ function generateDummyNote(override?: Partial<MiNote>): MiNote {
 		text: 'This is a dummy note for testing purposes.',
 		name: null,
 		cw: null,
+		editedAt: null,
+		editHistory: [],
 		userId: 'dummy-user-1',
 		user: null,
 		localOnly: true,
