@@ -64,6 +64,8 @@ jobs:
           pnpm --filter backend build:e2e
           pnpm --filter backend build
           NODE_ENV=test pnpm --filter backend compile-config
+      - name: Run Note edit ActivityPub audience unit test
+        run: NODE_ENV=test pnpm --filter backend exec vitest run --config vitest.config.unit.ts ./test/unit/NoteEditActivityPubAudience.ts
       - name: Initialize E2E schema
         run: NODE_ENV=test pnpm --filter backend exec typeorm schema:sync -d ormconfig.js
       - name: Run Note edit E2E
