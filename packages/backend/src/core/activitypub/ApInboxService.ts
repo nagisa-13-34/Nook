@@ -798,6 +798,8 @@ export class ApInboxService {
 		} else if (getApType(object) === 'Question') {
 			await this.apQuestionService.updateQuestion(object, actor, resolver).catch(err => console.error(err));
 			return 'ok: Question updated';
+		} else if (isPost(object)) {
+			return await this.apNoteService.updateNote(object, actor, activity.published);
 		} else {
 			return `skip: Unknown type: ${getApType(object)}`;
 		}

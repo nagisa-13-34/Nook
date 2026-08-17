@@ -6,11 +6,13 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { In } from 'typeorm';
 import * as Redis from 'ioredis';
+import * as mfm from 'mfm-js';
 import { DI } from '@/di-symbols.js';
-import type { PollsRepository, EmojisRepository, MiMeta } from '@/models/_.js';
+import type { PollsRepository, EmojisRepository, MiMeta, NotesRepository } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import type { MiRemoteUser } from '@/models/User.js';
-import type { MiNote } from '@/models/Note.js';
+import { MiNote } from '@/models/Note.js';
+import type { NoteEditRevision } from '@/models/Note.js';
 import { acquireApObjectLock } from '@/misc/distributed-lock.js';
 import { toArray, toSingle, unique } from '@/misc/prelude/array.js';
 import type { MiEmoji } from '@/models/Emoji.js';
@@ -21,9 +23,14 @@ import { IdService } from '@/core/IdService.js';
 import { PollService } from '@/core/PollService.js';
 import { StatusError } from '@/misc/status-error.js';
 import { UtilityService } from '@/core/UtilityService.js';
+import { SearchService } from '@/core/SearchService.js';
+import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { bindThis } from '@/decorators.js';
 import { checkHttps } from '@/misc/check-https.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
+import { extractHashtags } from '@/misc/extract-hashtags.js';
+import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mfm.js';
+import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { getOneApId, getApId, getOneApHrefNullable, validPost, isEmoji, getApType } from '../type.js';
 import { ApLoggerService } from '../ApLoggerService.js';
 import { ApMfmService } from '../ApMfmService.js';
@@ -58,6 +65,9 @@ export class ApNoteService {
 		@Inject(DI.emojisRepository)
 		private emojisRepository: EmojisRepository,
 
+		@Inject(DI.notesRepository)
+		private notesRepository: NotesRepository,
+
 		private idService: IdService,
 		private apMfmService: ApMfmService,
 		private apResolverService: ApResolverService,
@@ -67,6 +77,8 @@ export class ApNoteService {
 		private apPersonService: ApPersonService,
 
 		private utilityService: UtilityService,
+		private searchService: SearchService,
+		private globalEventService: GlobalEventService,
 		private apAudienceService: ApAudienceService,
 		private apMentionService: ApMentionService,
 		private apImageService: ApImageService,
@@ -120,6 +132,105 @@ export class ApNoteService {
 	@bindThis
 	public async fetchNote(object: string | IObject): Promise<MiNote | null> {
 		return await this.apDbResolverService.getNoteFromApId(object);
+	}
+
+	/**
+	 * Apply a remote ActivityPub Note Update without changing its audience,
+	 * attachments, poll, reply/renote target, or local counters.
+	 */
+	@bindThis
+	public async updateNote(note: IPost, actor: MiRemoteUser, activityPublished?: string): Promise<string> {
+		if (note.id == null) return 'skip: Note Update has no id';
+
+		const validationError = this.validateNote(note, note.id, actor);
+		if (validationError) {
+			this.logger.warn(`Skipping invalid Note Update: ${validationError.message}`);
+			return 'skip: invalid Note Update';
+		}
+
+		const existing = await this.fetchNote(note.id);
+		if (existing == null) return 'skip: target Note not found';
+		if (existing.userId !== actor.id || existing.userHost == null) return 'skip: invalid Note owner';
+
+		const timestamp = note.updated ?? activityPublished;
+		if (timestamp == null) return 'skip: Note Update has no timestamp';
+		const editedAt = new Date(timestamp);
+		if (!Number.isFinite(editedAt.valueOf()) || !this.idService.isSafeT(editedAt.valueOf())) {
+			return 'skip: invalid Note Update timestamp';
+		}
+
+		const cw = note.summary === '' ? null : (typeof note.summary === 'string' ? note.summary : null);
+		let text: string | null = null;
+		if (note.source?.mediaType === 'text/x.misskeymarkdown' && typeof note.source.content === 'string') {
+			text = note.source.content;
+		} else if (typeof note._misskey_content === 'string') {
+			text = note._misskey_content;
+		} else if (typeof note.content === 'string') {
+			text = this.apMfmService.htmlToMfm(note.content, note.tag);
+		}
+
+		if (this.noteCreateService.checkProhibitedWordsContain({ cw, text })) {
+			return 'skip: Note Update contains prohibited words';
+		}
+
+		const tokens = [
+			...(text == null ? [] : mfm.parse(text)),
+			...(cw == null ? [] : mfm.parse(cw)),
+		];
+		const tags = extractHashtags(tokens)
+			.filter(tag => Array.from(tag).length <= 128)
+			.slice(0, 32)
+			.map(tag => normalizeForSearch(tag));
+		const emojis = extractCustomEmojisFromMfm(tokens);
+
+		const result = await this.notesRepository.manager.transaction(async transactionalEntityManager => {
+			const lockedNote = await transactionalEntityManager.findOne(MiNote, {
+				where: { id: existing.id },
+				lock: { mode: 'pessimistic_write' },
+			});
+			if (lockedNote == null) return { changed: false, reason: 'skip: target Note not found' } as const;
+			if (lockedNote.userId !== actor.id || lockedNote.userHost == null || lockedNote.uri !== note.id) {
+				return { changed: false, reason: 'skip: invalid Note owner' } as const;
+			}
+
+			const previousChangeAt = lockedNote.editedAt ?? this.idService.parse(lockedNote.id).date;
+			if (editedAt.getTime() <= previousChangeAt.getTime()) {
+				return { changed: false, reason: 'skip: stale Note Update' } as const;
+			}
+			if (lockedNote.text === text && lockedNote.cw === cw) {
+				return { changed: false, reason: 'ok: Note Update is a no-op' } as const;
+			}
+			if (text == null && lockedNote.fileIds.length === 0 && !lockedNote.hasPoll && lockedNote.renoteId == null) {
+				return { changed: false, reason: 'skip: Note Update would remove all content' } as const;
+			}
+
+			const revision: NoteEditRevision = {
+				editedAt: editedAt.toISOString(),
+				text: lockedNote.text,
+				cw: lockedNote.cw,
+			};
+			lockedNote.text = text;
+			lockedNote.cw = cw;
+			lockedNote.tags = tags;
+			lockedNote.emojis = emojis;
+			lockedNote.editedAt = editedAt;
+			lockedNote.editHistory = [...(lockedNote.editHistory ?? []), revision].slice(-20);
+
+			await transactionalEntityManager.save(MiNote, lockedNote);
+			return { changed: true, note: lockedNote } as const;
+		});
+
+		if (!result.changed) return result.reason;
+
+		await this.searchService.unindexNote(result.note);
+		if (result.note.text != null || result.note.cw != null) await this.searchService.indexNote(result.note);
+		this.globalEventService.publishNoteStream(result.note, 'updated', {
+			text: result.note.text,
+			cw: result.note.cw,
+			editedAt: result.note.editedAt!.toISOString(),
+		});
+
+		return 'ok: Note updated';
 	}
 
 	/**

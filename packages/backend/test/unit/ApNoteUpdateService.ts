@@ -1,6 +1,4 @@
-from pathlib import Path
-
-Path('packages/backend/test/unit/ApNoteUpdateService.ts').write_text(r'''/*
+/*
  * SPDX-FileCopyrightText: syuilo and misskey-project
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -160,4 +158,3 @@ describe('ApNoteService.updateNote', () => {
 		expect(saved).toHaveLength(0);
 	});
 });
-''')
