@@ -65,6 +65,6 @@ jobs:
           pnpm --filter backend build
           NODE_ENV=test pnpm --filter backend compile-config
       - name: Initialize E2E schema
-        run: NODE_ENV=test pnpm --filter backend typeorm schema:sync -d ormconfig.js
+        run: NODE_ENV=test pnpm --filter backend exec typeorm schema:sync -d ormconfig.js
       - name: Run Note edit E2E
         run: NODE_ENV=test pnpm --filter backend exec vitest run --config vitest.config.e2e.ts ./test/e2e/note-edit.ts
