@@ -17,6 +17,18 @@ replace(
 )
 
 replace(
+    'packages/backend/test/unit/NoteCreateService.ts',
+    "\t\t\tcw: null,\n\t\t\tuserId: 'some-user-id',",
+    "\t\t\tcw: null,\n\t\t\teditedAt: null,\n\t\t\teditHistory: [],\n\t\t\tuserId: 'some-user-id',",
+)
+
+replace(
+    'packages/backend/test/unit/misc/is-renote.ts',
+    "\tcw: null,\n\tuserId: 'some-user-id',",
+    "\tcw: null,\n\teditedAt: null,\n\teditHistory: [],\n\tuserId: 'some-user-id',",
+)
+
+replace(
     'packages/backend/src/server/api/endpoints/notes/edit.ts',
     "))).filter((mentioned): mentioned is MiUser => mentioned != null);",
     "))).filter((mentioned): mentioned is MiLocalUser | MiRemoteUser => mentioned != null);",
