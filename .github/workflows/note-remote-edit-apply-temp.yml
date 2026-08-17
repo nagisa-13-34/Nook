@@ -1,0 +1,53 @@
+name: Apply remote Note editing integration
+
+on:
+  push:
+    branches:
+      - agent/note-body-edit
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message, '[remote-note-edit-applied]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/note-body-edit
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+      - name: Apply remote Note update patch
+        run: |
+          python scripts/apply-note-remote-edit.py
+          python scripts/add-note-remote-edit-test.py
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build shared packages
+        run: |
+          pnpm build-pre
+          pnpm --filter i18n build
+          pnpm --filter misskey-reversi build
+          pnpm --filter misskey-js build
+          pnpm --filter misskey-bubble-game build
+      - name: Validate backend
+        run: |
+          pnpm --filter backend typecheck
+          pnpm --filter backend eslint
+          pnpm --filter backend exec vitest run --config vitest.config.unit.ts test/unit/ApNoteUpdateService.ts
+      - name: Commit remote Note update support
+        run: |
+          git rm .github/workflows/note-remote-edit-apply-temp.yml scripts/apply-note-remote-edit.py scripts/add-note-remote-edit-test.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/backend/src/core/activitypub packages/backend/test/unit/ApNoteUpdateService.ts
+          git commit -m "feat: apply remote Note body updates [remote-note-edit-applied]"
+          git push origin HEAD:agent/note-body-edit
