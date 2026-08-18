@@ -5,8 +5,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div :class="$style.root">
 	<button class="_button" :class="$style.trigger" :title="l.communityProfile" @click="open">
-		<img v-if="triggerAvatarUrl" :src="triggerAvatarUrl" alt="">
-		<i v-else class="ti ti-user-circle"></i>
+		<span :class="$style.triggerAvatar">
+			<img v-if="triggerAvatarUrl" :src="triggerAvatarUrl" alt="">
+			<i v-else class="ti ti-user-circle"></i>
+		</span>
+		<span :class="$style.triggerLabel">{{ l.communityProfile }}</span>
 	</button>
 
 	<div v-if="opened" :class="$style.backdrop" @click.self="opened=false">
@@ -68,8 +71,7 @@ const saved = ref(false);
 const previewName = computed(() => nickname.value.trim() || $i.name || $i.username);
 
 async function loadProfile() {
-	const members = await nookApi<CommunityMember[]>('nook/community/members/list', { communityId: props.communityId }).catch(() => []);
-	const me = members.find(member => member.userId === $i.id);
+	const me = await nookApi<CommunityMember>('nook/community/profile-show', { communityId: props.communityId }).catch(() => null);
 	nickname.value = me?.nickname ?? '';
 	avatarId.value = me?.avatarId ?? null;
 	avatarUrl.value = me?.avatarUrl ?? $i.avatarUrl ?? null;
@@ -136,7 +138,7 @@ async function save() {
 			nickname: nickname.value.trim() || null,
 			avatarId: avatarId.value,
 		});
-		triggerAvatarUrl.value = avatarUrl.value;
+		await loadProfile();
 		saved.value = true;
 		emit('updated');
 	} finally {
@@ -148,5 +150,5 @@ onMounted(loadProfile);
 </script>
 
 <style lang="scss" module>
-.root{display:inline-flex}.trigger{width:34px;height:34px;overflow:hidden;display:grid;place-items:center;border:1px solid #d7e3f1;border-radius:7px;background:#fff;color:#17324d}.trigger:hover{background:#eef5ff;color:#175cd3}.trigger img{width:100%;height:100%;object-fit:cover}.trigger i{font-size:19px}.backdrop{position:fixed;z-index:100000;inset:0;display:grid;place-items:center;padding:18px;background:rgba(18,34,51,.35)}.modal{width:min(460px,100%);max-height:min(680px,calc(100dvh - 36px));overflow:auto;background:#fff;border:1px solid #d7e3f1;border-radius:10px;box-shadow:0 16px 50px rgba(23,50,77,.18);color:#17324d}.modal>header{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid #d7e3f1}.modal>header>div{display:flex;flex-direction:column;min-width:0}.modal>header small{margin-top:2px;color:#718399;font-size:10px}.modal>header button{width:30px;height:30px;border-radius:6px}.body{display:grid;gap:14px;padding:16px}.preview{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid #d7e3f1;border-radius:9px;background:#f8fbff}.preview>div:last-child{display:flex;min-width:0;flex-direction:column}.preview strong,.preview small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.preview small{color:#718399}.avatar{width:58px;height:58px;flex:none;overflow:hidden;display:grid;place-items:center;border-radius:16px;background:#eef5ff;color:#175cd3;font-size:22px;font-weight:850}.avatar img{width:100%;height:100%;object-fit:cover}.avatarActions{display:flex;flex-wrap:wrap;gap:8px}.avatarActions button{padding:8px 10px;border:1px solid #d7e3f1;border-radius:7px;background:#fff}.field{display:grid;gap:6px;font-size:12px;font-weight:700}.field input{box-sizing:border-box;width:100%;padding:9px 10px;border:1px solid #d7e3f1;border-radius:7px;background:#fff;color:#17324d;font:inherit}.field small{color:#718399;font-weight:400}.primary{padding:9px 12px;border-radius:7px;background:#ffd84d;color:#17324d;font-weight:800}.primary:disabled{opacity:.5}.saved{margin:0;color:#247a45;font-size:12px}
+.root{display:inline-flex}.trigger{height:34px;display:flex;align-items:center;gap:7px;padding:3px 9px 3px 4px;border:1px solid #d7e3f1;border-radius:7px;background:#fff;color:#17324d;font-size:11px;font-weight:750}.trigger:hover{background:#eef5ff;color:#175cd3}.triggerAvatar{width:26px;height:26px;flex:none;overflow:hidden;display:grid;place-items:center;border-radius:6px;background:#eef5ff}.triggerAvatar img{width:100%;height:100%;object-fit:cover}.triggerAvatar i{font-size:17px}.triggerLabel{white-space:nowrap}.backdrop{position:fixed;z-index:100000;inset:0;display:grid;place-items:center;padding:18px;background:rgba(18,34,51,.35)}.modal{width:min(460px,100%);max-height:min(680px,calc(100dvh - 36px));overflow:auto;background:#fff;border:1px solid #d7e3f1;border-radius:10px;box-shadow:0 16px 50px rgba(23,50,77,.18);color:#17324d}.modal>header{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid #d7e3f1}.modal>header>div{display:flex;flex-direction:column;min-width:0}.modal>header small{margin-top:2px;color:#718399;font-size:10px}.modal>header button{width:30px;height:30px;border-radius:6px}.body{display:grid;gap:14px;padding:16px}.preview{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid #d7e3f1;border-radius:9px;background:#f8fbff}.preview>div:last-child{display:flex;min-width:0;flex-direction:column}.preview strong,.preview small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.preview small{color:#718399}.avatar{width:58px;height:58px;flex:none;overflow:hidden;display:grid;place-items:center;border-radius:16px;background:#eef5ff;color:#175cd3;font-size:22px;font-weight:850}.avatar img{width:100%;height:100%;object-fit:cover}.avatarActions{display:flex;flex-wrap:wrap;gap:8px}.avatarActions button{padding:8px 10px;border:1px solid #d7e3f1;border-radius:7px;background:#fff}.field{display:grid;gap:6px;font-size:12px;font-weight:700}.field input{box-sizing:border-box;width:100%;padding:9px 10px;border:1px solid #d7e3f1;border-radius:7px;background:#fff;color:#17324d;font:inherit}.field small{color:#718399;font-weight:400}.primary{padding:9px 12px;border-radius:7px;background:#ffd84d;color:#17324d;font-weight:800}.primary:disabled{opacity:.5}.saved{margin:0;color:#247a45;font-size:12px}@media(max-width:700px){.trigger{width:34px;padding:3px}.triggerLabel{display:none}}
 </style>
