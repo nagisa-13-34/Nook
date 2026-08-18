@@ -9,9 +9,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<template v-else-if="detail">
 		<header :class="$style.topbar">
 			<div :class="$style.identity">
-				<div :class="$style.communityMark">N</div>
+				<div :class="$style.communityMark">{{ communityInitial }}</div>
 				<div>
-					<strong>{{ l.community }}</strong>
+					<strong>{{ displayName }}</strong>
 					<small>{{ detail.memberCount }} {{ l.members }}</small>
 				</div>
 				<span :class="$style.ageMode">{{ ageModeLabel }}</span>
@@ -36,9 +36,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 		<section v-else-if="!isActiveMember" :class="$style.joinPanel">
 			<div :class="$style.joinHeading">
-				<div :class="$style.joinIcon"><i class="ti ti-users-group"></i></div>
+				<div :class="$style.joinIcon">{{ communityInitial }}</div>
 				<div>
-					<h2>{{ l.community }}</h2>
+					<h2>{{ displayName }}</h2>
 					<p>{{ detail.memberCount }} {{ l.members }}</p>
 				</div>
 			</div>
@@ -147,7 +147,12 @@ import NookCommunityBots from './NookCommunityBots.vue';
 import NookCommunityAdmin from './NookCommunityAdmin.vue';
 import type { CommunityDetail, CommunityPin, CommunityRule } from './types.js';
 
-const props = defineProps<{ communityId: string; voiceEnabled: boolean }>();
+const props = defineProps<{
+	communityId: string;
+	communityName?: string;
+	voiceEnabled: boolean;
+}>();
+
 const detail = ref<CommunityDetail | null>(null);
 const rules = ref<CommunityRule[]>([]);
 const pins = ref<CommunityPin[]>([]);
@@ -159,6 +164,8 @@ const joinStatus = ref('');
 const autoTranslate = nookAutoTranslateEnabled;
 const targetLang = nookAutoTranslateTargetLang;
 
+const displayName = computed(() => props.communityName?.trim() || l.community);
+const communityInitial = computed(() => displayName.value.slice(0, 1).toUpperCase());
 const isActiveMember = computed(() => detail.value?.membership?.state === 'active');
 const isBanned = computed(() => detail.value?.membership?.state === 'banned');
 const ageModeLabel = computed(() => detail.value?.ageMode === 'minors_only'
@@ -184,7 +191,7 @@ const canOpenAdmin = computed(() => [
 
 const tabs = computed(() => [
 	{ key: 'channels', label: l.channels, icon: 'ti ti-hash' },
-	{ key: 'home', label: 'Info', icon: 'ti ti-info-circle' },
+	{ key: 'home', label: l.info, icon: 'ti ti-info-circle' },
 	{ key: 'announcements', label: l.announcements, icon: 'ti ti-speakerphone' },
 	{ key: 'events', label: l.events, icon: 'ti ti-calendar-event' },
 	{ key: 'members', label: l.members, icon: 'ti ti-users' },
@@ -283,12 +290,16 @@ onMounted(load);
 }
 
 .identity > div:nth-child(2) {
+	min-width: 0;
 	display: flex;
 	flex-direction: column;
 }
 
 .identity strong {
+	overflow: hidden;
 	font-size: 14px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .identity small {
@@ -431,7 +442,8 @@ onMounted(load);
 	border-radius: 12px;
 	background: var(--community-blue);
 	color: #fff;
-	font-size: 21px;
+	font-size: 18px;
+	font-weight: 850;
 }
 
 .joinHeading h2,
