@@ -5,9 +5,8 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import type { DriveFilesRepository } from '@/models/_.js';
+import type { DriveFilesRepository, UsersRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
-import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { requireNookCommunityMember, NookCommunityAccessError } from '@/nook/community/access.js';
@@ -49,8 +48,8 @@ export const paramDef = {
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.db) private db: DataSource,
+		@Inject(DI.usersRepository) private usersRepository: UsersRepository,
 		@Inject(DI.driveFilesRepository) private driveFilesRepository: DriveFilesRepository,
-		private userEntityService: UserEntityService,
 		private driveFileEntityService: DriveFileEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
@@ -62,17 +61,18 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw error;
 			}
 
-			const memberRows = await this.db.query<Array<{ nickname: string | null; avatarId: string | null; joinedAt: Date }>>(
-				'SELECT "nickname", "avatarId", "joinedAt" FROM "nook_community_member" WHERE "communityId" = $1 AND "userId" = $2 LIMIT 1',
-				[ps.communityId, me.id],
-			);
-			const communityRows = await this.db.query<Array<{ createdAt: Date }>>(
-				'SELECT "createdAt" FROM "channel" WHERE "id" = $1 LIMIT 1',
-				[ps.communityId],
-			);
+			const [memberRows, communityRows, user] = await Promise.all([
+				this.db.query<Array<{ nickname: string | null; avatarId: string | null; joinedAt: Date }>>(
+					'SELECT "nickname", "avatarId", "joinedAt" FROM "nook_community_member" WHERE "communityId" = $1 AND "userId" = $2 LIMIT 1',
+					[ps.communityId, me.id],
+				),
+				this.db.query<Array<{ createdAt: Date }>>(
+					'SELECT "createdAt" FROM "channel" WHERE "id" = $1 LIMIT 1',
+					[ps.communityId],
+				),
+				this.usersRepository.findOneBy({ id: me.id }),
+			]);
 			const row = memberRows[0];
-			const packedUsers = await this.userEntityService.packMany([me.id], me, { schema: 'UserLite' });
-			const user = packedUsers[0];
 			const avatar = row?.avatarId == null ? null : await this.driveFilesRepository.findOneBy({ id: row.avatarId });
 
 			return {
