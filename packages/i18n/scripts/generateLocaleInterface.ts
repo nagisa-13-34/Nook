@@ -51,9 +51,7 @@ function createMembers(record: LocaleRecord): ts.TypeElement[] {
 			ts.addSyntheticLeadingComment(
 				node,
 				ts.SyntaxKind.MultiLineCommentTrivia,
-				`*
- * ${v.replace(/\n/g, '\n * ')}
- `,
+				`*\n * ${v.replace(/\n/g, '\n * ')}\n `,
 				true,
 			);
 		}
@@ -139,11 +137,24 @@ export async function generateLocaleInterface(localesDir: string): Promise<void>
 		);
 
 	const autogenDir = `${__dirname}/../src/autogen`;
+	const temporaryPath = `${autogenDir}/_locale.ts`;
+	const targetPath = `${autogenDir}/locale.ts`;
 	fs.mkdirSync(autogenDir, { recursive: true });
 
-	// 一瞬ファイルが存在しなくなって途切れる→不安定になるらしいので、リネームで対処
-	fs.writeFileSync(`${autogenDir}/_locale.ts`, printed, 'utf-8');
-	fs.renameSync(`${autogenDir}/_locale.ts`, `${autogenDir}/locale.ts`);
+	// Prefer an atomic rename. On Windows, a watcher can briefly hold the
+	// destination open and cause EPERM, so fall back to overwriting it in place.
+	fs.writeFileSync(temporaryPath, printed, 'utf-8');
+	try {
+		fs.renameSync(temporaryPath, targetPath);
+	} catch (error) {
+		const code = error != null && typeof error === 'object' && 'code' in error
+			? error.code
+			: undefined;
+		if (process.platform !== 'win32' || code !== 'EPERM') throw error;
+
+		fs.writeFileSync(targetPath, printed, 'utf-8');
+		fs.rmSync(temporaryPath, { force: true });
+	}
 }
 
 // スクリプトとして直接実行された場合
