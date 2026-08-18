@@ -18,23 +18,24 @@ interface NookCommunityMemberListRecord {
 	baseRole: NookCommunityBaseRole;
 	state: 'active' | 'banned';
 	nickname: string | null;
+	avatarId: string | null;
 	joinedAt: Date;
 	roleIds: string[];
 }
 
 export async function listNookCommunityMembers(db: DataSource, communityId: string): Promise<NookCommunityMemberListRecord[]> {
 	const members = await db.query<NookCommunityMemberListRecord[]>(
-		`SELECT m."userId", m."baseRole", m."state", m."nickname", m."joinedAt",
+		`SELECT m."userId", m."baseRole", m."state", m."nickname", m."avatarId", m."joinedAt",
 		 COALESCE(array_agg(mr."roleId") FILTER (WHERE mr."roleId" IS NOT NULL), '{}') AS "roleIds"
 		 FROM "nook_community_member" m
 		 LEFT JOIN "nook_community_member_role" mr ON mr."communityId" = m."communityId" AND mr."userId" = m."userId"
 		 WHERE m."communityId" = $1
-		 GROUP BY m."communityId", m."userId", m."baseRole", m."state", m."nickname", m."joinedAt"
+		 GROUP BY m."communityId", m."userId", m."baseRole", m."state", m."nickname", m."avatarId", m."joinedAt"
 		 ORDER BY m."joinedAt" ASC LIMIT 1000`, [communityId]);
 	const ownerRows = await db.query<Array<{ userId: string | null; createdAt: Date }>>('SELECT "userId", "createdAt" FROM "channel" WHERE "id"=$1 LIMIT 1', [communityId]);
 	const owner = ownerRows[0];
 	if (owner?.userId != null && !members.some(member => member.userId === owner.userId)) {
-		members.unshift({ userId: owner.userId, baseRole: 'owner', state: 'active', nickname: null, joinedAt: owner.createdAt, roleIds: [] });
+		members.unshift({ userId: owner.userId, baseRole: 'owner', state: 'active', nickname: null, avatarId: null, joinedAt: owner.createdAt, roleIds: [] });
 	}
 	return members;
 }
