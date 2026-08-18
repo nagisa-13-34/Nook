@@ -134,12 +134,36 @@ function onContextmenu(ev: PointerEvent) {
 $widgets-hide-threshold: 1090px;
 
 .root {
+	--nook-blue: #175cd3;
+	--nook-blue-deep: #17324d;
+	--nook-blue-soft: #eef5ff;
+	--nook-yellow: #ffd84d;
+	--nook-yellow-soft: #fff7cc;
+	--nook-white: #ffffff;
+	--nook-border: #d7e3f1;
+	--nook-muted: #667a91;
+
+	/* Nook UI uses a fixed product palette instead of inheriting Misskey's visual identity. */
+	--MI_THEME-accent: var(--nook-blue);
+	--MI_THEME-bg: var(--nook-blue-soft);
+	--MI_THEME-panel: var(--nook-white);
+	--MI_THEME-navBg: var(--nook-white);
+	--MI_THEME-navFg: var(--nook-blue-deep);
+	--MI_THEME-fg: var(--nook-blue-deep);
+	--MI_THEME-divider: var(--nook-border);
+	--MI_THEME-indicator: var(--nook-yellow);
+	--MI_THEME-buttonGradateA: var(--nook-yellow);
+	--MI_THEME-buttonGradateB: var(--nook-yellow);
+	--MI_THEME-fgOnAccent: var(--nook-blue-deep);
+	--MI_THEME-accentedBg: #e6f0ff;
+
 	height: 100dvh;
 	overflow: clip;
 	contain: strict;
 	display: flex;
 	flex-direction: column;
-	background: var(--MI_THEME-navBg);
+	background: var(--nook-blue-soft);
+	color: var(--nook-blue-deep);
 }
 
 .nonTitlebarArea {
@@ -149,7 +173,7 @@ $widgets-hide-threshold: 1090px;
 }
 
 .sidebar {
-	border-right: solid 0.5px var(--MI_THEME-divider);
+	border-right: solid 1px var(--nook-border);
 }
 
 .contents {
@@ -158,10 +182,11 @@ $widgets-hide-threshold: 1090px;
 	flex: 1;
 	height: 100%;
 	min-width: 0;
+	background: var(--nook-blue-soft);
 
 	&.withSidebarAndTitlebar {
-		background: var(--MI_THEME-navBg);
-		border-radius: 12px 0 0 0;
+		background: var(--nook-blue-soft);
+		border-radius: 0;
 		overflow: clip;
 	}
 }
@@ -183,8 +208,8 @@ $widgets-hide-threshold: 1090px;
 	box-sizing: border-box;
 	overflow: auto;
 	padding: var(--MI-margin) var(--MI-margin) calc(var(--MI-margin) + env(safe-area-inset-bottom, 0px));
-	border-left: solid 0.5px var(--MI_THEME-divider);
-	background: var(--MI_THEME-bg);
+	border-left: solid 1px var(--nook-border);
+	background: var(--nook-white);
 
 	@media (max-width: $widgets-hide-threshold) {
 		display: none;
