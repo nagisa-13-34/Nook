@@ -3,50 +3,21 @@ SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 <template>
-<section class="_gaps">
-	<form v-if="canManage" class="_panel" :class="$style.form" @submit.prevent="createAnnouncement">
-		<input v-model="title" required maxlength="160" placeholder="Title" :class="$style.input">
-		<textarea v-model="body" required maxlength="12000" rows="4" :class="$style.input"></textarea>
-		<label><input v-model="important" type="checkbox"> Important</label>
-		<button class="_button" :class="$style.primary">{{ l.create }}</button>
-	</form>
-	<article v-for="item in items" :key="item.id" class="_panel" :class="$style.item">
-		<strong><span v-if="item.important">📢 </span>{{ item.title }}</strong>
-		<p>{{ item.body }}</p><NookAutoTranslation kind="communityAnnouncement" :objectId="item.id" :text="item.body"/><small>{{ new Date(item.createdAt).toLocaleString() }}</small>
-		<button v-if="canManage" class="_button" @click="remove(item.id)">🗑 {{ l.delete }}</button>
-	</article>
+<section :class="$style.root">
+	<form v-if="canManage" :class="$style.form" @submit.prevent="createAnnouncement"><input v-model="title" required maxlength="160" placeholder="Title"><textarea v-model="body" required maxlength="12000" rows="4"></textarea><label><input v-model="important" type="checkbox"> Important</label><button class="_button" :class="$style.primary">{{ l.create }}</button></form>
+	<article v-for="item in items" :key="item.id" :class="$style.item" @contextmenu.prevent="openMenu($event,item)" @pointerdown="startLongPress($event,item)" @pointerup="cancelLongPress" @pointercancel="cancelLongPress" @pointermove="cancelLongPress"><div :class="$style.title"><strong><span v-if="item.important">📢 </span>{{ item.title }}</strong><i v-if="isPinned(item.id)" class="ti ti-pin"></i></div><p>{{ item.body }}</p><NookAutoTranslation kind="communityAnnouncement" :objectId="item.id" :text="item.body"/><small>{{ new Date(item.createdAt).toLocaleString() }}</small><button v-if="canManage" class="_button" :class="$style.delete" @click="remove(item.id)"><i class="ti ti-trash"></i> {{ l.delete }}</button></article>
+	<div v-if="menu.open" :class="$style.menu" :style="{left:`${menu.x}px`,top:`${menu.y}px`}" @click.stop><button class="_button" @click="togglePin"><i :class="isPinned(menu.item?.id||'')?'ti ti-pin-off':'ti ti-pin'"></i> {{ isPinned(menu.item?.id||'')?l.unpin:l.pin }}</button></div>
 </section>
 </template>
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { nookApi } from './nook-api.js';
-import { communityLabels as l } from './labels.js';
-import NookAutoTranslation from './NookAutoTranslation.vue';
-import type { CommunityAnnouncement } from './types.js';
-
-const props = defineProps<{ communityId: string; canManage: boolean }>();
-const items = ref<CommunityAnnouncement[]>([]);
-const title = ref('');
-const body = ref('');
-const important = ref(false);
-
-async function load() {
-	items.value = await nookApi('nook/community/announcements/list', { communityId: props.communityId });
-}
-
-async function createAnnouncement() {
-	await nookApi('nook/community/announcements/create', { communityId: props.communityId, title: title.value, body: body.value, important: important.value });
-	title.value = '';
-	body.value = '';
-	important.value = false;
-	await load();
-}
-
-async function remove(id: string) {
-	await nookApi('nook/community/announcements/delete', { communityId: props.communityId, announcementId: id });
-	await load();
-}
-
-onMounted(load);
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'; import { nookApi } from './nook-api.js'; import { communityLabels as l } from './labels.js'; import NookAutoTranslation from './NookAutoTranslation.vue'; import type { CommunityAnnouncement,CommunityPin } from './types.js';
+const props=defineProps<{communityId:string;canManage:boolean;canManagePins:boolean}>(); const items=ref<CommunityAnnouncement[]>([]),pins=ref<CommunityPin[]>([]),title=ref(''),body=ref(''),important=ref(false); const menu=reactive<{open:boolean;x:number;y:number;item:CommunityAnnouncement|null}>({open:false,x:0,y:0,item:null});let longPress:number|undefined;
+async function load(){const [announcements,loadedPins]=await Promise.all([nookApi<CommunityAnnouncement[]>('nook/community/announcements/list',{communityId:props.communityId}),nookApi<CommunityPin[]>('nook/community/pins/list',{communityId:props.communityId,channelId:null}).catch(()=>[])]);items.value=announcements;pins.value=loadedPins}
+async function createAnnouncement(){await nookApi('nook/community/announcements/create',{communityId:props.communityId,title:title.value,body:body.value,important:important.value});title.value='';body.value='';important.value=false;await load()} async function remove(id:string){await nookApi('nook/community/announcements/delete',{communityId:props.communityId,announcementId:id});await load()}
+function pinFor(id:string){return pins.value.find(p=>p.kind==='announcement'&&p.targetId===id)} function isPinned(id:string){return!!pinFor(id)} function openMenu(e:MouseEvent|PointerEvent,item:CommunityAnnouncement){if(!props.canManagePins)return;menu.open=true;menu.x=Math.min(e.clientX,window.innerWidth-180);menu.y=Math.min(e.clientY,window.innerHeight-70);menu.item=item} function startLongPress(e:PointerEvent,item:CommunityAnnouncement){if(e.pointerType==='mouse'||!props.canManagePins)return;cancelLongPress();const{x,y}=e;longPress=window.setTimeout(()=>openMenu({clientX:x,clientY:y} as PointerEvent,item),550)} function cancelLongPress(){if(longPress){clearTimeout(longPress);longPress=undefined}} function closeMenu(){menu.open=false;menu.item=null;cancelLongPress()}
+async function togglePin(){const item=menu.item;if(!item)return;const existing=pinFor(item.id);if(existing)await nookApi('nook/community/pins/delete',{communityId:props.communityId,pinId:existing.id});else await nookApi('nook/community/pins/create',{communityId:props.communityId,channelId:null,kind:'announcement',targetId:item.id,label:item.title});closeMenu();await load()}
+function outside(){closeMenu()} onMounted(()=>{window.addEventListener('click',outside);void load()});onBeforeUnmount(()=>{window.removeEventListener('click',outside);cancelLongPress()});
 </script>
-<style module>.form,.item{padding:16px}.input{display:block;width:100%;box-sizing:border-box;margin:6px 0;padding:9px;border:1px solid var(--MI_THEME-divider);border-radius:8px;background:var(--MI_THEME-panel);color:var(--MI_THEME-fg)}.primary{padding:8px 14px;background:var(--MI_THEME-accent);color:var(--MI_THEME-fgOnAccent);border-radius:8px}</style>
+<style lang="scss" module>
+.root{display:grid;gap:10px}.form,.item{padding:16px;border:1px solid #d7e3f1;border-radius:8px;background:#fff}.form input,.form textarea{display:block;box-sizing:border-box;width:100%;margin:6px 0;padding:9px;border:1px solid #d7e3f1;border-radius:7px;background:#fff;color:#17324d}.primary{padding:8px 14px;border-radius:7px;background:#ffd84d;color:#17324d;font-weight:800}.title{display:flex;align-items:center;gap:8px}.title i{color:#d3a900}.item p{white-space:pre-wrap;line-height:1.6;color:#52677d}.item small{display:block;color:#8190a0}.delete{margin-top:9px;padding:6px 9px;border-radius:6px;color:#a33}.menu{position:fixed;z-index:100001;min-width:160px;padding:5px;border:1px solid #d7e3f1;border-radius:8px;background:#fff;box-shadow:0 8px 24px rgba(23,50,77,.16)}.menu button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 9px;border-radius:6px;text-align:left}.menu button:hover{background:#eef5ff;color:#175cd3}
+</style>
