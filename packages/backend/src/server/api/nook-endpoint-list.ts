@@ -11,6 +11,8 @@ export * as 'notes/recommended-page' from './endpoints/notes/recommended-page.js
 export * as 'nook/features' from './endpoints/nook/features.js';
 export * as 'nook/community/show' from './endpoints/nook/community/show.js';
 export * as 'nook/community/settings-update' from './endpoints/nook/community/settings-update.js';
+export * as 'nook/community/transfer-ownership' from './endpoints/nook/community/transfer-ownership.js';
+export * as 'nook/community/delete' from './endpoints/nook/community/delete.js';
 export * as 'nook/community/join' from './endpoints/nook/community/join.js';
 export * as 'nook/community/leave' from './endpoints/nook/community/leave.js';
 export * as 'nook/community/join-requests/list' from './endpoints/nook/community/join-requests/list.js';
