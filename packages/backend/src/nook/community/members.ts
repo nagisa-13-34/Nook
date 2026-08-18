@@ -32,10 +32,10 @@ export async function listNookCommunityMembers(db: DataSource, communityId: stri
 		 WHERE m."communityId" = $1
 		 GROUP BY m."communityId", m."userId", m."baseRole", m."state", m."nickname", m."avatarId", m."joinedAt"
 		 ORDER BY m."joinedAt" ASC LIMIT 1000`, [communityId]);
-	const ownerRows = await db.query<Array<{ userId: string | null; createdAt: Date }>>('SELECT "userId", "createdAt" FROM "channel" WHERE "id"=$1 LIMIT 1', [communityId]);
+	const ownerRows = await db.query<Array<{ userId: string | null }>>('SELECT "userId" FROM "channel" WHERE "id"=$1 LIMIT 1', [communityId]);
 	const owner = ownerRows[0];
 	if (owner?.userId != null && !members.some(member => member.userId === owner.userId)) {
-		members.unshift({ userId: owner.userId, baseRole: 'owner', state: 'active', nickname: null, avatarId: null, joinedAt: owner.createdAt, roleIds: [] });
+		members.unshift({ userId: owner.userId, baseRole: 'owner', state: 'active', nickname: null, avatarId: null, joinedAt: new Date(), roleIds: [] });
 	}
 	return members;
 }
