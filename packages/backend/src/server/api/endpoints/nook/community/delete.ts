@@ -30,12 +30,13 @@ export const paramDef = {
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(@Inject(DI.db) private db: DataSource) {
 		super(meta, paramDef, async (ps, me) => {
-		return await this.db.transaction(async manager => {
-			const rows = await manager.query<Array<{ userId: string | null }>>('SELECT "userId" FROM "channel" WHERE "id" = $1 FOR UPDATE', [ps.communityId]);
-			if (rows.length === 0) throw new ApiError(meta.errors.noSuchCommunity);
-			if (rows[0].userId !== me.id) throw new ApiError(meta.errors.forbidden);
-			await manager.query('DELETE FROM "channel" WHERE "id" = $1', [ps.communityId]);
-			return { deleted: true };
+			return await this.db.transaction(async manager => {
+				const rows = await manager.query<Array<{ userId: string | null }>>('SELECT "userId" FROM "channel" WHERE "id" = $1 FOR UPDATE', [ps.communityId]);
+				if (rows.length === 0) throw new ApiError(meta.errors.noSuchCommunity);
+				if (rows[0].userId !== me.id) throw new ApiError(meta.errors.forbidden);
+				await manager.query('DELETE FROM "channel" WHERE "id" = $1', [ps.communityId]);
+				return { deleted: true };
+			});
 		});
 	}
 }
