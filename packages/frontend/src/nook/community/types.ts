@@ -46,7 +46,18 @@ export interface CommunityMessage {
 
 export interface CommunityRule { id: string; communityId: string; position: number; title: string; body: string; }
 export interface CommunityRole { id: string; communityId: string; name: string; color: string | null; position: number; permissions: string[]; }
-export interface CommunityMember { userId: string; baseRole: string; state: string; nickname: string | null; joinedAt: string; roleIds: string[]; }
+export interface CommunityMember {
+	userId: string;
+	baseRole: string;
+	state: string;
+	nickname: string | null;
+	joinedAt: string;
+	roleIds: string[];
+	username: string;
+	name: string | null;
+	avatarUrl: string | null;
+	host: string | null;
+}
 export interface CommunityAnnouncement { id: string; communityId: string; authorId: string | null; title: string; body: string; important: boolean; createdAt: string; updatedAt: string; expiresAt: string | null; }
 export interface CommunityPin { id: string; communityId: string; channelId: string | null; kind: string; targetId: string | null; url: string | null; label: string | null; createdBy: string | null; createdAt: string; }
 export interface CommunityEvent { id: string; communityId: string; creatorId: string | null; title: string; description: string | null; location: string | null; startsAt: string; endsAt: string | null; maxAttendees: number | null; textChannelId: string | null; voiceChannelId: string | null; cancelledAt: string | null; createdAt: string; updatedAt: string; goingCount: number; interestedCount: number; myResponse: 'going' | 'interested' | 'not_going' | null; }
