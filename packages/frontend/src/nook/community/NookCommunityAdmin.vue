@@ -3,119 +3,35 @@ SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 <template>
-<section class="_gaps">
-	<div v-if="can('community.manage')" class="_panel" :class="$style.box">
+<section :class="$style.root">
+	<section v-if="can('community.manage')" :class="$style.panel">
 		<h3>{{ l.settings }}</h3>
 		<div :class="$style.settingsGrid">
-			<label :class="$style.field">
-				<span>{{ l.joinMode }}</span>
-				<select v-model="joinMode">
-					<option value="open">{{ l.joinModeOpen }}</option>
-					<option value="approval">{{ l.joinModeApproval }}</option>
-					<option value="invite">{{ l.joinModeInvite }}</option>
-					<option value="private">{{ l.joinModePrivate }}</option>
-				</select>
-			</label>
-			<label :class="$style.field">
-				<span>{{ l.ageMode }}</span>
-				<select v-model="ageMode">
-					<option value="minors_only">{{ l.ageModeMinorsOnly }}</option>
-					<option value="mixed">{{ l.ageModeMixed }}</option>
-					<option value="adults_only">{{ l.ageModeAdultsOnly }}</option>
-				</select>
-				<small :class="$style.hint">{{ l.ageModeHint }}</small>
-			</label>
-			<label :class="$style.checkField"><input v-model="discoverable" type="checkbox"> {{ l.discoverable }}</label>
+			<label><span>{{ l.joinMode }}</span><select v-model="joinMode"><option value="open">{{ l.joinModeOpen }}</option><option value="approval">{{ l.joinModeApproval }}</option><option value="invite">{{ l.joinModeInvite }}</option><option value="private">{{ l.joinModePrivate }}</option></select></label>
+			<label><span>{{ l.ageMode }}</span><select v-model="ageMode"><option value="minors_only">{{ l.ageModeMinorsOnly }}</option><option value="mixed">{{ l.ageModeMixed }}</option><option value="adults_only">{{ l.ageModeAdultsOnly }}</option></select><small>{{ l.ageModeHint }}</small></label>
+			<label :class="$style.check"><input v-model="discoverable" type="checkbox"><span>{{ l.discoverable }}</span></label>
 		</div>
-		<div :class="$style.settingsActions">
-			<button type="button" class="_button" :class="$style.primary" @click="saveSettings">{{ l.save }}</button>
-			<p v-if="settingsMessage" :class="[$style.settingsMessage, { [$style.error]: settingsMessageError }]" :role="settingsMessageError ? 'alert' : 'status'">{{ settingsMessage }}</p>
-		</div>
-	</div>
+		<div :class="$style.actions"><span v-if="settingsMessage" :class="{[$style.error]:settingsMessageError}">{{ settingsMessage }}</span><button class="_button" :class="$style.primary" @click="saveSettings">{{ l.save }}</button></div>
+	</section>
 
-	<div v-if="can('channels.manage')" class="_panel" :class="$style.box">
+	<section v-if="can('channels.manage')" :class="$style.panel">
 		<h3>{{ l.channels }}</h3>
-		<div :class="$style.channelList">
-			<div v-for="channel in channels" :key="channel.id" :class="$style.channelRow">
-				<span>{{ channel.kind === 'voice' ? '🔊' : '#' }} {{ channel.name }}</span>
-				<small v-if="channel.parentId">↳ {{ parentName(channel.parentId) }}</small>
-			</div>
-		</div>
-		<form :class="$style.channelForm" @submit.prevent="createChannel">
-			<input v-model="channelName" required maxlength="64" placeholder="Channel name">
-			<select v-model="channelKind">
-				<option value="text">text</option>
-				<option value="announcement">announcement</option>
-				<option value="media">media</option>
-				<option value="forum">forum</option>
-				<option v-if="voiceEnabled" value="voice">voice</option>
-			</select>
-			<select v-model="channelParentId">
-				<option value="">{{ l.noCategory }}</option>
-				<option v-for="candidate in categoryCandidates" :key="candidate.id" :value="candidate.id">{{ candidate.name }}</option>
-			</select>
-			<button class="_button" :class="$style.primary">{{ l.create }}</button>
-		</form>
-		<small :class="$style.hint">{{ l.categoryHint }}</small>
-	</div>
+		<div :class="$style.channelList"><div v-for="channel in channels" :key="channel.id" :class="$style.channelRow"><div><strong>{{ channel.topic===CATEGORY_TOPIC?'▾':channel.kind==='voice'?'🔊':'#' }} {{ channel.name }}</strong><small v-if="channel.parentId">{{ parentName(channel.parentId) }}</small></div><button class="_button" :title="l.delete" @click="deleteChannel(channel.id)"><i class="ti ti-trash"></i></button></div></div>
+		<form :class="$style.channelForm" @submit.prevent="createChannel"><input v-model="channelName" required maxlength="64" :placeholder="l.defaultChannelName"><select v-model="channelKind"><option value="text">text</option><option value="announcement">announcement</option><option value="media">media</option><option value="forum">forum</option><option v-if="voiceEnabled" value="voice">voice</option></select><select v-model="channelParentId"><option value="">{{ l.noCategory }}</option><option v-for="candidate in categoryCandidates" :key="candidate.id" :value="candidate.id">{{ candidate.name }}</option></select><button class="_button" :class="$style.primary">{{ l.create }}</button></form>
+	</section>
 
-	<div v-if="can('roles.manage')" class="_panel" :class="$style.box">
-		<h3>{{ l.role }}</h3>
-		<div v-for="role in roles" :key="role.id">
-			<span :style="{ color: role.color || undefined }">{{ role.name }}</span>
-			<small>{{ role.permissions.join(', ') }}</small>
-			<button class="_button" @click="deleteRole(role.id)">×</button>
-		</div>
-		<form @submit.prevent="createRole">
-			<input v-model="roleName" required maxlength="64" placeholder="Role name">
-			<input v-model="rolePermissions" placeholder="messages.post, events.manage">
-			<button class="_button">{{ l.create }}</button>
-		</form>
-	</div>
+	<section v-if="can('roles.manage')" :class="$style.panel"><NookCommunityRoleEditor :communityId="communityId"/></section>
 
-	<div v-if="can('rules.manage')" class="_panel" :class="$style.box">
-		<h3>{{ l.rules }}</h3>
-		<article v-for="rule in rules" :key="rule.id">
-			<strong>{{ rule.title }}</strong>
-			<p>{{ rule.body }}</p>
-			<button class="_button" @click="deleteRule(rule.id)">×</button>
-		</article>
-		<form @submit.prevent="createRule">
-			<input v-model="ruleTitle" required maxlength="128" placeholder="Rule">
-			<textarea v-model="ruleBody" required maxlength="4096"></textarea>
-			<button class="_button">{{ l.create }}</button>
-		</form>
-	</div>
+	<section v-if="isOwner" :class="$style.panel">
+		<h3>{{ l.transferOwnership }}</h3><p :class="$style.help">{{ l.transferOwnershipHint }}</p>
+		<div :class="$style.inline"><select v-model="targetOwnerId"><option value="">{{ l.selectNewOwner }}</option><option v-for="member in transferCandidates" :key="member.userId" :value="member.userId">{{ member.nickname||member.name||member.username }} ({{ memberHandle(member) }})</option></select><button class="_button" :class="$style.primary" :disabled="!targetOwnerId" @click="transferOwnership">{{ l.transfer }}</button></div>
+	</section>
 
-	<div v-if="can('members.invite')" class="_panel" :class="$style.box">
-		<h3>{{ l.invite }}</h3>
-		<button class="_button" @click="createInvite">{{ l.create }}</button>
-		<div v-if="inviteToken" :class="$style.token">
-			<code>{{ inviteToken }}</code>
-			<button class="_button" @click="copyInvite">{{ l.copy }}</button>
-		</div>
-		<div v-for="invite in invites" :key="invite.id">
-			<small>{{ invite.id }} · {{ invite.useCount }}/{{ invite.maxUses ?? '∞' }}</small>
-			<button class="_button" @click="revokeInvite(invite.id)">Revoke</button>
-		</div>
-	</div>
-
-	<div v-if="can('pins.manage')" class="_panel" :class="$style.box">
-		<h3>{{ l.pins }}</h3>
-		<div v-for="pin in pins" :key="pin.id">📌 {{ pin.label || pin.url || pin.targetId }} <button class="_button" @click="deletePin(pin.id)">×</button></div>
-		<form @submit.prevent="createPin">
-			<select v-model="pinKind">
-				<option value="url">url</option>
-				<option value="note">note</option>
-				<option value="message">message</option>
-				<option value="announcement">announcement</option>
-				<option value="event">event</option>
-			</select>
-			<input v-model="pinTarget" placeholder="URL or target ID">
-			<input v-model="pinLabel" placeholder="Label">
-			<button class="_button">{{ l.create }}</button>
-		</form>
-	</div>
+	<section v-if="isOwner" :class="[$style.panel,$style.dangerZone]">
+		<h3>{{ l.deleteCommunity }}</h3><p>{{ l.deleteCommunityHint }}</p>
+		<label><span>{{ l.typeCommunityName }}</span><input v-model="deleteConfirmation" :placeholder="communityName"></label>
+		<button class="_button" :class="$style.danger" :disabled="deleteConfirmation!==communityName" @click="deleteCommunity"><i class="ti ti-trash"></i> {{ l.deleteCommunity }}</button>
+	</section>
 </section>
 </template>
 
@@ -123,253 +39,27 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, onMounted, ref, watch } from 'vue';
 import { nookApi } from './nook-api.js';
 import { communityLabels as l } from './labels.js';
-import type { CommunityChannel, CommunityDetail, CommunityPin, CommunityRole, CommunityRule } from './types.js';
+import NookCommunityRoleEditor from './NookCommunityRoleEditor.vue';
+import type { CommunityChannel, CommunityDetail, CommunityMember } from './types.js';
 
-const props = defineProps<{ communityId: string; detail: CommunityDetail; voiceEnabled: boolean }>();
-const emit = defineEmits<{ refresh: [] }>();
-const joinMode = ref(props.detail.joinMode);
-const ageMode = ref(props.detail.ageMode);
-const discoverable = ref(props.detail.discoverable);
-const settingsMessage = ref('');
-const settingsMessageError = ref(false);
-const channels = ref<CommunityChannel[]>([]);
-const roles = ref<CommunityRole[]>([]);
-const rules = ref<CommunityRule[]>([]);
-const invites = ref<Array<{ id: string; useCount: number; maxUses: number | null }>>([]);
-const pins = ref<CommunityPin[]>([]);
-const channelName = ref('');
-const channelKind = ref<CommunityChannel['kind']>('text');
-const channelParentId = ref('');
-const roleName = ref('');
-const rolePermissions = ref('messages.post');
-const ruleTitle = ref('');
-const ruleBody = ref('');
-const inviteToken = ref('');
-const pinKind = ref<'url' | 'note' | 'message' | 'announcement' | 'event'>('url');
-const pinTarget = ref('');
-const pinLabel = ref('');
-
-const categoryCandidates = computed(() => channels.value.filter(channel => channel.parentId == null && channel.kind !== 'voice'));
-
-function can(permission: string) {
-	const values = props.detail.membership?.permissions ?? [];
-	return values.includes('*') || values.includes(permission);
-}
-
-function parentName(parentId: string) {
-	return channels.value.find(channel => channel.id === parentId)?.name ?? parentId;
-}
-
-async function safe<T>(request: Promise<T>, fallback: T): Promise<T> {
-	try {
-		return await request;
-	} catch {
-		return fallback;
-	}
-}
-
-async function load() {
-	const requests: Promise<void>[] = [];
-	if (can('channels.manage')) requests.push(safe(nookApi<CommunityChannel[]>('nook/community/channels/list', { communityId: props.communityId }), []).then(value => { channels.value = value; }));
-	if (can('roles.manage')) requests.push(safe(nookApi<CommunityRole[]>('nook/community/roles/list', { communityId: props.communityId }), []).then(value => { roles.value = value; }));
-	if (can('rules.manage')) requests.push(safe(nookApi<CommunityRule[]>('nook/community/rules/list', { communityId: props.communityId }), []).then(value => { rules.value = value; }));
-	if (can('members.invite')) requests.push(safe(nookApi<Array<{ id: string; useCount: number; maxUses: number | null }>>('nook/community/invites/list', { communityId: props.communityId }), []).then(value => { invites.value = value; }));
-	if (can('pins.manage')) requests.push(safe(nookApi<CommunityPin[]>('nook/community/pins/list', { communityId: props.communityId, channelId: null }), []).then(value => { pins.value = value; }));
-	await Promise.all(requests);
-}
-
-async function saveSettings() {
-	settingsMessage.value = '';
-	settingsMessageError.value = false;
-	try {
-		await nookApi('nook/community/settings-update', { communityId: props.communityId, joinMode: joinMode.value, ageMode: ageMode.value, discoverable: discoverable.value });
-		settingsMessage.value = l.settingsSaved;
-		emit('refresh');
-	} catch (error) {
-		settingsMessageError.value = true;
-		settingsMessage.value = (error as { code?: string }).code === 'AGE_MODE_CONFLICT' ? l.ageModeConflict : l.settingsSaveFailed;
-	}
-}
-
-async function createChannel() {
-	if (channelKind.value === 'voice' && !props.voiceEnabled) return;
-	await nookApi('nook/community/channels/create', {
-		communityId: props.communityId,
-		name: channelName.value,
-		kind: channelKind.value,
-		parentId: channelParentId.value || null,
-	});
-	channelName.value = '';
-	channelParentId.value = '';
-	await load();
-}
-
-async function createRole() {
-	await nookApi('nook/community/roles/create', { communityId: props.communityId, name: roleName.value, permissions: rolePermissions.value.split(',').map(x => x.trim()).filter(Boolean) });
-	roleName.value = '';
-	await load();
-}
-
-async function deleteRole(roleId: string) {
-	await nookApi('nook/community/roles/delete', { communityId: props.communityId, roleId });
-	await load();
-}
-
-async function createRule() {
-	await nookApi('nook/community/rules/create', { communityId: props.communityId, title: ruleTitle.value, body: ruleBody.value });
-	ruleTitle.value = '';
-	ruleBody.value = '';
-	await load();
-}
-
-async function deleteRule(ruleId: string) {
-	await nookApi('nook/community/rules/delete', { communityId: props.communityId, ruleId });
-	await load();
-}
-
-async function createInvite() {
-	const result = await nookApi<{ token: string }>('nook/community/invites/create', { communityId: props.communityId });
-	inviteToken.value = result.token;
-	await load();
-}
-
-async function copyInvite() {
-	await navigator.clipboard.writeText(`${window.location.origin}/channels/${props.communityId}?invite=${encodeURIComponent(inviteToken.value)}`);
-}
-
-async function revokeInvite(inviteId: string) {
-	await nookApi('nook/community/invites/revoke', { communityId: props.communityId, inviteId });
-	await load();
-}
-
-async function createPin() {
-	const data: Record<string, unknown> = { communityId: props.communityId, kind: pinKind.value, label: pinLabel.value || null };
-	if (pinKind.value === 'url') data.url = pinTarget.value;
-	else data.targetId = pinTarget.value;
-	await nookApi('nook/community/pins/create', data);
-	pinTarget.value = '';
-	pinLabel.value = '';
-	await load();
-}
-
-async function deletePin(pinId: string) {
-	await nookApi('nook/community/pins/delete', { communityId: props.communityId, pinId });
-	await load();
-}
-
-watch(() => props.detail, detail => {
-	joinMode.value = detail.joinMode;
-	ageMode.value = detail.ageMode;
-	discoverable.value = detail.discoverable;
-	if (!props.voiceEnabled && channelKind.value === 'voice') channelKind.value = 'text';
-	void load();
-}, { deep: true });
-
-onMounted(load);
+const CATEGORY_TOPIC='__nook_category__';
+const props=defineProps<{communityId:string;communityName:string;detail:CommunityDetail;voiceEnabled:boolean}>();
+const emit=defineEmits<{refresh:[]}>();
+const joinMode=ref(props.detail.joinMode),ageMode=ref(props.detail.ageMode),discoverable=ref(props.detail.discoverable),settingsMessage=ref(''),settingsMessageError=ref(false),channels=ref<CommunityChannel[]>([]),members=ref<CommunityMember[]>([]),channelName=ref(''),channelKind=ref<CommunityChannel['kind']>('text'),channelParentId=ref(''),targetOwnerId=ref(''),deleteConfirmation=ref('');
+const isOwner=computed(()=>props.detail.membership?.baseRole==='owner');
+const categoryCandidates=computed(()=>channels.value.filter(c=>c.parentId==null&&c.kind!=='voice'));
+const transferCandidates=computed(()=>members.value.filter(m=>m.state==='active'&&m.baseRole!=='owner'));
+function can(permission:string){const values=props.detail.membership?.permissions??[];return values.includes('*')||values.includes(permission)}
+function parentName(id:string){return channels.value.find(c=>c.id===id)?.name??id} function memberHandle(m:CommunityMember){return`@${m.username}${m.host?`@${m.host}`:''}`}
+async function load(){const jobs:Promise<unknown>[]=[];if(can('channels.manage'))jobs.push(nookApi<CommunityChannel[]>('nook/community/channels/list',{communityId:props.communityId}).then(v=>channels.value=v).catch(()=>{}));if(isOwner.value)jobs.push(nookApi<CommunityMember[]>('nook/community/members/list',{communityId:props.communityId}).then(v=>members.value=v).catch(()=>{}));await Promise.all(jobs)}
+async function saveSettings(){settingsMessage.value='';settingsMessageError.value=false;try{await nookApi('nook/community/settings-update',{communityId:props.communityId,joinMode:joinMode.value,ageMode:ageMode.value,discoverable:discoverable.value});settingsMessage.value=l.settingsSaved;emit('refresh')}catch(error){settingsMessageError.value=true;settingsMessage.value=(error as {code?:string}).code==='AGE_MODE_CONFLICT'?l.ageModeConflict:l.settingsSaveFailed}}
+async function createChannel(){if(channelKind.value==='voice'&&!props.voiceEnabled)return;await nookApi('nook/community/channels/create',{communityId:props.communityId,name:channelName.value.trim(),kind:channelKind.value,parentId:channelParentId.value||null});channelName.value='';channelParentId.value='';await load()}
+async function deleteChannel(channelId:string){if(!window.confirm(`${l.delete} ${l.channels}?`))return;await nookApi('nook/community/channels/delete',{communityId:props.communityId,channelId});await load()}
+async function transferOwnership(){if(!targetOwnerId.value||!window.confirm(l.transferConfirm))return;await nookApi('nook/community/transfer-ownership',{communityId:props.communityId,targetUserId:targetOwnerId.value});targetOwnerId.value='';emit('refresh')}
+async function deleteCommunity(){if(deleteConfirmation.value!==props.communityName||!window.confirm(l.deleteCommunityConfirm))return;await nookApi('nook/community/delete',{communityId:props.communityId});window.location.assign('/channels')}
+watch(()=>props.detail,d=>{joinMode.value=d.joinMode;ageMode.value=d.ageMode;discoverable.value=d.discoverable;void load()},{deep:true});onMounted(load);
 </script>
 
 <style lang="scss" module>
-.box {
-	padding: 16px;
-}
-
-.box h3 {
-	margin-top: 0;
-}
-
-.box form {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
-	margin-top: 10px;
-}
-
-.box input,
-.box textarea,
-.box select {
-	padding: 8px;
-	background: var(--MI_THEME-bg);
-	color: var(--MI_THEME-fg);
-	border: 1px solid var(--MI_THEME-divider);
-	border-radius: 7px;
-}
-
-.settingsGrid {
-	display: grid;
-	gap: 14px;
-}
-
-.field {
-	display: grid;
-	gap: 6px;
-}
-
-.hint {
-	display: block;
-	margin-top: 8px;
-	color: var(--MI_THEME-fg);
-	opacity: 0.7;
-	line-height: 1.5;
-}
-
-.checkField {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
-.settingsActions {
-	display: flex;
-	align-items: center;
-	flex-wrap: wrap;
-	gap: 12px;
-	margin-top: 16px;
-}
-
-.primary {
-	padding: 9px 15px;
-	background: var(--MI_THEME-accent);
-	color: var(--MI_THEME-fgOnAccent);
-	border-radius: 8px;
-}
-
-.settingsMessage {
-	margin: 0;
-	font-size: 90%;
-	color: var(--MI_THEME-fg);
-}
-
-.error {
-	color: var(--MI_THEME-error);
-}
-
-.channelList {
-	display: grid;
-	gap: 4px;
-}
-
-.channelRow {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 8px;
-	padding: 7px 9px;
-	border-radius: 7px;
-	background: var(--MI_THEME-bg);
-}
-
-.channelRow small {
-	opacity: 0.65;
-}
-
-.channelForm {
-	align-items: center;
-}
-
-.token {
-	margin: 10px 0;
-	padding: 8px;
-	background: var(--MI_THEME-bg);
-	overflow-wrap: anywhere;
-}
+.root{display:grid;gap:12px}.panel{padding:16px;background:#fff;border:1px solid #d7e3f1;border-radius:9px;color:#17324d}.panel h3{margin:0 0 12px}.settingsGrid{display:grid;gap:13px}.settingsGrid label,.dangerZone label{display:grid;gap:6px}.settingsGrid select,.channelForm input,.channelForm select,.inline select,.dangerZone input{box-sizing:border-box;width:100%;padding:8px 9px;border:1px solid #d7e3f1;border-radius:7px;background:#fff;color:#17324d}.settingsGrid small,.help,.dangerZone p{color:#718399;line-height:1.5}.check{display:flex!important;align-items:center;gap:8px}.check input{width:18px;height:18px;accent-color:#175cd3}.actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:14px;font-size:12px}.primary{padding:8px 13px;border-radius:7px;background:#ffd84d;color:#17324d;font-weight:800}.error{color:#c62828}.channelList{display:grid;gap:5px}.channelRow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 9px;border-radius:7px;background:#f8fbff}.channelRow>div{min-width:0;display:flex;align-items:center;gap:8px}.channelRow small{color:#718399}.channelRow button{width:30px;height:30px;border-radius:6px;color:#a33}.channelForm{display:grid;grid-template-columns:minmax(130px,1fr) 120px minmax(130px,1fr) auto;gap:7px;margin-top:10px}.inline{display:flex;gap:8px}.inline select{flex:1}.dangerZone{border-color:#efcaca;background:#fffafa}.dangerZone h3{color:#a92727}.danger{margin-top:12px;padding:9px 13px;border-radius:7px;background:#c62828;color:#fff;font-weight:800}.danger:disabled,.primary:disabled{opacity:.45}.help{margin:-5px 0 12px}@media(max-width:700px){.channelForm{grid-template-columns:1fr}.inline{flex-direction:column}}
 </style>
