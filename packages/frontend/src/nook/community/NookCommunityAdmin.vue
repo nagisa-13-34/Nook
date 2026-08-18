@@ -25,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div :class="$style.actions"><span v-if="settingsMessage" :class="{[$style.error]:settingsMessageError}">{{ settingsMessage }}</span><button class="_button" :class="$style.primary" @click="saveSettings">{{ l.save }}</button></div>
 	</section>
 
-	<section v-else-if="tab==='roles' && can('roles.manage')" :class="$style.panel>
+	<section v-else-if="tab==='roles' && can('roles.manage')" :class="$style.panel">
 		<NookCommunityRoleEditor :communityId="communityId"/>
 	</section>
 
