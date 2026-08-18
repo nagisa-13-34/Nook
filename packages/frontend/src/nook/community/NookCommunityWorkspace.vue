@@ -75,7 +75,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, h, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue';
+import { computed, defineComponent, h, nextTick, onBeforeUnmount, onMounted, ref, useCssModule, useTemplateRef } from 'vue';
 import { nookApi } from './nook-api.js';
 import { communityLabels as l } from './labels.js';
 import NookAutoTranslation from './NookAutoTranslation.vue';
@@ -86,6 +86,7 @@ import type { CommunityChannel, CommunityMember, CommunityMessage, CommunityPin,
 
 type SystemView = 'info' | 'announcements' | 'members';
 const props = defineProps<{ communityId: string; rules: CommunityRule[]; pins: CommunityPin[]; canManageChannels: boolean; canManageAnnouncements: boolean; canManageMembers: boolean; canManageRoles: boolean; canManageVoice: boolean; voiceEnabled: boolean }>();
+const $style = useCssModule();
 const channels = ref<CommunityChannel[]>([]); const selected = ref<CommunityChannel | null>(null); const systemView = ref<SystemView | null>(null); const messages = ref<CommunityMessage[]>([]); const members = ref<CommunityMember[]>([]); const draft = ref(''); const filter = ref(''); const messagesEl = useTemplateRef('messagesEl'); let timer: number | undefined;
 
 const XHeader = defineComponent({ props: { icon: { type: String, required: true }, title: { type: String, required: true } }, setup(p) { return () => h('header', { class: $style.header }, [h('div', { class: $style.heading }, [h('i', { class: p.icon }), h('strong', p.title)])]); } });
