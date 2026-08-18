@@ -5,184 +5,145 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div v-if="meta" :class="$style.root">
-	<MkFeaturedPhotos :class="$style.bg"/>
-	<XTimeline :class="$style.tl"/>
-	<div :class="$style.shape1"></div>
-	<div :class="$style.shape2"></div>
-	<div :class="$style.logoWrapper">
-		<div :class="$style.poweredBy">Powered by</div>
-		<img :src="misskeysvg" :class="$style.misskey"/>
-	</div>
-	<div :class="$style.contents">
-		<MkVisitorDashboard/>
-	</div>
-	<div v-if="instances && instances.length > 0" :class="$style.federation">
-		<MkMarqueeText :duration="40">
-			<MkA v-for="instance in instances" :key="instance.id" :class="$style.federationInstance" :to="`/instance-info/${instance.host}`" behavior="window">
-				<!--<MkInstanceCardMini :instance="instance"/>-->
-				<img v-if="instance.iconUrl" :class="$style.federationInstanceIcon" :src="getInstanceIcon(instance)" alt=""/>
-				<span class="_monospace">{{ instance.host }}</span>
-			</MkA>
-		</MkMarqueeText>
-	</div>
+	<section :class="$style.hero">
+		<div :class="$style.heroInner">
+			<div :class="$style.brand">Nook</div>
+			<div :class="$style.yellowBar"></div>
+			<h1 :class="$style.headline">話したいことを、もっと自然に。</h1>
+			<p :class="$style.lead">人とつながるための、シンプルなソーシャルスペース。</p>
+		</div>
+	</section>
+
+	<main :class="$style.main">
+		<div :class="$style.dashboard">
+			<MkVisitorDashboard/>
+		</div>
+	</main>
 </div>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
-import * as Misskey from 'misskey-js';
-import XTimeline from './welcome.timeline.vue';
-import MkMarqueeText from '@/components/MkMarqueeText.vue';
-import MkFeaturedPhotos from '@/components/MkFeaturedPhotos.vue';
-import misskeysvg from '/client-assets/misskey.svg';
-import { misskeyApiGet } from '@/utility/misskey-api.js';
 import MkVisitorDashboard from '@/components/MkVisitorDashboard.vue';
-import { getProxiedImageUrl } from '@/utility/media-proxy.js';
 import { instance as meta } from '@/instance.js';
-
-const instances = ref<Misskey.entities.FederationInstance[]>();
-
-function getInstanceIcon(instance: Misskey.entities.FederationInstance): string {
-	if (!instance.iconUrl) {
-		return '';
-	}
-
-	return getProxiedImageUrl(instance.iconUrl, 'preview');
-}
-
-misskeyApiGet('federation/instances', {
-	sort: '+pubSub',
-	limit: 20,
-	blocked: false,
-}).then(_instances => {
-	instances.value = _instances;
-});
 </script>
 
 <style lang="scss" module>
 .root {
-	height: 100cqh;
+	--nook-blue: #175cd3;
+	--nook-blue-deep: #17324d;
+	--nook-blue-soft: #eef5ff;
+	--nook-yellow: #ffd84d;
+	--nook-white: #ffffff;
+	--nook-border: #d7e3f1;
+
+	--MI_THEME-accent: var(--nook-blue);
+	--MI_THEME-bg: var(--nook-blue-soft);
+	--MI_THEME-panel: var(--nook-white);
+	--MI_THEME-popup: var(--nook-white);
+	--MI_THEME-fg: var(--nook-blue-deep);
+	--MI_THEME-divider: var(--nook-border);
+	--MI_THEME-buttonGradateA: var(--nook-yellow);
+	--MI_THEME-buttonGradateB: var(--nook-yellow);
+	--MI_THEME-fgOnAccent: var(--nook-blue-deep);
+	--MI-radius: 8px;
+
+	min-height: 100cqh;
+	display: grid;
+	grid-template-columns: minmax(360px, 0.9fr) minmax(520px, 1.1fr);
+	background: var(--nook-blue-soft);
+	color: var(--nook-blue-deep);
 	overflow: auto;
 	overscroll-behavior: contain;
 }
 
-.bg {
-	position: fixed;
-	top: 0;
-	right: 0;
-	width: 80vw; // 100%からshapeの幅を引いている
-	height: 100vh;
-	// 固定レイヤがホイール操作を奪い、コンテンツ列以外の上でページをスクロールできなくなるのを防ぐ (issue #17680)
-	pointer-events: none;
-}
-
-.tl {
-	position: fixed;
-	top: 0;
-	bottom: 0;
-	right: 64px;
-	margin: auto;
-	padding: 128px 0;
-	width: 500px;
-	height: calc(100% - 256px);
-	overflow: hidden;
-	-webkit-mask-image: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 128px, rgba(0,0,0,1) calc(100% - 128px), rgba(0,0,0,0) 100%);
-	mask-image: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 128px, rgba(0,0,0,1) calc(100% - 128px), rgba(0,0,0,0) 100%);
-
-	@media (max-width: 1200px) {
-		display: none;
-	}
-}
-
-.shape1 {
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100vw;
-	height: 100vh;
-	background: var(--MI_THEME-accent);
-	clip-path: polygon(0% 0%, 45% 0%, 20% 100%, 0% 100%);
-	pointer-events: none; // 装飾レイヤ。ホイール操作を透過させる (→ .bg 参照)
-}
-.shape2 {
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100vw;
-	height: 100vh;
-	background: var(--MI_THEME-accent);
-	clip-path: polygon(0% 0%, 25% 0%, 35% 100%, 0% 100%);
-	opacity: 0.5;
-	pointer-events: none; // 装飾レイヤ。ホイール操作を透過させる (→ .bg 参照)
-}
-
-.logoWrapper {
-	position: fixed;
-	top: 36px;
-	left: 36px;
-	flex: auto;
-	color: #fff;
-	user-select: none;
-	pointer-events: none;
-}
-
-.poweredBy {
-	margin-bottom: 2px;
-}
-
-.misskey {
-	width: 120px;
-
-	@media (max-width: 450px) {
-		width: 100px;
-	}
-}
-
-.contents {
+.hero {
 	position: relative;
-	width: min(430px, calc(100% - 32px));
-	margin-left: 128px;
-	padding: 100px 0 100px 0;
-
-	@media (max-width: 1200px) {
-		margin: auto;
-	}
-}
-
-.federation {
-	position: fixed;
-	bottom: 16px;
-	left: 0;
-	right: 0;
-	margin: auto;
-	background: color(from var(--MI_THEME-panel) srgb r g b / 0.5);
-	-webkit-backdrop-filter: var(--MI-blur, blur(15px));
-	backdrop-filter: var(--MI-blur, blur(15px));
-	border-radius: 999px;
-	overflow: clip;
-	width: 800px;
-	padding: 8px 0;
-
-	@media (max-width: 900px) {
-		display: none;
-	}
-}
-
-.federationInstance {
-	display: inline-flex;
+	min-height: 100cqh;
+	display: flex;
 	align-items: center;
-	vertical-align: bottom;
-	padding: 6px 12px 6px 6px;
-	margin: 0 10px 0 0;
-	background: var(--MI_THEME-panel);
-	border-radius: 999px;
+	background: var(--nook-blue);
+	color: var(--nook-white);
 }
 
-.federationInstanceIcon {
-	display: inline-block;
-	width: 20px;
-	height: 20px;
-	margin-right: 5px;
-	border-radius: 999px;
+.heroInner {
+	width: min(520px, calc(100% - 80px));
+	margin: 0 auto;
+	padding: 64px 0;
+}
+
+.brand {
+	font-size: 38px;
+	font-weight: 850;
+	line-height: 1;
+	letter-spacing: -0.055em;
+}
+
+.yellowBar {
+	width: 50px;
+	height: 6px;
+	margin: 22px 0 46px;
+	border-radius: 2px;
+	background: var(--nook-yellow);
+}
+
+.headline {
+	max-width: 480px;
+	margin: 0;
+	font-size: clamp(34px, 4vw, 56px);
+	line-height: 1.18;
+	letter-spacing: -0.045em;
+}
+
+.lead {
+	max-width: 430px;
+	margin: 24px 0 0;
+	font-size: 17px;
+	line-height: 1.85;
+	opacity: 0.86;
+}
+
+.main {
+	min-height: 100cqh;
+	display: grid;
+	place-items: center;
+	padding: 64px 40px;
+	box-sizing: border-box;
+	background: var(--nook-blue-soft);
+}
+
+.dashboard {
+	width: min(460px, 100%);
+}
+
+:global(.nook-ui-entrance ._panel) {
+	box-shadow: none;
+}
+
+@media (max-width: 900px) {
+	.root {
+		grid-template-columns: 1fr;
+	}
+
+	.hero {
+		min-height: auto;
+	}
+
+	.heroInner {
+		width: min(100% - 44px, 620px);
+		padding: calc(32px + env(safe-area-inset-top, 0px)) 0 36px;
+	}
+
+	.yellowBar {
+		margin: 16px 0 24px;
+	}
+
+	.headline {
+		font-size: clamp(30px, 9vw, 42px);
+	}
+
+	.main {
+		min-height: auto;
+		padding: 34px 20px calc(44px + env(safe-area-inset-bottom, 0px));
+	}
 }
 </style>
