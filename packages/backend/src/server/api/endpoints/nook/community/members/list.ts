@@ -46,6 +46,25 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			const members = await listNookCommunityMembers(this.db, ps.communityId);
+
+			// Legacy/partially initialized Communities may have a valid membership
+			// context for the requester without a corresponding list row yet.
+			// Always include the signed-in member in the visible member list.
+			if (!members.some(member => member.userId === me.id)) {
+				const communityRows = await this.db.query<Array<{ createdAt: Date }>>(
+					'SELECT "createdAt" FROM "channel" WHERE "id" = $1 LIMIT 1',
+					[ps.communityId],
+				);
+				members.unshift({
+					userId: me.id,
+					baseRole: membership.baseRole,
+					state: membership.state,
+					nickname: null,
+					joinedAt: communityRows[0]?.createdAt ?? new Date(),
+					roleIds: [],
+				});
+			}
+
 			const packedUsers = await this.userEntityService.packMany(members.map(member => member.userId), me, { schema: 'UserLite' });
 			const users = new Map(packedUsers.map(user => [user.id, user]));
 			const canManageRoles = membership.permissions.has('*') || membership.permissions.has('roles.manage');
