@@ -151,6 +151,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<i v-else class="ti ti-plus"></i>
 					<p v-if="(appearNote.reactionAcceptance === 'likeOnly' || prefer.s.showReactionsCount) && $appearNote.reactionCount > 0" :class="$style.footerButtonCount">{{ number($appearNote.reactionCount) }}</p>
 				</button>
+				<NookNoteQuickActions :note="appearNote" :buttonClass="$style.footerButton"/>
 				<button v-if="prefer.s.showClipButtonInNoteFooter" ref="clipButton" :class="$style.footerButton" class="_button" @mousedown.prevent="clip()">
 					<i class="ti ti-paperclip"></i>
 				</button>
@@ -220,6 +221,7 @@ import MkCwButton from '@/components/MkCwButton.vue';
 import MkPoll from '@/components/MkPoll.vue';
 import MkUrlPreview from '@/components/MkUrlPreview.vue';
 import MkInstanceTicker from '@/components/MkInstanceTicker.vue';
+import NookNoteQuickActions from '@/components/NookNoteQuickActions.vue';
 
 const props = withDefaults(defineProps<{
 	note: Misskey.entities.Note;
@@ -444,8 +446,6 @@ const keymap = {
 }
 
 .skipRender {
-	// TODO: これが有効だとTransitionGroupでnoteを追加するときに一瞬がくっとなってしまうのをどうにかしたい
-	// Transitionが完了するのを待ってからskipRenderを付与すれば解決しそうだけどパフォーマンス的な影響が不明
 	content-visibility: auto;
 	contain-intrinsic-size: 0 150px;
 }
@@ -686,7 +686,7 @@ const keymap = {
 .footerButton {
 	margin: 0;
 	padding: 8px;
-	color: color-mix(in srgb, var(--MI_THEME-panel), var(--MI_THEME-fg) 70%); // opacityなど不透明度で表現するとレンダリングパフォーマンスに影響するので通常の色の混合で代用
+	color: color-mix(in srgb, var(--MI_THEME-panel), var(--MI_THEME-fg) 70%);
 
 	&:not(:last-child) {
 		margin-right: 28px;
@@ -703,59 +703,24 @@ const keymap = {
 }
 
 @container (max-width: 580px) {
-	.root {
-		font-size: 0.95em;
-	}
-
-	.renote {
-		padding: 12px 26px 0 26px;
-	}
-
-	.article {
-		padding: 24px 26px;
-	}
-
-	.avatar {
-		width: 50px;
-		height: 50px;
-	}
+	.root { font-size: 0.95em; }
+	.renote { padding: 12px 26px 0 26px; }
+	.article { padding: 24px 26px; }
+	.avatar { width: 50px; height: 50px; }
 }
 
 @container (max-width: 500px) {
-	.root {
-		font-size: 0.9em;
-	}
-
-	.renote {
-		padding: 10px 22px 0 22px;
-	}
-
-	.article {
-		padding: 20px 22px;
-	}
-
-	.footer {
-		margin-bottom: -8px;
-	}
+	.root { font-size: 0.9em; }
+	.renote { padding: 10px 22px 0 22px; }
+	.article { padding: 20px 22px; }
+	.footer { margin-bottom: -8px; }
 }
 
 @container (max-width: 480px) {
-	.renote {
-		padding: 8px 16px 0 16px;
-	}
-
-	.tip {
-		padding: 8px 16px 0 16px;
-	}
-
-	.collapsedRenoteTarget {
-		padding: 0 16px 9px;
-		margin-top: 4px;
-	}
-
-	.article {
-		padding: 14px 16px;
-	}
+	.renote { padding: 8px 16px 0 16px; }
+	.tip { padding: 8px 16px 0 16px; }
+	.collapsedRenoteTarget { padding: 0 16px 9px; margin-top: 4px; }
+	.article { padding: 14px 16px; }
 }
 
 @container (max-width: 450px) {
@@ -763,59 +728,26 @@ const keymap = {
 		margin: 0 10px 0 0;
 		width: 46px;
 		height: 46px;
-
-		&.useSticky {
-			top: calc(14px + var(--MI-stickyTop, 0px));
-		}
+		&.useSticky { top: calc(14px + var(--MI-stickyTop, 0px)); }
 	}
 }
 
 @container (max-width: 400px) {
-	.root:not(.showActionsOnlyHover) {
-		.footerButton {
-			&:not(:last-child) {
-				margin-right: 18px;
-			}
-		}
-	}
+	.root:not(.showActionsOnlyHover) .footerButton:not(:last-child) { margin-right: 18px; }
 }
 
 @container (max-width: 350px) {
-	.root:not(.showActionsOnlyHover) {
-		.footerButton {
-			&:not(:last-child) {
-				margin-right: 12px;
-			}
-		}
-	}
-
-	.colorBar {
-		top: 6px;
-		left: 6px;
-		width: 4px;
-		height: calc(100% - 12px);
-	}
+	.root:not(.showActionsOnlyHover) .footerButton:not(:last-child) { margin-right: 12px; }
+	.colorBar { top: 6px; left: 6px; width: 4px; height: calc(100% - 12px); }
 }
 
 @container (max-width: 300px) {
-	.avatar {
-		width: 44px;
-		height: 44px;
-	}
-
-	.root:not(.showActionsOnlyHover) {
-		.footerButton {
-			&:not(:last-child) {
-				margin-right: 8px;
-			}
-		}
-	}
+	.avatar { width: 44px; height: 44px; }
+	.root:not(.showActionsOnlyHover) .footerButton:not(:last-child) { margin-right: 8px; }
 }
 
 @container (max-width: 250px) {
-	.quoteNote {
-		padding: 12px;
-	}
+	.quoteNote { padding: 12px; }
 }
 
 .muted {
