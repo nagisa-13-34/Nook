@@ -223,6 +223,7 @@ async function unmute() {
 	const _channel = channel.value;
 	os.apiWithDialog('channels/mute/delete', { channelId: _channel.id }).then(() => {
 		_channel.isMuting = false;
+		favoritedChannelsCache.delete();
 	});
 }
 
@@ -263,7 +264,7 @@ const headerActions = computed(() => {
 	} else {
 		headerItems.push({ icon: 'ti ti-volume-off', text: i18n.ts.unmute, handler: async () => { await unmute(); } });
 	}
-	if (($i && $i.id === channel.value.userId) || iAmModerator) {
+	if (!communityEnabled.value && (($i && $i.id === channel.value.userId) || iAmModerator)) {
 		headerItems.push({ icon: 'ti ti-settings', text: i18n.ts.edit, handler: edit });
 	}
 	return headerItems.length > 0 ? headerItems : null;
