@@ -4,32 +4,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div class="_panel _shadow" :class="$style.root">
+<div :class="$style.root">
 	<div :class="$style.icon">
-		<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-open-source" width="40" height="40" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-			<path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-			<path d="M12 3a9 9 0 0 1 3.618 17.243l-2.193 -5.602a3 3 0 1 0 -2.849 0l-2.193 5.603a9 9 0 0 1 3.617 -17.244z"/>
-		</svg>
+		<i class="ti ti-code"></i>
 	</div>
 	<div :class="$style.main">
-		<div :class="$style.title">
-			<I18n :src="i18n.ts.aboutX" tag="span">
-				<template #x>
-					{{ instance.name ?? host }}
-				</template>
-			</I18n>
-		</div>
+		<div :class="$style.title">Nookのソースコード</div>
 		<div :class="$style.text">
-			<I18n :src="i18n.ts._aboutMisskey.thisIsModifiedVersion" tag="span">
-				<template #name>
-					{{ instance.name ?? host }}
-				</template>
-			</I18n>
-			<I18n :src="i18n.ts.correspondingSourceIsAvailable" tag="span">
-				<template #anchor>
-					<MkA to="/about-misskey" class="_link">{{ i18n.ts.aboutMisskey }}</MkA>
-				</template>
-			</I18n>
+			Nookの対応するソースコードを公開しています。
+			<div :class="$style.linkRow">
+				<MkA to="/about-misskey" class="_link">ソースコードを見る</MkA>
+			</div>
 		</div>
 		<div class="_buttons">
 			<MkButton @click="close">{{ i18n.ts.gotIt }}</MkButton>
@@ -41,9 +26,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import MkButton from '@/components/MkButton.vue';
-import { host } from '@@/js/config.js';
 import { i18n } from '@/i18n.js';
-import { instance } from '@/instance.js';
 import { miLocalStorage } from '@/local-storage.js';
 import * as os from '@/os.js';
 
@@ -69,29 +52,26 @@ function close() {
 	margin: auto;
 	box-sizing: border-box;
 	width: calc(100% - (var(--MI-margin) * 2));
-	max-width: 500px;
+	max-width: 480px;
 	display: flex;
+	background: #fff;
+	color: #17324d;
+	border: solid 1px #d7e3f1;
+	border-top: solid 4px #175cd3;
+	border-radius: 8px;
+	box-shadow: 0 8px 24px rgb(23 50 77 / 10%);
 }
 
 .icon {
-	text-align: center;
-	padding-top: 25px;
-	width: 100px;
-	color: var(--MI_THEME-accent);
-}
-@media (max-width: 500px) {
-	.icon {
-		width: 80px;
-	}
-}
-@media (max-width: 450px) {
-	.icon {
-		width: 70px;
-	}
+	padding: 25px 0 0 24px;
+	width: 62px;
+	box-sizing: border-box;
+	font-size: 26px;
+	color: #175cd3;
 }
 
 .main {
-	padding: 25px 25px 25px 0;
+	padding: 22px 38px 22px 18px;
 	flex: 1;
 }
 
@@ -103,10 +83,30 @@ function close() {
 }
 
 .title {
-	font-weight: bold;
+	font-weight: 750;
 }
 
 .text {
-	margin: 0.7em 0 1em 0;
+	margin: 0.7em 0 1em;
+	line-height: 1.7;
+}
+
+.linkRow {
+	margin-top: 5px;
+}
+
+@media (max-width: 500px) {
+	.root {
+		max-width: calc(100% - 24px);
+	}
+
+	.icon {
+		padding-left: 18px;
+		width: 52px;
+	}
+
+	.main {
+		padding-left: 12px;
+	}
 }
 </style>
