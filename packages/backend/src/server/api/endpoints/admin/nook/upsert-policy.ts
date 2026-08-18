@@ -8,7 +8,7 @@ import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { DI } from '@/di-symbols.js';
 import { MiNookPolicy } from '@/models/NookPolicy.js';
 import { nookAccountStates, nookAgeGroups, nookPermissions } from '@/nook/policy/PolicyTypes.js';
-import { nookPermissionsSchema, nookPolicySchema } from '@/nook/api/NookAdminSchemas.js';
+import { nookPermissionsParamSchema, nookPolicySchema } from '@/nook/api/NookAdminSchemas.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import type { DataSource } from 'typeorm';
 
@@ -34,7 +34,7 @@ export const paramDef = {
 			uniqueItems: true,
 			items: { type: 'string', enum: nookAccountStates },
 		},
-		permissions: nookPermissionsSchema,
+		permissions: nookPermissionsParamSchema,
 		priority: { type: 'integer', minimum: -100000, maximum: 100000 },
 		enabled: { type: 'boolean' },
 	},

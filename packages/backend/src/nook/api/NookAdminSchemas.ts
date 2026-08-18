@@ -33,6 +33,16 @@ export const nookPermissionProperties = {
 	personalized_ads: { type: 'boolean', optional: false, nullable: false },
 } as const satisfies Record<NookPermission, { type: 'boolean'; optional: false; nullable: false }>;
 
+export const nookPermissionParamProperties = Object.fromEntries(
+nookPermissions.map(permission => [permission, { type: 'boolean' as const }]),
+) as Record<NookPermission, { readonly type: 'boolean' }>;
+
+export const nookPermissionsParamSchema = {
+type: 'object',
+additionalProperties: false,
+properties: nookPermissionParamProperties,
+required: nookPermissions,
+} as const;
 export const nookPermissionsSchema = {
 	type: 'object',
 	optional: false,
