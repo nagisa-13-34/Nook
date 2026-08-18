@@ -14,11 +14,19 @@ const nookLocale = lang === 'ja-JP'
 		nookBookmarks: 'ブックマーク',
 		nookBookmarksEmpty: '保存した投稿はここに表示されます。',
 		nookShorts: 'ショート',
+		chooseServerOnMisskeyHub: 'サーバー一覧から選択',
+		serverHostPlaceholder: '例: social.example.com',
+		repositoryUrlDescription: 'Nookのソースコードを公開しているリポジトリのURLを記入します。このNook本体のリポジトリは https://github.com/Nagisa-13-34/Nook です。',
+		sendErrorReportsDescription: 'オンにすると、問題が発生したときにエラーの詳細情報が開発者へ共有され、ソフトウェアの品質向上に役立てられます。エラー情報には、OSのバージョン、ブラウザの種類、行動履歴などが含まれる場合があります。',
 	} as const
 	: {
 		nookBookmarks: 'Bookmarks',
 		nookBookmarksEmpty: 'Posts you save will appear here.',
 		nookShorts: 'Shorts',
+		chooseServerOnMisskeyHub: 'Choose from the server directory',
+		serverHostPlaceholder: 'e.g. social.example.com',
+		repositoryUrlDescription: 'Enter the URL of the repository where the Nook source code is published. The repository for this Nook project is https://github.com/Nagisa-13-34/Nook.',
+		sendErrorReportsDescription: 'When enabled, error details may be shared with the developers to help improve the software. Error information may include the OS version, browser type, and recent activity.',
 	} as const;
 
 type NookLocale = Locale & typeof nookLocale;
