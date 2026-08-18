@@ -4,50 +4,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<PageWithAnimBg>
+<div :class="$style.page">
 	<div :class="$style.formContainer">
-		<div :class="$style.form" class="_panel">
-			<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="z-index:1;position:relative" viewBox="0 0 854 300">
-				<defs>
-					<linearGradient id="linear" x1="0%" y1="0%" x2="100%" y2="0%">
-						<stop offset="0%" stop-color="#86b300"/><stop offset="100%" stop-color="#4ab300"/>
-					</linearGradient>
-				</defs>
-
-				<g transform="translate(427, 150) scale(1, 1) translate(-427, -150)">
-					<path d="" fill="url(#linear)" opacity="0.4">
-						<animate
-							attributeName="d"
-							dur="20s"
-							repeatCount="indefinite"
-							keyTimes="0;0.333;0.667;1"
-							calcmod="spline"
-							keySplines="0.2 0 0.2 1;0.2 0 0.2 1;0.2 0 0.2 1"
-							begin="0s"
-							values="M0 0L 0 220Q 213.5 260 427 230T 854 255L 854 0 Z;M0 0L 0 245Q 213.5 260 427 240T 854 230L 854 0 Z;M0 0L 0 265Q 213.5 235 427 265T 854 230L 854 0 Z;M0 0L 0 220Q 213.5 260 427 230T 854 255L 854 0 Z"
-						>
-						</animate>
-					</path>
-					<path d="" fill="url(#linear)" opacity="0.4">
-						<animate
-							attributeName="d"
-							dur="20s"
-							repeatCount="indefinite"
-							keyTimes="0;0.333;0.667;1"
-							calcmod="spline"
-							keySplines="0.2 0 0.2 1;0.2 0 0.2 1;0.2 0 0.2 1"
-							begin="-10s"
-							values="M0 0L 0 235Q 213.5 280 427 250T 854 260L 854 0 Z;M0 0L 0 250Q 213.5 220 427 220T 854 240L 854 0 Z;M0 0L 0 245Q 213.5 225 427 250T 854 265L 854 0 Z;M0 0L 0 235Q 213.5 280 427 250T 854 260L 854 0 Z"
-						>
-						</animate>
-					</path>
-				</g>
-			</svg>
-			<div :class="$style.title">
-				<div>Welcome to Nook!</div>
+		<div :class="$style.form">
+			<div :class="$style.hero">
+				<div :class="$style.brand">Nook</div>
+				<div :class="$style.yellowBar"></div>
+				<div :class="$style.title">Welcome to Nook!</div>
 				<div :class="$style.version">v{{ version }}</div>
 			</div>
-			<div style="padding: 16px 32px 32px 32px;">
+			<div :class="$style.body">
 				<form v-if="!accountCreated" class="_gaps_m" @submit.prevent="createAccount()">
 					<div style="text-align: center;" class="_gaps_s">
 						<div><b>{{ i18n.ts._serverSetupWizard.installCompleted }}</b></div>
@@ -106,11 +72,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<div>{{ i18n.ts._serverSetupWizard.settingsCompleted_description }}</div>
 						<div>{{ i18n.ts._serverSetupWizard.settingsCompleted_description2 }}</div>
 					</div>
-					<div class="_gaps_s" :class="$style.donation">
-						<div><b>{{ i18n.ts._serverSetupWizard.donationRequest }}</b></div>
-						<div>{{ i18n.ts._serverSetupWizard._donationRequest.text1 }}<br>{{ i18n.ts._serverSetupWizard._donationRequest.text2 }}<br>{{ i18n.ts._serverSetupWizard._donationRequest.text3 }}</div>
-						<MkLink target="_blank" url="https://misskey-hub.net/docs/donate/" style="margin: 0 auto;">{{ i18n.ts.learnMore }}</MkLink>
-					</div>
 					<div class="_buttonsCenter">
 						<MkButton gradate large rounded data-testid="next" style="margin: 0 auto;" @click="finish">
 							{{ i18n.ts.start }}
@@ -120,7 +81,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 		</div>
 	</div>
-</PageWithAnimBg>
+</div>
 </template>
 
 <script lang="ts" setup>
@@ -132,7 +93,6 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { login } from '@/accounts.js';
-import MkLink from '@/components/MkLink.vue';
 import MkServerSetupWizard from '@/components/MkServerSetupWizard.vue';
 
 const username = ref('');
@@ -196,47 +156,106 @@ function finish() {
 </script>
 
 <style lang="scss" module>
+.page {
+	--nook-blue: #175cd3;
+	--nook-blue-deep: #17324d;
+	--nook-blue-soft: #eef5ff;
+	--nook-yellow: #ffd84d;
+	--nook-white: #ffffff;
+	--nook-border: #d7e3f1;
+
+	--MI_THEME-accent: var(--nook-blue);
+	--MI_THEME-bg: var(--nook-blue-soft);
+	--MI_THEME-panel: var(--nook-white);
+	--MI_THEME-fg: var(--nook-blue-deep);
+	--MI_THEME-divider: var(--nook-border);
+	--MI_THEME-buttonGradateA: var(--nook-yellow);
+	--MI_THEME-buttonGradateB: var(--nook-yellow);
+	--MI_THEME-fgOnAccent: var(--nook-blue-deep);
+	--MI_THEME-accentedBg: #e6f0ff;
+	--MI-radius: 8px;
+
+	min-height: 100svh;
+	background: var(--nook-blue-soft);
+	color: var(--nook-blue-deep);
+}
+
 .formContainer {
 	min-height: 100svh;
-	padding: 32px 32px 64px 32px;
+	padding: 32px;
 	box-sizing: border-box;
-	align-content: center;
+	display: grid;
+	place-items: center;
 }
 
 .form {
 	position: relative;
 	z-index: 10;
-	border-radius: var(--MI-radius);
-	box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+	width: min(100%, 550px);
+	border: solid 1px var(--nook-border);
+	border-radius: 10px;
+	background: var(--nook-white);
+	box-shadow: none;
 	overflow: clip;
-	max-width: 550px;
-	margin: 0 auto;
+}
+
+.hero {
+	padding: 28px 32px 30px;
+	background: var(--nook-blue);
+	color: var(--nook-white);
+	text-align: left;
+}
+
+.brand {
+	font-size: 30px;
+	font-weight: 850;
+	line-height: 1;
+	letter-spacing: -0.055em;
+}
+
+.yellowBar {
+	width: 44px;
+	height: 5px;
+	margin: 16px 0 22px;
+	border-radius: 2px;
+	background: var(--nook-yellow);
 }
 
 .title {
-	position: absolute;
-	top: 16px;
-	left: 0;
-	right: 0;
-	z-index: 1;
-	margin: 0;
-	font-size: 1.5em;
-	text-align: center;
-	padding: 32px;
-	color: #fff;
-	font-weight: bold;
+	font-size: 23px;
+	font-weight: 750;
+	letter-spacing: -0.025em;
 }
 
 .version {
-	font-size: 70%;
-	font-weight: normal;
-	opacity: 0.7;
+	margin-top: 5px;
+	font-size: 12px;
+	opacity: 0.72;
 }
 
-.donation {
-	background: var(--MI_THEME-accentedBg);
-	border-radius: 12px;
-	padding: 16px;
-	text-align: center;
+.body {
+	padding: 28px 32px 32px;
+}
+
+@media (max-width: 600px) {
+	.formContainer {
+		padding: 0;
+		place-items: stretch;
+	}
+
+	.form {
+		width: 100%;
+		min-height: 100svh;
+		border: 0;
+		border-radius: 0;
+	}
+
+	.hero {
+		padding: calc(24px + env(safe-area-inset-top, 0px)) 22px 24px;
+	}
+
+	.body {
+		padding: 24px 20px calc(28px + env(safe-area-inset-bottom, 0px));
+	}
 }
 </style>
