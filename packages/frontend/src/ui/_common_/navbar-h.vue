@@ -6,238 +6,178 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div :class="[$style.root, acrylic ? $style.acrylic : null]">
 	<div :class="$style.body">
-		<div>
-			<button v-click-anime :class="[$style.item, $style.instance]" class="_button" @click="openInstanceMenu">
-				<img :class="$style.instanceIcon" :src="instance.iconUrl ?? '/favicon.ico'" draggable="false"/>
-			</button>
-			<MkA v-click-anime v-tooltip="i18n.ts.timeline" :class="$style.item" :activeClass="$style.active" to="/" exact>
-				<i :class="$style.itemIcon" class="ti ti-home ti-fw"></i>
+		<MkA :class="$style.brand" to="/" exact>Nook</MkA>
+
+		<div :class="$style.mainNav">
+			<MkA v-tooltip="i18n.ts.home" :class="$style.item" :activeClass="$style.active" to="/" exact>
+				<i :class="$style.itemIcon" class="ti ti-home"></i>
 			</MkA>
-			<template v-for="item in menu">
-				<div v-if="item === '-'" :class="$style.divider"></div>
-				<component :is="navbarItemDef[item].to ? 'MkA' : 'button'" v-else-if="navbarItemDef[item] && (navbarItemDef[item].show == null || navbarItemDef[item].show.value !== false)" v-click-anime v-tooltip="navbarItemDef[item].title" class="_button" :class="$style.item" :activeClass="$style.active" :to="navbarItemDef[item].to" v-on="navbarItemDef[item].action ? { click: navbarItemDef[item].action } : {}">
-					<i :class="[$style.itemIcon, navbarItemDef[item].icon]" class="ti-fw"></i>
-					<span v-if="navbarItemDef[item].indicated" :class="$style.indicator" class="_blink"><i class="_indicatorCircle"></i></span>
-				</component>
-			</template>
-			<div :class="$style.divider"></div>
-			<MkA v-if="$i && ($i.isAdmin || $i.isModerator)" v-click-anime v-tooltip="i18n.ts.controlPanel" class="item" :activeClass="$style.active" to="/admin" :behavior="settingsWindowed ? 'window' : null">
-				<i :class="$style.itemIcon" class="ti ti-dashboard ti-fw"></i>
+			<MkA v-tooltip="i18n.ts.search" :class="$style.item" :activeClass="$style.active" to="/search">
+				<i :class="$style.itemIcon" class="ti ti-search"></i>
 			</MkA>
-			<button v-click-anime :class="$style.item" class="_button" @click="more">
-				<i :class="$style.itemIcon" class="ti ti-dots ti-fw"></i>
-				<span v-if="otherNavItemIndicated" :class="$style.indicator" class="_blink"><i class="_indicatorCircle"></i></span>
-			</button>
+			<MkA v-tooltip="i18n.ts.explore" :class="$style.item" :activeClass="$style.active" to="/explore">
+				<i :class="$style.itemIcon" class="ti ti-compass"></i>
+			</MkA>
+			<MkA v-if="$i" v-tooltip="i18n.ts.notifications" :class="$style.item" :activeClass="$style.active" to="/my/notifications">
+				<i :class="$style.itemIcon" class="ti ti-bell"></i>
+				<span v-if="$i.hasUnreadNotification" :class="$style.indicator"><i class="_indicatorCircle"></i></span>
+			</MkA>
+			<MkA v-if="$i" v-tooltip="i18n.ts.nookBookmarks" :class="$style.item" :activeClass="$style.active" to="/my/favorites">
+				<i :class="$style.itemIcon" class="ti ti-bookmark"></i>
+			</MkA>
+			<MkA v-tooltip="i18n.ts.nookCommunity" :class="$style.item" :activeClass="$style.active" to="/channels">
+				<i :class="$style.itemIcon" class="ti ti-users-group"></i>
+			</MkA>
+			<MkA v-if="$i && $i.policies.chatAvailability !== 'unavailable'" v-tooltip="i18n.ts.chat" :class="$style.item" :activeClass="$style.active" to="/chat">
+				<i :class="$style.itemIcon" class="ti ti-messages"></i>
+				<span v-if="$i.hasUnreadChatMessages" :class="$style.indicator"><i class="_indicatorCircle"></i></span>
+			</MkA>
 		</div>
+
 		<div :class="$style.right">
-			<MkA v-click-anime v-tooltip="i18n.ts.settings" :class="$style.item" :activeClass="$style.active" to="/settings" :behavior="settingsWindowed ? 'window' : null">
-				<i :class="$style.itemIcon" class="ti ti-settings ti-fw"></i>
+			<MkA v-if="$i && ($i.isAdmin || $i.isModerator)" v-tooltip="i18n.ts.controlPanel" :class="$style.item" :activeClass="$style.active" to="/admin">
+				<i :class="$style.itemIcon" class="ti ti-dashboard"></i>
 			</MkA>
-			<button v-if="$i" v-click-anime :class="[$style.item, $style.account]" class="_button" @click="openAccountMenu">
-				<MkAvatar :user="$i" :class="$style.avatar"/><MkAcct :class="$style.acct" :user="$i"/>
+			<MkA v-tooltip="i18n.ts.settings" :class="$style.item" :activeClass="$style.active" to="/settings">
+				<i :class="$style.itemIcon" class="ti ti-settings"></i>
+			</MkA>
+			<button v-if="$i" :class="[$style.item, $style.account]" class="_button" @click="openAccountMenu">
+				<MkAvatar :user="$i" :class="$style.avatar"/>
 			</button>
-			<div :class="$style.post" @click="os.post()">
-				<MkButton :class="$style.postButton" gradate rounded>
-					<i class="ti ti-pencil ti-fw"></i>
-				</MkButton>
-			</div>
+			<button v-tooltip="i18n.ts.create" :class="$style.postButton" class="_button" data-testid="open-post-form" @click="os.post()">
+				<i class="ti ti-plus"></i>
+			</button>
 		</div>
 	</div>
 </div>
 </template>
 
 <script lang="ts" setup>
-import { computed, defineAsyncComponent, onMounted, ref } from 'vue';
-import { openInstanceMenu } from './common.js';
 import * as os from '@/os.js';
-import { navbarItemDef } from '@/navbar.js';
-import MkButton from '@/components/MkButton.vue';
-import { instance } from '@/instance.js';
 import { i18n } from '@/i18n.js';
-import { prefer } from '@/preferences.js';
 import { getAccountMenu } from '@/accounts.js';
 import { $i } from '@/i.js';
-import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
 
-const WINDOW_THRESHOLD = 1400;
-
-const props = defineProps<{
+defineProps<{
 	acrylic?: boolean;
 }>();
 
-const settingsWindowed = ref(window.innerWidth > WINDOW_THRESHOLD);
-const menu = ref(prefer.s.menu);
-// const menuDisplay = store.model('menuDisplay');
-const otherNavItemIndicated = computed<boolean>(() => {
-	for (const def in navbarItemDef) {
-		if (menu.value.includes(def)) continue;
-		if (navbarItemDef[def].indicated) return true;
-	}
-	return false;
-});
-
-async function more(ev: PointerEvent) {
-	const target = getHTMLElementOrNull(ev.currentTarget ?? ev.target);
-	if (!target) return;
-
-	const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkLaunchPad.vue').then(x => x.default), {
-		anchorElement: target,
-		anchor: { x: 'center', y: 'bottom' },
-	}, {
-		closed: () => dispose(),
-	});
-}
-
 async function openAccountMenu(ev: PointerEvent) {
-	const menuItems = await getAccountMenu({
-		withExtraOperation: true,
-	});
-
+	const menuItems = await getAccountMenu({ withExtraOperation: false });
 	os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
 }
-
-onMounted(() => {
-	window.addEventListener('resize', () => {
-		settingsWindowed.value = (window.innerWidth >= WINDOW_THRESHOLD);
-	}, { passive: true });
-});
-
 </script>
 
 <style lang="scss" module>
 .root {
-	--height: 60px;
-
+	--height: 58px;
+	--nook-blue: #175cd3;
+	--nook-yellow: #ffd84d;
+	--nook-ink: #17324d;
+	--nook-border: #d7e3f1;
 	position: sticky;
 	top: 0;
 	z-index: 1000;
 	width: 100%;
 	height: var(--height);
-	contain: strict;
-	background: var(--MI_THEME-navBg);
+	background: #fff;
+	border-bottom: 1px solid var(--nook-border);
+	color: var(--nook-ink);
+}
 
-	&.acrylic {
-		background: color(from var(--MI_THEME-bg) srgb r g b / 0.75);
-		-webkit-backdrop-filter: var(--MI-blur, blur(15px));
-		backdrop-filter: var(--MI-blur, blur(15px));
-	}
+.acrylic {
+	background: rgba(255, 255, 255, 0.94);
+	backdrop-filter: blur(10px);
 }
 
 .body {
-	max-width: 1380px;
-	margin: 0 auto;
+	height: 100%;
 	display: flex;
-	overflow: auto;
-	overflow-y: clip;
+	align-items: center;
+	padding: 0 12px;
+	box-sizing: border-box;
+	overflow-x: auto;
 	white-space: nowrap;
+}
+
+.brand {
+	padding: 0 12px 0 4px;
+	font-size: 21px;
+	font-weight: 850;
+	letter-spacing: -0.05em;
+	color: var(--nook-blue);
+	text-decoration: none;
+}
+
+.mainNav,
+.right {
+	display: flex;
+	align-items: center;
+}
+
+.right {
+	margin-left: auto;
 }
 
 .item {
 	position: relative;
-	font-size: 0.9em;
-	display: inline-block;
-	padding: 0 12px;
-	line-height: var(--height);
+	width: 44px;
+	height: 44px;
+	display: grid;
+	place-items: center;
+	border-radius: 8px;
+	color: var(--nook-ink);
+	text-decoration: none;
+}
 
-	&:hover {
-		text-decoration: none;
-		color: light-dark(hsl(from var(--MI_THEME-navFg) h s calc(l - 17)), hsl(from var(--MI_THEME-navFg) h s calc(l + 17)));
-	}
+.item:hover {
+	background: #f7faff;
+}
 
-	&.active {
-		color: var(--MI_THEME-navActive);
-	}
+.active {
+	color: var(--nook-blue);
+	background: #eef5ff;
 }
 
 .itemIcon {
-	margin-right: 0;
-	left: 10px;
-}
-
-.avatar {
-	margin-right: 0;
-	width: 32px;
-	height: 32px;
-	vertical-align: middle;
-}
-
-.acct {
-	margin-left: 8px;
-
-	@media (max-width: 1200px) {
-		display: none;
-	}
+	font-size: 20px;
 }
 
 .indicator {
 	position: absolute;
-	top: 0;
-	left: 0;
-	color: var(--MI_THEME-navIndicator);
-	font-size: 8px;
+	top: 8px;
+	right: 8px;
+	color: var(--nook-yellow);
+	font-size: 7px;
 }
 
-.divider {
-	display: inline-block;
-	height: 16px;
-	margin: 0 10px;
-	border-right: solid 0.5px var(--MI_THEME-divider);
+.account {
+	padding: 0;
 }
 
-.instance {
-	display: inline-block;
-	position: relative;
-	width: 56px;
-	height: 100%;
-	vertical-align: bottom;
-	position: sticky;
-	top: 0;
-	left: 0;
-	z-index: 1;
-}
-
-.instanceIcon {
-	display: inline-block;
-	width: 24px;
-	position: absolute;
-	top: 0;
-	right: 0;
-	bottom: 0;
-	left: 0;
-	margin: auto;
-}
-
-.right {
-	display: flex;
-	align-items: center;
-	margin-left: auto;
-	position: sticky;
-	top: 0;
-	right: 0;
-	z-index: 1;
-	contain: content;
-	background: var(--MI_THEME-navBg);
-}
-.acrylic .right {
-	background: transparent;
-}
-
-.post {
-	display: inline-block;
-	margin-right: 8px;
+.avatar {
+	width: 30px;
+	height: 30px;
 }
 
 .postButton {
 	width: 40px;
 	height: 40px;
-	padding: 0;
-	min-width: 0;
+	margin-left: 6px;
+	border: 1px solid #e4bd29;
+	border-radius: 8px;
+	background: var(--nook-yellow);
+	color: var(--nook-ink);
+	font-size: 19px;
 }
 
-.account {
-	display: inline-flex;
-	align-items: center;
-	vertical-align: top;
-	margin-right: 8px;
+@media (max-width: 720px) {
+	.brand {
+		display: none;
+	}
+
+	.item {
+		width: 40px;
+	}
 }
 </style>
