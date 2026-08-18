@@ -223,7 +223,6 @@ async function unmute() {
 	const _channel = channel.value;
 	os.apiWithDialog('channels/mute/delete', { channelId: _channel.id }).then(() => {
 		_channel.isMuting = false;
-		favoritedChannelsCache.delete();
 	});
 }
 
