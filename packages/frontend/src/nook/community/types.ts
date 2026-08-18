@@ -51,6 +51,7 @@ export interface CommunityMember {
 	baseRole: string;
 	state: string;
 	nickname: string | null;
+	avatarId: string | null;
 	joinedAt: string;
 	roleIds: string[];
 	username: string;
