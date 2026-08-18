@@ -8,7 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div :class="$style.railHeader">
 			<div>
 				<strong>{{ l.channels }}</strong>
-				<small>{{ channels.length }}</small>
+				<small>{{ selectableChannels.length }}</small>
 			</div>
 			<button class="_button" :class="$style.railAction" :title="l.search" @click="searchOpen = !searchOpen">
 				<i class="ti ti-search"></i>
@@ -21,6 +21,20 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 
 		<div :class="$style.channelScroll">
+			<section v-for="group in channelGroups" :key="group.id" :class="$style.channelGroup">
+				<div :class="$style.groupTitle">{{ group.name }}</div>
+				<button
+					v-for="item in group.channels"
+					:key="item.id"
+					class="_button"
+					:class="[$style.channel, { [$style.active]: selected?.id === item.id }]"
+					@click="select(item)"
+				>
+					<i :class="channelIcon(item)"></i>
+					<span>{{ item.name }}</span>
+				</button>
+			</section>
+
 			<section v-if="textChannels.length > 0" :class="$style.channelGroup">
 				<div :class="$style.groupTitle">{{ l.textChannels }}</div>
 				<button
@@ -56,7 +70,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			v-if="voiceEnabled && selected?.kind === 'voice'"
 			:communityId="communityId"
 			:channel="selected"
-			:channels="channels"
+			:channels="selectableChannels"
 			:canManage="canManageVoice"
 		/>
 
@@ -179,27 +193,47 @@ const searchResults = ref<Array<{ id: string; channelId: string; body: string }>
 const messagesEl = useTemplateRef('messagesEl');
 let timer: number | undefined;
 
-const filteredChannels = computed(() => {
+const categoryIds = computed(() => new Set(
+	channels.value
+		.map(channel => channel.parentId)
+		.filter((id): id is string => id != null),
+));
+
+const selectableChannels = computed(() => channels.value.filter(channel => !categoryIds.value.has(channel.id)));
+
+const filteredSelectableChannels = computed(() => {
 	const needle = channelFilter.value.trim().toLowerCase();
 	return needle.length === 0
-		? channels.value
-		: channels.value.filter(channel => channel.name.toLowerCase().includes(needle));
+		? selectableChannels.value
+		: selectableChannels.value.filter(channel => channel.name.toLowerCase().includes(needle));
 });
 
-const textChannels = computed(() => filteredChannels.value.filter(channel => channel.kind !== 'voice'));
-const voiceChannels = computed(() => filteredChannels.value.filter(channel => channel.kind === 'voice'));
+const channelGroups = computed(() => channels.value
+	.filter(channel => categoryIds.value.has(channel.id))
+	.map(parent => ({
+		id: parent.id,
+		name: parent.name,
+		channels: filteredSelectableChannels.value.filter(channel => channel.parentId === parent.id),
+	}))
+	.filter(group => group.channels.length > 0));
+
+const ungroupedChannels = computed(() => filteredSelectableChannels.value.filter(channel => channel.parentId == null));
+const textChannels = computed(() => ungroupedChannels.value.filter(channel => channel.kind !== 'voice'));
+const voiceChannels = computed(() => ungroupedChannels.value.filter(channel => channel.kind === 'voice'));
 const activeMembers = computed(() => {
 	const rank: Record<string, number> = { owner: 0, admin: 1, moderator: 2, member: 3 };
 	return members.value
 		.filter(member => member.state === 'active')
-		.toSorted((a, b) => (rank[a.baseRole] ?? 9) - (rank[b.baseRole] ?? 9));
+		.slice()
+		.sort((a, b) => (rank[a.baseRole] ?? 9) - (rank[b.baseRole] ?? 9));
 });
 
 async function loadChannels() {
 	const loaded = await nookApi<CommunityChannel[]>('nook/community/channels/list', { communityId: props.communityId });
 	channels.value = props.voiceEnabled ? loaded : loaded.filter(channel => channel.kind !== 'voice');
-	if (selected.value == null || !channels.value.some(channel => channel.id === selected.value?.id)) {
-		selected.value = channels.value.find(channel => channel.kind !== 'voice') ?? channels.value[0] ?? null;
+	const available = selectableChannels.value;
+	if (selected.value == null || !available.some(channel => channel.id === selected.value?.id)) {
+		selected.value = available.find(channel => channel.kind !== 'voice') ?? available[0] ?? null;
 	}
 	await loadMessages();
 }
@@ -252,7 +286,7 @@ async function search() {
 }
 
 async function openSearchResult(channelId: string) {
-	const channel = channels.value.find(item => item.id === channelId);
+	const channel = selectableChannels.value.find(item => item.id === channelId);
 	if (channel) await select(channel);
 }
 
@@ -419,8 +453,9 @@ onBeforeUnmount(() => {
 	padding: 4px 8px 5px;
 	font-size: 10px;
 	font-weight: 800;
-	letter-spacing: 0.08em;
+	letter-spacing: 0.06em;
 	color: #718399;
+	text-transform: uppercase;
 }
 
 .channel {
