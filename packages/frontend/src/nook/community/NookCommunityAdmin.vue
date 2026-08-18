@@ -7,21 +7,120 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div v-if="can('community.manage')" class="_panel" :class="$style.box">
 		<h3>{{ l.settings }}</h3>
 		<div :class="$style.settingsGrid">
-			<label :class="$style.field"><span>{{ l.joinMode }}</span><select v-model="joinMode"><option value="open">{{ l.joinModeOpen }}</option><option value="approval">{{ l.joinModeApproval }}</option><option value="invite">{{ l.joinModeInvite }}</option><option value="private">{{ l.joinModePrivate }}</option></select></label>
-			<label :class="$style.field"><span>{{ l.ageMode }}</span><select v-model="ageMode"><option value="minors_only">{{ l.ageModeMinorsOnly }}</option><option value="mixed">{{ l.ageModeMixed }}</option><option value="adults_only">{{ l.ageModeAdultsOnly }}</option></select><small :class="$style.hint">{{ l.ageModeHint }}</small></label>
+			<label :class="$style.field">
+				<span>{{ l.joinMode }}</span>
+				<select v-model="joinMode">
+					<option value="open">{{ l.joinModeOpen }}</option>
+					<option value="approval">{{ l.joinModeApproval }}</option>
+					<option value="invite">{{ l.joinModeInvite }}</option>
+					<option value="private">{{ l.joinModePrivate }}</option>
+				</select>
+			</label>
+			<label :class="$style.field">
+				<span>{{ l.ageMode }}</span>
+				<select v-model="ageMode">
+					<option value="minors_only">{{ l.ageModeMinorsOnly }}</option>
+					<option value="mixed">{{ l.ageModeMixed }}</option>
+					<option value="adults_only">{{ l.ageModeAdultsOnly }}</option>
+				</select>
+				<small :class="$style.hint">{{ l.ageModeHint }}</small>
+			</label>
 			<label :class="$style.checkField"><input v-model="discoverable" type="checkbox"> {{ l.discoverable }}</label>
 		</div>
-		<div :class="$style.settingsActions"><button type="button" class="_button" :class="$style.primary" @click="saveSettings">{{ l.save }}</button><p v-if="settingsMessage" :class="[$style.settingsMessage, { [$style.error]: settingsMessageError }]" :role="settingsMessageError ? 'alert' : 'status'">{{ settingsMessage }}</p></div>
+		<div :class="$style.settingsActions">
+			<button type="button" class="_button" :class="$style.primary" @click="saveSettings">{{ l.save }}</button>
+			<p v-if="settingsMessage" :class="[$style.settingsMessage, { [$style.error]: settingsMessageError }]" :role="settingsMessageError ? 'alert' : 'status'">{{ settingsMessage }}</p>
+		</div>
 	</div>
-	<div v-if="can('channels.manage')" class="_panel" :class="$style.box"><h3>{{ l.channels }}</h3><div v-for="channel in channels" :key="channel.id">{{ channel.kind === 'voice' ? '🔊' : '#' }} {{ channel.name }}</div><form @submit.prevent="createChannel"><input v-model="channelName" required maxlength="64" placeholder="Channel name"><select v-model="channelKind"><option value="text">text</option><option value="announcement">announcement</option><option value="media">media</option><option value="forum">forum</option><option v-if="voiceEnabled" value="voice">voice</option></select><button class="_button">{{ l.create }}</button></form></div>
-	<div v-if="can('roles.manage')" class="_panel" :class="$style.box"><h3>{{ l.role }}</h3><div v-for="role in roles" :key="role.id"><span :style="{ color: role.color || undefined }">{{ role.name }}</span> <small>{{ role.permissions.join(', ') }}</small> <button class="_button" @click="deleteRole(role.id)">×</button></div><form @submit.prevent="createRole"><input v-model="roleName" required maxlength="64" placeholder="Role name"><input v-model="rolePermissions" placeholder="messages.post, events.manage"><button class="_button">{{ l.create }}</button></form></div>
-	<div v-if="can('rules.manage')" class="_panel" :class="$style.box"><h3>{{ l.rules }}</h3><article v-for="rule in rules" :key="rule.id"><strong>{{ rule.title }}</strong><p>{{ rule.body }}</p><button class="_button" @click="deleteRule(rule.id)">×</button></article><form @submit.prevent="createRule"><input v-model="ruleTitle" required maxlength="128" placeholder="Rule"><textarea v-model="ruleBody" required maxlength="4096"></textarea><button class="_button">{{ l.create }}</button></form></div>
-	<div v-if="can('members.invite')" class="_panel" :class="$style.box"><h3>{{ l.invite }}</h3><button class="_button" @click="createInvite">{{ l.create }}</button><div v-if="inviteToken" :class="$style.token"><code>{{ inviteToken }}</code><button class="_button" @click="copyInvite">{{ l.copy }}</button></div><div v-for="invite in invites" :key="invite.id"><small>{{ invite.id }} · {{ invite.useCount }}/{{ invite.maxUses ?? '∞' }}</small> <button class="_button" @click="revokeInvite(invite.id)">Revoke</button></div></div>
-	<div v-if="can('pins.manage')" class="_panel" :class="$style.box"><h3>{{ l.pins }}</h3><div v-for="pin in pins" :key="pin.id">📌 {{ pin.label || pin.url || pin.targetId }} <button class="_button" @click="deletePin(pin.id)">×</button></div><form @submit.prevent="createPin"><select v-model="pinKind"><option value="url">url</option><option value="note">note</option><option value="message">message</option><option value="announcement">announcement</option><option value="event">event</option></select><input v-model="pinTarget" placeholder="URL or target ID"><input v-model="pinLabel" placeholder="Label"><button class="_button">{{ l.create }}</button></form></div>
+
+	<div v-if="can('channels.manage')" class="_panel" :class="$style.box">
+		<h3>{{ l.channels }}</h3>
+		<div :class="$style.channelList">
+			<div v-for="channel in channels" :key="channel.id" :class="$style.channelRow">
+				<span>{{ channel.kind === 'voice' ? '🔊' : '#' }} {{ channel.name }}</span>
+				<small v-if="channel.parentId">↳ {{ parentName(channel.parentId) }}</small>
+			</div>
+		</div>
+		<form :class="$style.channelForm" @submit.prevent="createChannel">
+			<input v-model="channelName" required maxlength="64" placeholder="Channel name">
+			<select v-model="channelKind">
+				<option value="text">text</option>
+				<option value="announcement">announcement</option>
+				<option value="media">media</option>
+				<option value="forum">forum</option>
+				<option v-if="voiceEnabled" value="voice">voice</option>
+			</select>
+			<select v-model="channelParentId">
+				<option value="">{{ l.noCategory }}</option>
+				<option v-for="candidate in categoryCandidates" :key="candidate.id" :value="candidate.id">{{ candidate.name }}</option>
+			</select>
+			<button class="_button" :class="$style.primary">{{ l.create }}</button>
+		</form>
+		<small :class="$style.hint">{{ l.categoryHint }}</small>
+	</div>
+
+	<div v-if="can('roles.manage')" class="_panel" :class="$style.box">
+		<h3>{{ l.role }}</h3>
+		<div v-for="role in roles" :key="role.id">
+			<span :style="{ color: role.color || undefined }">{{ role.name }}</span>
+			<small>{{ role.permissions.join(', ') }}</small>
+			<button class="_button" @click="deleteRole(role.id)">×</button>
+		</div>
+		<form @submit.prevent="createRole">
+			<input v-model="roleName" required maxlength="64" placeholder="Role name">
+			<input v-model="rolePermissions" placeholder="messages.post, events.manage">
+			<button class="_button">{{ l.create }}</button>
+		</form>
+	</div>
+
+	<div v-if="can('rules.manage')" class="_panel" :class="$style.box">
+		<h3>{{ l.rules }}</h3>
+		<article v-for="rule in rules" :key="rule.id">
+			<strong>{{ rule.title }}</strong>
+			<p>{{ rule.body }}</p>
+			<button class="_button" @click="deleteRule(rule.id)">×</button>
+		</article>
+		<form @submit.prevent="createRule">
+			<input v-model="ruleTitle" required maxlength="128" placeholder="Rule">
+			<textarea v-model="ruleBody" required maxlength="4096"></textarea>
+			<button class="_button">{{ l.create }}</button>
+		</form>
+	</div>
+
+	<div v-if="can('members.invite')" class="_panel" :class="$style.box">
+		<h3>{{ l.invite }}</h3>
+		<button class="_button" @click="createInvite">{{ l.create }}</button>
+		<div v-if="inviteToken" :class="$style.token">
+			<code>{{ inviteToken }}</code>
+			<button class="_button" @click="copyInvite">{{ l.copy }}</button>
+		</div>
+		<div v-for="invite in invites" :key="invite.id">
+			<small>{{ invite.id }} · {{ invite.useCount }}/{{ invite.maxUses ?? '∞' }}</small>
+			<button class="_button" @click="revokeInvite(invite.id)">Revoke</button>
+		</div>
+	</div>
+
+	<div v-if="can('pins.manage')" class="_panel" :class="$style.box">
+		<h3>{{ l.pins }}</h3>
+		<div v-for="pin in pins" :key="pin.id">📌 {{ pin.label || pin.url || pin.targetId }} <button class="_button" @click="deletePin(pin.id)">×</button></div>
+		<form @submit.prevent="createPin">
+			<select v-model="pinKind">
+				<option value="url">url</option>
+				<option value="note">note</option>
+				<option value="message">message</option>
+				<option value="announcement">announcement</option>
+				<option value="event">event</option>
+			</select>
+			<input v-model="pinTarget" placeholder="URL or target ID">
+			<input v-model="pinLabel" placeholder="Label">
+			<button class="_button">{{ l.create }}</button>
+		</form>
+	</div>
 </section>
 </template>
+
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { nookApi } from './nook-api.js';
 import { communityLabels as l } from './labels.js';
 import type { CommunityChannel, CommunityDetail, CommunityPin, CommunityRole, CommunityRule } from './types.js';
@@ -40,6 +139,7 @@ const invites = ref<Array<{ id: string; useCount: number; maxUses: number | null
 const pins = ref<CommunityPin[]>([]);
 const channelName = ref('');
 const channelKind = ref<CommunityChannel['kind']>('text');
+const channelParentId = ref('');
 const roleName = ref('');
 const rolePermissions = ref('messages.post');
 const ruleTitle = ref('');
@@ -49,9 +149,15 @@ const pinKind = ref<'url' | 'note' | 'message' | 'announcement' | 'event'>('url'
 const pinTarget = ref('');
 const pinLabel = ref('');
 
+const categoryCandidates = computed(() => channels.value.filter(channel => channel.parentId == null && channel.kind !== 'voice'));
+
 function can(permission: string) {
 	const values = props.detail.membership?.permissions ?? [];
 	return values.includes('*') || values.includes(permission);
+}
+
+function parentName(parentId: string) {
+	return channels.value.find(channel => channel.id === parentId)?.name ?? parentId;
 }
 
 async function safe<T>(request: Promise<T>, fallback: T): Promise<T> {
@@ -87,8 +193,14 @@ async function saveSettings() {
 
 async function createChannel() {
 	if (channelKind.value === 'voice' && !props.voiceEnabled) return;
-	await nookApi('nook/community/channels/create', { communityId: props.communityId, name: channelName.value, kind: channelKind.value });
+	await nookApi('nook/community/channels/create', {
+		communityId: props.communityId,
+		name: channelName.value,
+		kind: channelKind.value,
+		parentId: channelParentId.value || null,
+	});
 	channelName.value = '';
+	channelParentId.value = '';
 	await load();
 }
 
@@ -152,6 +264,112 @@ watch(() => props.detail, detail => {
 	if (!props.voiceEnabled && channelKind.value === 'voice') channelKind.value = 'text';
 	void load();
 }, { deep: true });
+
 onMounted(load);
 </script>
-<style lang="scss" module>.box{padding:16px}.box h3{margin-top:0}.box form{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.box input,.box textarea,.box select{padding:8px;background:var(--MI_THEME-bg);color:var(--MI_THEME-fg);border:1px solid var(--MI_THEME-divider);border-radius:7px}.settingsGrid{display:grid;gap:14px}.field{display:grid;gap:6px}.hint{color:var(--MI_THEME-fg);opacity:.7;line-height:1.5}.checkField{display:flex;align-items:center;gap:8px}.settingsActions{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:16px}.primary{padding:9px 15px;background:var(--MI_THEME-accent);color:var(--MI_THEME-fgOnAccent);border-radius:8px}.settingsMessage{margin:0;font-size:90%;color:var(--MI_THEME-fg)}.error{color:var(--MI_THEME-error)}.token{margin:10px 0;padding:8px;background:var(--MI_THEME-bg);overflow-wrap:anywhere}</style>
+
+<style lang="scss" module>
+.box {
+	padding: 16px;
+}
+
+.box h3 {
+	margin-top: 0;
+}
+
+.box form {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 10px;
+}
+
+.box input,
+.box textarea,
+.box select {
+	padding: 8px;
+	background: var(--MI_THEME-bg);
+	color: var(--MI_THEME-fg);
+	border: 1px solid var(--MI_THEME-divider);
+	border-radius: 7px;
+}
+
+.settingsGrid {
+	display: grid;
+	gap: 14px;
+}
+
+.field {
+	display: grid;
+	gap: 6px;
+}
+
+.hint {
+	display: block;
+	margin-top: 8px;
+	color: var(--MI_THEME-fg);
+	opacity: 0.7;
+	line-height: 1.5;
+}
+
+.checkField {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.settingsActions {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin-top: 16px;
+}
+
+.primary {
+	padding: 9px 15px;
+	background: var(--MI_THEME-accent);
+	color: var(--MI_THEME-fgOnAccent);
+	border-radius: 8px;
+}
+
+.settingsMessage {
+	margin: 0;
+	font-size: 90%;
+	color: var(--MI_THEME-fg);
+}
+
+.error {
+	color: var(--MI_THEME-error);
+}
+
+.channelList {
+	display: grid;
+	gap: 4px;
+}
+
+.channelRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 7px 9px;
+	border-radius: 7px;
+	background: var(--MI_THEME-bg);
+}
+
+.channelRow small {
+	opacity: 0.65;
+}
+
+.channelForm {
+	align-items: center;
+}
+
+.token {
+	margin: 10px 0;
+	padding: 8px;
+	background: var(--MI_THEME-bg);
+	overflow-wrap: anywhere;
+}
+</style>
