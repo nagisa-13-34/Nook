@@ -26,7 +26,7 @@ export const defaultNookFeatureFlags: NookFeatureFlagSet = Object.freeze({
 	chat: false,
 	voice_call: false,
 	video_call: false,
-	community: false,
+	community: true,
 	spaces: false,
 	recommendations: false,
 	external_links: false,
