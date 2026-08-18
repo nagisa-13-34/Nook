@@ -20,7 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<MkInfo v-if="noEmailServer" warn>{{ i18n.ts.noEmailServerWarning }} <MkA to="/admin/email-settings" class="_link">{{ i18n.ts.configure }}</MkA></MkInfo>
 				</div>
 
-				<MkSuperMenu :def="menuDef" :searchIndex="searchIndex" :grid="narrow"></MkSuperMenu>
+				<MkSuperMenu :def="menuDef" :grid="narrow"></MkSuperMenu>
 			</div>
 		</div>
 	</div>
@@ -41,10 +41,8 @@ import { instance } from '@/instance.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { definePage, provideMetadataReceiver, provideReactiveMetadata } from '@/page.js';
 import { useRouter } from '@/router.js';
-import { genSearchIndexes } from '@/utility/inapp-search.js';
 import { iAmAdmin } from '@/i.js';
 
-const searchIndex = await import('search-index:admin').then(({ searchIndexes }) => genSearchIndexes(searchIndexes));
 const isEmpty = (x: string | null) => x == null || x === '';
 const router = useRouter();
 
