@@ -45,7 +45,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import { chooseDriveFile } from '@/utility/drive.js';
 import * as os from '@/os.js';
@@ -67,15 +67,19 @@ const saving = ref(false);
 const saved = ref(false);
 const previewName = computed(() => nickname.value.trim() || $i.name || $i.username);
 
-async function open() {
-	opened.value = true;
-	saved.value = false;
+async function loadProfile() {
 	const members = await nookApi<CommunityMember[]>('nook/community/members/list', { communityId: props.communityId }).catch(() => []);
 	const me = members.find(member => member.userId === $i.id);
 	nickname.value = me?.nickname ?? '';
 	avatarId.value = me?.avatarId ?? null;
 	avatarUrl.value = me?.avatarUrl ?? $i.avatarUrl ?? null;
 	triggerAvatarUrl.value = avatarUrl.value;
+}
+
+async function open() {
+	opened.value = true;
+	saved.value = false;
+	await loadProfile();
 }
 
 function useAvatar(driveFile: Misskey.entities.DriveFile) {
@@ -139,6 +143,8 @@ async function save() {
 		saving.value = false;
 	}
 }
+
+onMounted(loadProfile);
 </script>
 
 <style lang="scss" module>
