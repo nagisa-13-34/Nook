@@ -4,14 +4,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div :class="[$style.root, { '_forceShrinkSpacer': deviceKind === 'smartphone' }]">
+<div class="nook-ui" :class="[$style.root, { '_forceShrinkSpacer': deviceKind === 'smartphone' }]">
 	<XTitlebar v-if="prefer.r.showTitlebar.value && !isMobile" style="flex-shrink: 0;"/>
 	<XNookMobileHeader v-if="isMobile" v-model:drawerMenuShowing="drawerMenuShowing" v-model:widgetsShowing="widgetsShowing"/>
 
 	<div :class="$style.nonTitlebarArea">
 		<XSidebar v-if="!isMobile" :class="$style.sidebar" :showWidgetButton="!showWidgetsSide" @widgetButtonClick="widgetsShowing = true"/>
 
-		<div :class="[$style.contents, !isMobile && prefer.r.showTitlebar.value ? $style.withSidebarAndTitlebar : null]" @contextmenu.stop="onContextmenu">
+		<div :class="[$style.contents, isRoot ? $style.homeContents : null, !isMobile && prefer.r.showTitlebar.value ? $style.withSidebarAndTitlebar : null]" @contextmenu.stop="onContextmenu">
 			<div>
 				<XReloadSuggestion v-if="shouldSuggestReload"/>
 				<XPreferenceRestore v-if="shouldSuggestRestoreBackup"/>
@@ -143,19 +143,24 @@ $widgets-hide-threshold: 1090px;
 	--nook-border: #d7e3f1;
 	--nook-muted: #667a91;
 
-	/* Nook UI uses a fixed product palette instead of inheriting Misskey's visual identity. */
+	/* Nook owns the visual system while keeping Misskey's internals intact. */
 	--MI_THEME-accent: var(--nook-blue);
 	--MI_THEME-bg: var(--nook-blue-soft);
 	--MI_THEME-panel: var(--nook-white);
+	--MI_THEME-popup: var(--nook-white);
 	--MI_THEME-navBg: var(--nook-white);
 	--MI_THEME-navFg: var(--nook-blue-deep);
 	--MI_THEME-fg: var(--nook-blue-deep);
+	--MI_THEME-fgHighlighted: var(--nook-blue);
 	--MI_THEME-divider: var(--nook-border);
 	--MI_THEME-indicator: var(--nook-yellow);
 	--MI_THEME-buttonGradateA: var(--nook-yellow);
 	--MI_THEME-buttonGradateB: var(--nook-yellow);
 	--MI_THEME-fgOnAccent: var(--nook-blue-deep);
 	--MI_THEME-accentedBg: #e6f0ff;
+	--MI_THEME-panelHighlight: #f7faff;
+	--MI_THEME-focus: var(--nook-blue);
+	--MI-radius: 8px;
 
 	height: 100dvh;
 	overflow: clip;
@@ -196,6 +201,14 @@ $widgets-hide-threshold: 1090px;
 	min-height: 0;
 }
 
+.homeContents > .content {
+	width: min(100%, 720px);
+	margin-inline: auto;
+	box-sizing: border-box;
+	background: var(--nook-white);
+	border-inline: solid 1px var(--nook-border);
+}
+
 .statusbars {
 	position: sticky;
 	top: 0;
@@ -213,6 +226,101 @@ $widgets-hide-threshold: 1090px;
 
 	@media (max-width: $widgets-hide-threshold) {
 		display: none;
+	}
+}
+
+/* Shared surfaces: flat, quiet and product-like rather than card-heavy. */
+:global(.nook-ui ._panel) {
+	background: var(--nook-white);
+	border: solid 1px var(--nook-border);
+	border-radius: 8px;
+	box-shadow: none;
+}
+
+:global(.nook-ui article) {
+	background: var(--nook-white);
+	border-bottom: solid 1px var(--nook-border);
+	box-shadow: none;
+}
+
+/* Composer: white writing surface with a solid yellow action. */
+:global(.nook-ui div:has(> header [data-testid="post-form-submit"])) {
+	background: var(--nook-white);
+	border: solid 1px var(--nook-border);
+	border-radius: 8px;
+	box-shadow: none;
+	overflow: clip;
+}
+
+:global(.nook-ui div:has(> header [data-testid="post-form-submit"]) > header) {
+	background: var(--nook-white);
+	border-bottom: solid 1px var(--nook-border);
+}
+
+:global(.nook-ui [data-testid="post-form-text"]) {
+	color: var(--nook-blue-deep);
+	font-size: 16px;
+	line-height: 1.6;
+}
+
+:global(.nook-ui [data-testid="post-form-text"]::placeholder) {
+	color: var(--nook-muted);
+	opacity: 0.8;
+}
+
+:global(.nook-ui [data-testid="post-form-submit"] > div) {
+	background: var(--nook-yellow) !important;
+	color: var(--nook-blue-deep) !important;
+	border-radius: 6px;
+	box-shadow: none;
+}
+
+:global(.nook-ui [data-testid="post-form-submit"]:not(:disabled):hover > div) {
+	background: #ffdf66 !important;
+}
+
+/* Tabs use a simple blue underline instead of pill-like selected states. */
+:global(.nook-ui [role="tablist"]) {
+	background: var(--nook-white);
+	border-bottom: solid 1px var(--nook-border);
+}
+
+:global(.nook-ui [role="tab"]) {
+	border-radius: 0 !important;
+	box-shadow: none !important;
+}
+
+:global(.nook-ui [role="tab"][aria-selected="true"]) {
+	background: transparent !important;
+	color: var(--nook-blue) !important;
+	box-shadow: inset 0 -2px var(--nook-blue) !important;
+}
+
+/* Keep controls crisp: no decorative gradient or floating-card shadow. */
+:global(.nook-ui ._buttonGradate) {
+	background: var(--nook-yellow) !important;
+	color: var(--nook-blue-deep) !important;
+	box-shadow: none !important;
+}
+
+:global(.nook-ui a) {
+	text-underline-offset: 2px;
+}
+
+@media (max-width: 500px) {
+	.homeContents > .content {
+		width: 100%;
+		border-inline: 0;
+	}
+
+	:global(.nook-ui ._panel) {
+		border-radius: 0;
+		border-inline: 0;
+	}
+
+	:global(.nook-ui div:has(> header [data-testid="post-form-submit"])) {
+		border-radius: 0;
+		border-inline: 0;
 	}
 }
 </style>
