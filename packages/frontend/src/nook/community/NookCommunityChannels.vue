@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 		<div :class="$style.channelScroll">
 			<section v-if="textChannels.length > 0" :class="$style.channelGroup">
-				<div :class="$style.groupTitle">TEXT</div>
+				<div :class="$style.groupTitle">{{ l.textChannels }}</div>
 				<button
 					v-for="item in textChannels"
 					:key="item.id"
@@ -36,7 +36,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</section>
 
 			<section v-if="voiceChannels.length > 0" :class="$style.channelGroup">
-				<div :class="$style.groupTitle">VOICE</div>
+				<div :class="$style.groupTitle">{{ l.voiceChannels }}</div>
 				<button
 					v-for="item in voiceChannels"
 					:key="item.id"
@@ -131,7 +131,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 		<div v-else :class="$style.empty">
 			<i class="ti ti-message-circle"></i>
-			<strong>No channels yet.</strong>
+			<strong>{{ l.noChannels }}</strong>
 		</div>
 	</main>
 
@@ -188,7 +188,12 @@ const filteredChannels = computed(() => {
 
 const textChannels = computed(() => filteredChannels.value.filter(channel => channel.kind !== 'voice'));
 const voiceChannels = computed(() => filteredChannels.value.filter(channel => channel.kind === 'voice'));
-const activeMembers = computed(() => members.value.filter(member => member.state === 'active'));
+const activeMembers = computed(() => {
+	const rank: Record<string, number> = { owner: 0, admin: 1, moderator: 2, member: 3 };
+	return members.value
+		.filter(member => member.state === 'active')
+		.toSorted((a, b) => (rank[a.baseRole] ?? 9) - (rank[b.baseRole] ?? 9));
+});
 
 async function loadChannels() {
 	const loaded = await nookApi<CommunityChannel[]>('nook/community/channels/list', { communityId: props.communityId });
@@ -264,7 +269,10 @@ function channelIcon(channel: CommunityChannel) {
 }
 
 function authorName(message: CommunityMessage) {
-	return message.botId ? message.botId : (message.userId ?? 'Unknown');
+	if (message.botId) return message.botId;
+	if (!message.userId) return 'Unknown';
+	const member = members.value.find(item => item.userId === message.userId);
+	return member?.nickname || message.userId;
 }
 
 function authorInitial(message: CommunityMessage) {
@@ -276,10 +284,10 @@ function memberInitial(member: CommunityMember) {
 }
 
 function roleLabel(role: string) {
-	if (role === 'owner') return 'Owner';
-	if (role === 'admin') return 'Admin';
-	if (role === 'moderator') return 'Moderator';
-	return 'Member';
+	if (role === 'owner') return l.owner;
+	if (role === 'admin') return l.administrator;
+	if (role === 'moderator') return l.moderator;
+	return l.member;
 }
 
 function formatTime(value: string) {
@@ -452,6 +460,7 @@ onBeforeUnmount(() => {
 }
 
 .main {
+	position: relative;
 	min-width: 0;
 	display: flex;
 	flex-direction: column;
@@ -658,7 +667,7 @@ onBeforeUnmount(() => {
 	position: absolute;
 	z-index: 5;
 	top: 55px;
-	right: 220px;
+	right: 0;
 	width: min(420px, 60vw);
 	max-height: 360px;
 	overflow-y: auto;
@@ -764,10 +773,6 @@ onBeforeUnmount(() => {
 
 	.memberRail {
 		display: none;
-	}
-
-	.searchResults {
-		right: 0;
 	}
 }
 
