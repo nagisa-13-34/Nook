@@ -61,19 +61,16 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw error;
 			}
 
-			const [memberRows, communityRows, user] = await Promise.all([
+			const [memberRows, user] = await Promise.all([
 				this.db.query<Array<{ nickname: string | null; avatarId: string | null; joinedAt: Date }>>(
 					'SELECT "nickname", "avatarId", "joinedAt" FROM "nook_community_member" WHERE "communityId" = $1 AND "userId" = $2 LIMIT 1',
 					[ps.communityId, me.id],
-				),
-				this.db.query<Array<{ createdAt: Date }>>(
-					'SELECT "createdAt" FROM "channel" WHERE "id" = $1 LIMIT 1',
-					[ps.communityId],
 				),
 				this.usersRepository.findOneBy({ id: me.id }),
 			]);
 			const row = memberRows[0];
 			const avatar = row?.avatarId == null ? null : await this.driveFilesRepository.findOneBy({ id: row.avatarId });
+			const joinedAt = row?.joinedAt == null ? new Date() : (row.joinedAt instanceof Date ? row.joinedAt : new Date(row.joinedAt));
 
 			return {
 				userId: me.id,
@@ -81,7 +78,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				state: membership.state,
 				nickname: row?.nickname ?? null,
 				avatarId: row?.avatarId ?? null,
-				joinedAt: (row?.joinedAt ?? communityRows[0]?.createdAt ?? new Date()).toISOString(),
+				joinedAt: joinedAt.toISOString(),
 				roleIds: [],
 				username: user?.username ?? me.id,
 				name: user?.name ?? null,
