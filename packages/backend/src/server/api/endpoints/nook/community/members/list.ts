@@ -55,17 +55,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			// context for the requester without a corresponding list row yet.
 			// Always include the signed-in member in the visible member list.
 			if (!members.some(member => member.userId === me.id)) {
-				const communityRows = await this.db.query<Array<{ createdAt: Date }>>(
-					'SELECT "createdAt" FROM "channel" WHERE "id" = $1 LIMIT 1',
-					[ps.communityId],
-				);
 				members.unshift({
 					userId: me.id,
 					baseRole: membership.baseRole,
 					state: membership.state,
 					nickname: null,
 					avatarId: null,
-					joinedAt: communityRows[0]?.createdAt ?? new Date(),
+					joinedAt: new Date(),
 					roleIds: [],
 				});
 			}
@@ -81,9 +77,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			return members.map(member => {
 				const user = users.get(member.userId);
 				const avatar = member.avatarId == null ? null : avatars.get(member.avatarId) ?? null;
+				const joinedAt = member.joinedAt instanceof Date ? member.joinedAt : new Date(member.joinedAt);
 				return {
 					...member,
-					joinedAt: member.joinedAt.toISOString(),
+					joinedAt: joinedAt.toISOString(),
 					roleIds: canManageRoles ? member.roleIds : [],
 					username: user?.username ?? member.userId,
 					name: user?.name ?? null,
