@@ -4,9 +4,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<PageWithHeader v-model:tab="tab" :actions="headerActions" :tabs="headerTabs" :swipable="true">
-	<div class="_spacer" style="--MI_SPACER-w: 700px;">
-		<div v-if="channel && tab === 'overview'" class="_gaps">
+<PageWithHeader v-model:tab="tab" :actions="headerActions" :tabs="headerTabs" :swipable="!communityEnabled">
+	<div
+		class="_spacer"
+		:style="communityEnabled
+			? '--MI_SPACER-w: 1320px; --MI_SPACER-min: 10px; --MI_SPACER-max: 18px;'
+			: '--MI_SPACER-w: 700px;'"
+	>
+		<div v-if="channel && !communityEnabled && tab === 'overview'" class="_gaps">
 			<div class="_panel" :class="$style.bannerContainer">
 				<XChannelFollowButton :channel="channel" :full="true" :class="$style.subscribe"/>
 				<MkButton v-if="favorited" v-tooltip="i18n.ts.unfavorite" asLike class="button" rounded primary :class="$style.favorite" @click="unfavorite()"><i class="ti ti-star"></i></MkButton>
@@ -15,7 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div :class="$style.bannerStatus">
 						<div><i class="ti ti-users ti-fw"></i><I18n :src="i18n.ts._channel.usersCount" tag="span" style="margin-left: 4px;"><template #n><b>{{ channel.usersCount }}</b></template></I18n></div>
 						<div><i class="ti ti-pencil ti-fw"></i><I18n :src="i18n.ts._channel.notesCount" tag="span" style="margin-left: 4px;"><template #n><b>{{ channel.notesCount }}</b></template></I18n></div>
-						<div v-if="$i != null && channel != null && $i.id === channel.userId" style="color: var(--MI_THEME-warn)"><i class="ti ti-user-star ti-fw"></i><span style="margin-left: 4px;">{{ i18n.ts.youAreAdmin }}</span></div>
+						<div v-if="$i != null && $i.id === channel.userId" style="color: var(--MI_THEME-warn)"><i class="ti ti-user-star ti-fw"></i><span style="margin-left: 4px;">{{ i18n.ts.youAreAdmin }}</span></div>
 					</div>
 					<div v-if="channel.isSensitive" :class="$style.sensitiveIndicator">{{ i18n.ts.sensitive }}</div>
 					<div :class="$style.bannerFade"></div>
@@ -32,17 +37,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 			</MkFoldableSection>
 		</div>
-		<div v-if="channel && tab === 'timeline'" class="_gaps">
+
+		<div v-if="channel && !communityEnabled && tab === 'timeline'" class="_gaps">
 			<MkInfo v-if="channel.isArchived" warn>{{ i18n.ts.thisChannelArchived }}</MkInfo>
-
 			<MkPostForm v-if="$i && prefer.r.showFixedPostFormInChannel.value" :channel="channel" class="post-form _panel" fixed :autofocus="deviceKind === 'desktop'"/>
-
 			<MkStreamingNotesTimeline :key="channelId" src="channel" :channel="channelId"/>
 		</div>
-		<div v-else-if="tab === 'featured'">
+
+		<div v-else-if="!communityEnabled && tab === 'featured'">
 			<MkNotesTimeline :paginator="featuredPaginator"/>
 		</div>
-		<div v-else-if="tab === 'search'">
+
+		<div v-else-if="!communityEnabled && tab === 'search'">
 			<div v-if="notesSearchAvailable" class="_gaps">
 				<div>
 					<MkInput v-model="searchQuery" @enter="search()">
@@ -56,11 +62,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<MkInfo warn>{{ i18n.ts.notesSearchNotAvailable }}</MkInfo>
 			</div>
 		</div>
-		<div v-if="channel && communityEnabled && tab === 'community'">
-			<NookCommunityPanel :communityId="channelId" :voiceEnabled="voiceCallEnabled"/>
+
+		<div v-if="channel && communityEnabled" :class="$style.communityRoot">
+			<NookCommunityPanel
+				:communityId="channelId"
+				:communityName="channel.name"
+				:voiceEnabled="voiceCallEnabled"
+			/>
 		</div>
 	</div>
-	<template #footer>
+
+	<template v-if="!communityEnabled" #footer>
 		<div :class="$style.footer">
 			<div class="_spacer" style="--MI_SPACER-w: 700px; --MI_SPACER-min: 16px; --MI_SPACER-max: 16px;">
 				<div class="_buttonsCenter">
@@ -124,7 +136,7 @@ const featuredPaginator = markRaw(new Paginator('notes/featured', {
 }));
 
 useInterval(() => {
-	if (channel.value == null) return;
+	if (channel.value == null || communityEnabled.value) return;
 	miLocalStorage.setItemAsJson(`channelLastReadedAt:${channel.value.id}`, Date.now());
 }, 3000, { immediate: true, afterMounted: true });
 
@@ -133,17 +145,25 @@ watch(() => props.channelId, async () => {
 		misskeyApi('channels/show', { channelId: props.channelId }),
 		nookApi<{ community: boolean; voiceCall: boolean }>('nook/features').catch(() => ({ community: false, voiceCall: false })),
 	]);
+
 	communityEnabled.value = features.community;
 	voiceCallEnabled.value = features.community && features.voiceCall;
-	if (!communityEnabled.value && tab.value === 'community') tab.value = 'overview';
 	favorited.value = _channel.isFavorited ?? false;
+	channel.value = _channel;
+
+	if (communityEnabled.value) {
+		tab.value = 'community';
+		return;
+	}
+
+	if (tab.value === 'community') tab.value = 'overview';
 	if (favorited.value || _channel.isFollowing) tab.value = 'timeline';
+
 	if ((favorited.value || _channel.isFollowing) && _channel.lastNotedAt) {
 		const lastReadedAt: number = miLocalStorage.getItemAsJson(`channelLastReadedAt:${_channel.id}`) ?? 0;
 		const lastNotedAt = Date.parse(_channel.lastNotedAt);
 		if (lastNotedAt > lastReadedAt) miLocalStorage.setItemAsJson(`channelLastReadedAt:${_channel.id}`, lastNotedAt);
 	}
-	channel.value = _channel;
 }, { immediate: true });
 
 function edit() {
@@ -209,7 +229,7 @@ async function unmute() {
 async function search() {
 	if (!channel.value) return;
 	const query = searchQuery.value.toString().trim();
-	if (query == null) return;
+	if (query.length === 0) return;
 	searchPaginator.value = markRaw(new Paginator('notes/search', {
 		limit: 10,
 		params: { query, channelId: channel.value.id },
@@ -249,13 +269,15 @@ const headerActions = computed(() => {
 	return headerItems.length > 0 ? headerItems : null;
 });
 
-const headerTabs = computed(() => [
-	{ key: 'overview', title: i18n.ts.overview, icon: 'ti ti-info-circle' },
-	...(communityEnabled.value ? [{ key: 'community', title: 'Community', icon: 'ti ti-users-group' }] : []),
-	{ key: 'timeline', title: i18n.ts.timeline, icon: 'ti ti-home' },
-	{ key: 'featured', title: i18n.ts.featured, icon: 'ti ti-bolt' },
-	{ key: 'search', title: i18n.ts.search, icon: 'ti ti-search' },
-]);
+const headerTabs = computed(() => {
+	if (communityEnabled.value) return [];
+	return [
+		{ key: 'overview', title: i18n.ts.overview, icon: 'ti ti-info-circle' },
+		{ key: 'timeline', title: i18n.ts.timeline, icon: 'ti ti-home' },
+		{ key: 'featured', title: i18n.ts.featured, icon: 'ti ti-bolt' },
+		{ key: 'search', title: i18n.ts.search, icon: 'ti ti-search' },
+	];
+});
 
 definePage(() => ({
 	title: channel.value ? channel.value.name : i18n.ts.channel,
@@ -264,12 +286,17 @@ definePage(() => ({
 </script>
 
 <style lang="scss" module>
+.communityRoot {
+	min-width: 0;
+}
+
 .footer {
 	-webkit-backdrop-filter: var(--MI-blur, blur(15px));
 	backdrop-filter: var(--MI-blur, blur(15px));
 	background: color(from var(--MI_THEME-bg) srgb r g b / 0.5);
 	border-top: solid 0.5px var(--MI_THEME-divider);
 }
+
 .bannerContainer { position: relative; }
 .subscribe { position: absolute; z-index: 1; top: 16px; left: 16px; }
 .favorite { position: absolute; z-index: 1; top: 16px; right: 16px; }
