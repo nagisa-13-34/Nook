@@ -60,7 +60,7 @@ const detail=ref<CommunityDetail|null>(null), rules=ref<CommunityRule[]>([]), pi
 const autoTranslate=nookAutoTranslateEnabled;
 const displayName=computed(()=>props.communityName?.trim()||l.community), communityInitial=computed(()=>displayName.value.slice(0,1).toUpperCase()), isActiveMember=computed(()=>detail.value?.membership?.state==='active'), isBanned=computed(()=>detail.value?.membership?.state==='banned'), ageModeLabel=computed(()=>detail.value?.ageMode==='minors_only'?l.ageModeMinorsOnly:detail.value?.ageMode==='adults_only'?l.ageModeAdultsOnly:l.ageModeMixed);
 function can(permission:string){if(!isActiveMember.value)return false;const values=detail.value?.membership?.permissions??[];return values.includes('*')||values.includes(permission)}
-const canOpenAdmin=computed(()=>['community.manage','channels.manage','roles.manage'].some(can));
+const canOpenAdmin=computed(()=>['community.manage','roles.manage'].some(can));
 const tabs=computed(()=>[{key:'channels',label:l.channels,icon:'ti ti-hash'},{key:'events',label:l.events,icon:'ti ti-calendar-event'},...(can('bots.manage')?[{key:'bots',label:l.bots,icon:'ti ti-robot'}]:[]),...(canOpenAdmin.value?[{key:'admin',label:l.admin,icon:'ti ti-settings'}]:[])]);
 async function load(){loading.value=true;try{detail.value=await nookApi('nook/community/show',{communityId:props.communityId});rules.value=await nookApi('nook/community/rules/list',{communityId:props.communityId});pins.value=isActiveMember.value?await nookApi('nook/community/pins/list',{communityId:props.communityId,channelId:null}).catch(()=>[]):[];if(!tabs.value.some(x=>x.key===tab.value))tab.value='channels'}finally{loading.value=false}}
 function profileUpdated(){workspaceKey.value++}
