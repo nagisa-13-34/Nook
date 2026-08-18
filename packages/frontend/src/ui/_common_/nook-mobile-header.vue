@@ -41,14 +41,19 @@ const menuIndicated = computed(() => {
 
 <style lang="scss" module>
 .root {
+	--nook-blue: #175cd3;
+	--nook-yellow: #ffd84d;
+	--nook-ink: #17324d;
+	--nook-border: #d7e3f1;
 	position: relative;
 	display: grid;
 	grid-template-columns: 48px 1fr 48px 48px;
 	align-items: center;
-	min-height: 44px;
+	min-height: 48px;
 	padding-top: env(safe-area-inset-top, 0px);
-	background: var(--MI_THEME-navBg);
-	border-bottom: solid 0.5px var(--MI_THEME-divider);
+	background: #fff;
+	color: var(--nook-ink);
+	border-bottom: 1px solid var(--nook-border);
 }
 
 .brand {
@@ -57,9 +62,9 @@ const menuIndicated = computed(() => {
 	transform: translateX(-50%);
 	text-align: center;
 	font-size: 20px;
-	font-weight: 800;
-	letter-spacing: -0.04em;
-	color: var(--MI_THEME-accent);
+	font-weight: 850;
+	letter-spacing: -0.045em;
+	color: var(--nook-blue);
 }
 
 .menu {
@@ -78,15 +83,16 @@ const menuIndicated = computed(() => {
 	position: relative;
 	display: grid;
 	width: 100%;
-	height: 44px;
+	height: 48px;
 	place-items: center;
 	font-size: 19px;
+	color: var(--nook-ink);
 }
 
 .unread {
 	position: absolute;
 	top: 9px;
 	right: 10px;
-	color: var(--MI_THEME-indicator);
+	color: var(--nook-yellow);
 }
 </style>
