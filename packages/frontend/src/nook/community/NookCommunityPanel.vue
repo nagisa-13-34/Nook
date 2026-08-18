@@ -79,24 +79,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<NookCommunityChannels
 					v-if="tab === 'channels'"
 					:communityId="communityId"
+					:rules="rules"
+					:pins="pins"
+					:canManageChannels="can('channels.manage')"
+					:canManageAnnouncements="can('announcements.manage')"
+					:canManageMembers="can('members.manage')"
+					:canManageRoles="can('roles.manage')"
 					:canManageVoice="can('voice.manage')"
 					:voiceEnabled="voiceEnabled"
-				/>
-				<NookCommunityAnnouncements
-					v-else-if="tab === 'announcements'"
-					:communityId="communityId"
-					:canManage="can('announcements.manage')"
 				/>
 				<NookCommunityEvents
 					v-else-if="tab === 'events'"
 					:communityId="communityId"
 					:canManage="can('events.manage')"
-				/>
-				<NookCommunityMembers
-					v-else-if="tab === 'members'"
-					:communityId="communityId"
-					:canManage="can('members.manage')"
-					:canManageRoles="can('roles.manage')"
 				/>
 				<NookCommunityBots
 					v-else-if="tab === 'bots'"
@@ -110,24 +105,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 					:voiceEnabled="voiceEnabled"
 					@refresh="load"
 				/>
-				<section v-else :class="$style.homeGrid">
-					<div :class="$style.homePanel">
-						<h3><i class="ti ti-notebook"></i> {{ l.rules }}</h3>
-						<ol>
-							<li v-for="rule in rules" :key="rule.id">
-								<strong>{{ rule.title }}</strong>
-								<p>{{ rule.body }}</p>
-							</li>
-						</ol>
-					</div>
-					<div :class="$style.homePanel">
-						<h3><i class="ti ti-pin"></i> {{ l.pins }}</h3>
-						<div v-for="pin in pins" :key="pin.id" :class="$style.pin">
-							<a v-if="pin.url" :href="pin.url" target="_blank" rel="noopener noreferrer">{{ pin.label || pin.url }}</a>
-							<span v-else>{{ pin.label || pin.targetId }}</span>
-						</div>
-					</div>
-				</section>
 			</div>
 		</template>
 	</template>
@@ -140,9 +117,7 @@ import { nookApi } from './nook-api.js';
 import { communityLabels as l } from './labels.js';
 import { nookAutoTranslateEnabled, nookAutoTranslateTargetLang } from './translation-preferences.js';
 import NookCommunityChannels from './NookCommunityChannels.vue';
-import NookCommunityAnnouncements from './NookCommunityAnnouncements.vue';
 import NookCommunityEvents from './NookCommunityEvents.vue';
-import NookCommunityMembers from './NookCommunityMembers.vue';
 import NookCommunityBots from './NookCommunityBots.vue';
 import NookCommunityAdmin from './NookCommunityAdmin.vue';
 import type { CommunityDetail, CommunityPin, CommunityRule } from './types.js';
@@ -191,10 +166,7 @@ const canOpenAdmin = computed(() => [
 
 const tabs = computed(() => [
 	{ key: 'channels', label: l.channels, icon: 'ti ti-hash' },
-	{ key: 'home', label: l.info, icon: 'ti ti-info-circle' },
-	{ key: 'announcements', label: l.announcements, icon: 'ti ti-speakerphone' },
 	{ key: 'events', label: l.events, icon: 'ti ti-calendar-event' },
-	{ key: 'members', label: l.members, icon: 'ti ti-users' },
 	...(can('bots.manage') ? [{ key: 'bots', label: l.bots, icon: 'ti ti-robot' }] : []),
 	...(canOpenAdmin.value ? [{ key: 'admin', label: l.admin, icon: 'ti ti-settings' }] : []),
 ]);
@@ -246,8 +218,7 @@ onMounted(load);
 
 .loading,
 .notice,
-.joinPanel,
-.homePanel {
+.joinPanel {
 	background: #fff;
 	border: 1px solid var(--community-border);
 	border-radius: 10px;
@@ -278,15 +249,19 @@ onMounted(load);
 	gap: 9px;
 }
 
-.communityMark {
-	width: 32px;
-	height: 32px;
+.communityMark,
+.joinIcon {
 	display: grid;
 	place-items: center;
-	border-radius: 9px;
 	background: var(--community-blue);
 	color: #fff;
 	font-weight: 850;
+}
+
+.communityMark {
+	width: 32px;
+	height: 32px;
+	border-radius: 9px;
 }
 
 .identity > div:nth-child(2) {
@@ -437,13 +412,8 @@ onMounted(load);
 .joinIcon {
 	width: 44px;
 	height: 44px;
-	display: grid;
-	place-items: center;
 	border-radius: 12px;
-	background: var(--community-blue);
-	color: #fff;
 	font-size: 18px;
-	font-weight: 850;
 }
 
 .joinHeading h2,
@@ -498,35 +468,6 @@ onMounted(load);
 	color: #62768c;
 }
 
-.homeGrid {
-	display: grid;
-	grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.7fr);
-	gap: 12px;
-}
-
-.homePanel {
-	padding: 16px;
-}
-
-.homePanel h3 {
-	margin: 0 0 12px;
-	font-size: 14px;
-}
-
-.homePanel li {
-	margin: 10px 0;
-}
-
-.homePanel p {
-	margin: 3px 0 0;
-	color: #62768c;
-}
-
-.pin {
-	padding: 8px 0;
-	border-bottom: 1px solid var(--community-border);
-}
-
 @media (max-width: 700px) {
 	.topbar {
 		border-inline: 0;
@@ -540,10 +481,6 @@ onMounted(load);
 	.translation > input,
 	.ageMode {
 		display: none;
-	}
-
-	.homeGrid {
-		grid-template-columns: 1fr;
 	}
 }
 </style>
