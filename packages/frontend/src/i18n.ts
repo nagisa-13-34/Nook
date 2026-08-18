@@ -23,8 +23,26 @@ const nookLocale = lang === 'ja-JP'
 
 type NookLocale = Locale & typeof nookLocale;
 
+function brandAsNook<T>(value: T): T {
+	if (typeof value === 'string') {
+		return value.replaceAll('Misskey', 'Nook') as T;
+	}
+
+	if (Array.isArray(value)) {
+		return value.map(item => brandAsNook(item)) as T;
+	}
+
+	if (value != null && typeof value === 'object') {
+		return Object.fromEntries(
+			Object.entries(value).map(([key, item]) => [key, brandAsNook(item)]),
+		) as T;
+	}
+
+	return value;
+}
+
 function withNookLocale(baseLocale: Locale | undefined): NookLocale {
-	return Object.assign({}, baseLocale ?? {}, nookLocale) as NookLocale;
+	return Object.assign({}, brandAsNook(baseLocale ?? {}), nookLocale) as NookLocale;
 }
 
 export const i18n = markRaw(new I18n<NookLocale>(withNookLocale(locale), _DEV_));
