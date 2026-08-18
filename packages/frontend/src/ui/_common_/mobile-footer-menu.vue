@@ -66,29 +66,34 @@ watch(rootEl, () => {
 
 <style lang="scss" module>
 .root {
+	--nook-blue: #175cd3;
+	--nook-blue-soft: #eef5ff;
+	--nook-yellow: #ffd84d;
+	--nook-ink: #17324d;
+	--nook-border: #d7e3f1;
 	position: relative;
 	z-index: 1;
 	padding-bottom: env(safe-area-inset-bottom, 0px);
 	display: grid;
-	grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+	grid-template-columns: repeat(5, 1fr);
 	width: 100%;
 	box-sizing: border-box;
-	background: var(--MI_THEME-navBg);
-	color: var(--MI_THEME-navFg);
-	border-top: solid 0.5px var(--MI_THEME-divider);
+	background: #fff;
+	color: var(--nook-ink);
+	border-top: 1px solid var(--nook-border);
 }
 
 .item {
 	display: flex;
 	min-width: 0;
-	padding: 8px 2px 6px;
+	padding: 8px 2px 7px;
 	flex-direction: column;
 	align-items: center;
 	gap: 3px;
-	color: var(--MI_THEME-navFg);
+	color: var(--nook-ink);
 
 	&.active {
-		color: var(--MI_THEME-accent);
+		color: var(--nook-blue);
 	}
 
 	&:disabled {
@@ -97,17 +102,18 @@ watch(rootEl, () => {
 }
 
 .create {
-	margin-top: -8px;
+	margin-top: -9px;
 }
 
 .createIcon {
 	display: grid;
-	width: 40px;
-	height: 40px;
+	width: 42px;
+	height: 42px;
 	place-items: center;
-	border-radius: 50%;
-	background: linear-gradient(90deg, var(--MI_THEME-buttonGradateA), var(--MI_THEME-buttonGradateB));
-	color: var(--MI_THEME-fgOnAccent);
+	border: 1px solid #e4bd29;
+	border-radius: 11px;
+	background: var(--nook-yellow);
+	color: var(--nook-ink);
 }
 
 .iconWrapper {
@@ -122,6 +128,7 @@ watch(rootEl, () => {
 	max-width: 100%;
 	overflow: hidden;
 	font-size: 10px;
+	font-weight: 650;
 	line-height: 1.2;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -131,6 +138,6 @@ watch(rootEl, () => {
 	position: absolute;
 	top: -2px;
 	right: -5px;
-	color: var(--MI_THEME-indicator);
+	color: var(--nook-yellow);
 }
 </style>
