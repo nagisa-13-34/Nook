@@ -16,6 +16,9 @@ const nookLocale = lang === 'ja-JP'
 		nookCommunity: 'コミュニティ',
 		nookUnreadChat: '未読のチャットがあります',
 		nookShorts: 'ショート',
+		nookFollowing: 'フォロー中',
+		nookDiscover: 'みつける',
+		nookMedia: 'メディア',
 		chooseServerOnMisskeyHub: 'サーバー一覧から選択',
 		serverHostPlaceholder: '例: social.example.com',
 		repositoryUrlDescription: 'Nookのソースコードを公開しているリポジトリのURLを記入します。このNook本体のリポジトリは https://github.com/Nagisa-13-34/Nook です。',
@@ -27,6 +30,9 @@ const nookLocale = lang === 'ja-JP'
 		nookCommunity: 'Community',
 		nookUnreadChat: 'You have unread chat messages',
 		nookShorts: 'Shorts',
+		nookFollowing: 'Following',
+		nookDiscover: 'Discover',
+		nookMedia: 'Media',
 		chooseServerOnMisskeyHub: 'Choose from the server directory',
 		serverHostPlaceholder: 'e.g. social.example.com',
 		repositoryUrlDescription: 'Enter the URL of the repository where the Nook source code is published. The repository for this Nook project is https://github.com/Nagisa-13-34/Nook.',
@@ -37,7 +43,11 @@ type NookLocale = Locale & typeof nookLocale;
 
 function brandAsNook<T>(value: T): T {
 	if (typeof value === 'string') {
-		return value.replaceAll('Misskey', 'Nook') as T;
+		let text = value.replaceAll('Misskey', 'Nook');
+		if (lang === 'ja-JP') {
+			text = text.replaceAll('リノート', 'リポスト').replaceAll('ノート', '投稿');
+		}
+		return text as T;
 	}
 
 	if (Array.isArray(value)) {
