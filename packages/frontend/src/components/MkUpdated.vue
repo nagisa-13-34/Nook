@@ -6,8 +6,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <MkModal ref="modal" preferType="dialog" :zPriority="'middle'" @click="modal?.close()" @closed="emit('closed')">
 	<div :class="$style.root">
-		<div :class="$style.title"><MkSparkle>{{ i18n.ts.misskeyUpdated }}</MkSparkle></div>
-		<div :class="$style.version">✨{{ version }}🚀</div>
+		<div :class="$style.brand">Nook</div>
+		<div :class="$style.yellowBar"></div>
+		<div :class="$style.title">{{ i18n.ts.misskeyUpdated }}</div>
+		<div :class="$style.version">v{{ version }}</div>
 		<div v-if="isBeta" :class="$style.beta">{{ i18n.ts.thankYouForTestingBeta }}</div>
 		<MkButton full @click="whatIsNew">{{ i18n.ts.whatIsNew }}</MkButton>
 		<MkButton :class="$style.gotIt" primary full @click="modal?.close()">{{ i18n.ts.gotIt }}</MkButton>
@@ -16,13 +18,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onMounted, useTemplateRef } from 'vue';
+import { useTemplateRef } from 'vue';
 import { version } from '@@/js/config.js';
 import MkModal from '@/components/MkModal.vue';
 import MkButton from '@/components/MkButton.vue';
-import MkSparkle from '@/components/MkSparkle.vue';
 import { i18n } from '@/i18n.js';
-import { confetti } from '@/utility/confetti.js';
 
 const modal = useTemplateRef('modal');
 
@@ -34,46 +34,59 @@ const isBeta = version.includes('-beta') || version.includes('-alpha') || versio
 
 function whatIsNew() {
 	modal.value?.close();
-	if (isBeta) {
-		window.open(`https://github.com/misskey-dev/misskey/releases/tag/${version}`, '_blank');
-	} else {
-		window.open(`https://misskey-hub.net/docs/releases/#_${version.replace(/\./g, '')}`, '_blank');
-	}
+	window.open('https://github.com/Nagisa-13-34/Nook/releases', '_blank');
 }
-
-onMounted(() => {
-	confetti({
-		duration: 1000 * 3,
-	});
-});
 </script>
 
 <style lang="scss" module>
 .root {
 	margin: auto;
 	position: relative;
-	padding: 32px;
+	padding: 30px;
 	min-width: 320px;
-	max-width: 480px;
+	max-width: 460px;
 	box-sizing: border-box;
-	text-align: center;
-	background: var(--MI_THEME-panel);
-	border-radius: var(--MI-radius);
+	text-align: left;
+	background: #fff;
+	color: #17324d;
+	border: solid 1px #d7e3f1;
+	border-top: solid 5px #175cd3;
+	border-radius: 8px;
+	box-shadow: none;
+}
+
+.brand {
+	font-size: 28px;
+	font-weight: 850;
+	line-height: 1;
+	letter-spacing: -0.055em;
+	color: #175cd3;
+}
+
+.yellowBar {
+	width: 42px;
+	height: 5px;
+	margin: 15px 0 22px;
+	border-radius: 2px;
+	background: #ffd84d;
 }
 
 .title {
-	font-weight: bold;
+	font-size: 20px;
+	font-weight: 750;
 }
 
 .version {
-	margin: 1em 0;
+	margin: 7px 0 22px;
+	font-size: 13px;
+	opacity: 0.6;
 }
 
 .beta {
-	margin: 1em 0;
+	margin: 0 0 18px;
 }
 
 .gotIt {
-	margin: 8px 0 0 0;
+	margin: 8px 0 0;
 }
 </style>
