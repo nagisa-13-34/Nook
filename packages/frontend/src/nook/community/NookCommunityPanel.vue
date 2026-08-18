@@ -9,6 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<header :class="$style.topbar">
 			<div :class="$style.identity"><div :class="$style.mark">{{ communityInitial }}</div><div><strong>{{ displayName }}</strong><small>{{ detail.memberCount }} {{ l.members }}</small></div><span :class="$style.age">{{ ageModeLabel }}</span></div>
 			<div :class="$style.tools">
+				<NookCommunityProfileButton v-if="isActiveMember" :communityId="communityId" @updated="profileUpdated"/>
 				<NookCommunityInviteButton v-if="isActiveMember && can('members.invite')" :communityId="communityId" :communityName="displayName"/>
 				<label :class="$style.translateToggle" :title="l.autoTranslate"><input v-model="autoTranslate" type="checkbox"><i class="ti ti-language"></i></label>
 				<NookCommunityLanguagePicker v-if="autoTranslate"/>
@@ -30,7 +31,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<button v-for="item in tabs" :key="item.key" class="_button" :class="[$style.navItem,{[$style.active]:tab===item.key}]" @click="tab=item.key"><i :class="item.icon"></i><span>{{ item.label }}</span></button>
 			</nav>
 			<div :class="[$style.body,{[$style.channels]:tab==='channels'}]">
-				<NookCommunityWorkspace v-if="tab==='channels'" :communityId="communityId" :pins="pins" :canManageChannels="can('channels.manage')" :canManageAnnouncements="can('announcements.manage')" :canManageMembers="can('members.manage')" :canManageRoles="can('roles.manage')" :canManageRules="can('rules.manage')" :canManagePins="can('pins.manage')" :canManageVoice="can('voice.manage')" :voiceEnabled="voiceEnabled"/>
+				<NookCommunityWorkspace v-if="tab==='channels'" :key="workspaceKey" :communityId="communityId" :pins="pins" :canManageChannels="can('channels.manage')" :canManageAnnouncements="can('announcements.manage')" :canManageMembers="can('members.manage')" :canManageRoles="can('roles.manage')" :canManageRules="can('rules.manage')" :canManagePins="can('pins.manage')" :canManageVoice="can('voice.manage')" :voiceEnabled="voiceEnabled"/>
 				<NookCommunityEvents v-else-if="tab==='events'" :communityId="communityId" :canManage="can('events.manage')"/>
 				<NookCommunityBots v-else-if="tab==='bots'" :communityId="communityId" :canManage="true"/>
 				<NookCommunityAdmin v-else-if="tab==='admin'" :communityId="communityId" :communityName="displayName" :detail="detail" :voiceEnabled="voiceEnabled" @refresh="load"/>
@@ -50,17 +51,19 @@ import NookCommunityEvents from './NookCommunityEvents.vue';
 import NookCommunityBots from './NookCommunityBots.vue';
 import NookCommunityAdmin from './NookCommunityAdmin.vue';
 import NookCommunityInviteButton from './NookCommunityInviteButton.vue';
+import NookCommunityProfileButton from './NookCommunityProfileButton.vue';
 import NookCommunityLanguagePicker from './NookCommunityLanguagePicker.vue';
 import type { CommunityDetail, CommunityPin, CommunityRule } from './types.js';
 
 const props = defineProps<{ communityId:string; communityName?:string; voiceEnabled:boolean }>();
-const detail=ref<CommunityDetail|null>(null), rules=ref<CommunityRule[]>([]), pins=ref<CommunityPin[]>([]), loading=ref(true), tab=ref('channels'), joinMessage=ref(''), inviteToken=ref(new URLSearchParams(window.location.search).get('invite')??''), joinStatus=ref('');
+const detail=ref<CommunityDetail|null>(null), rules=ref<CommunityRule[]>([]), pins=ref<CommunityPin[]>([]), loading=ref(true), tab=ref('channels'), joinMessage=ref(''), inviteToken=ref(new URLSearchParams(window.location.search).get('invite')??''), joinStatus=ref(''), workspaceKey=ref(0);
 const autoTranslate=nookAutoTranslateEnabled;
 const displayName=computed(()=>props.communityName?.trim()||l.community), communityInitial=computed(()=>displayName.value.slice(0,1).toUpperCase()), isActiveMember=computed(()=>detail.value?.membership?.state==='active'), isBanned=computed(()=>detail.value?.membership?.state==='banned'), ageModeLabel=computed(()=>detail.value?.ageMode==='minors_only'?l.ageModeMinorsOnly:detail.value?.ageMode==='adults_only'?l.ageModeAdultsOnly:l.ageModeMixed);
 function can(permission:string){if(!isActiveMember.value)return false;const values=detail.value?.membership?.permissions??[];return values.includes('*')||values.includes(permission)}
 const canOpenAdmin=computed(()=>['community.manage','channels.manage','roles.manage'].some(can));
 const tabs=computed(()=>[{key:'channels',label:l.channels,icon:'ti ti-hash'},{key:'events',label:l.events,icon:'ti ti-calendar-event'},...(can('bots.manage')?[{key:'bots',label:l.bots,icon:'ti ti-robot'}]:[]),...(canOpenAdmin.value?[{key:'admin',label:l.admin,icon:'ti ti-settings'}]:[])]);
 async function load(){loading.value=true;try{detail.value=await nookApi('nook/community/show',{communityId:props.communityId});rules.value=await nookApi('nook/community/rules/list',{communityId:props.communityId});pins.value=isActiveMember.value?await nookApi('nook/community/pins/list',{communityId:props.communityId,channelId:null}).catch(()=>[]):[];if(!tabs.value.some(x=>x.key===tab.value))tab.value='channels'}finally{loading.value=false}}
+function profileUpdated(){workspaceKey.value++}
 async function join(){try{if(inviteToken.value){await nookApi('nook/community/invites/use',{token:inviteToken.value});joinStatus.value='Joined'}else{const result=await nookApi<{status:string}>('nook/community/join',{communityId:props.communityId,message:joinMessage.value||null});joinStatus.value=result.status}await load()}catch(error){joinStatus.value=(error as {message?:string}).message??'Failed'}}
 onMounted(load);
 </script>
