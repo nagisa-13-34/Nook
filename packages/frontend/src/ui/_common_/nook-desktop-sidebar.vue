@@ -85,6 +85,14 @@ import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { getAccountMenu } from '@/accounts.js';
 
+defineProps<{
+	showWidgetButton?: boolean;
+}>();
+
+defineEmits<{
+	(ev: 'widgetButtonClick'): void;
+}>();
+
 async function openAccountMenu(ev: PointerEvent) {
 	const menuItems = await getAccountMenu({ withExtraOperation: false });
 	os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
