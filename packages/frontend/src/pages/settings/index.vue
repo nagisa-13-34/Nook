@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<div v-if="!narrow || currentPage?.route.name == null" class="nav">
 					<div class="_gaps_s">
 						<MkInfo v-if="emailNotConfigured" warn class="info">{{ i18n.ts.emailNotConfiguredWarning }} <MkA to="/settings/email" class="_link">{{ i18n.ts.configure }}</MkA></MkInfo>
-						<MkSuperMenu :def="menuDef" :grid="narrow" :searchIndex="searchIndex"></MkSuperMenu>
+						<MkSuperMenu :def="menuDef" :grid="narrow"></MkSuperMenu>
 					</div>
 				</div>
 				<div v-if="!(narrow && currentPage?.route.name == null)" class="main">
@@ -39,9 +39,6 @@ import { definePage, provideMetadataReceiver, provideReactiveMetadata } from '@/
 import * as os from '@/os.js';
 import { useRouter } from '@/router.js';
 import { signout } from '@/signout.js';
-import { genSearchIndexes } from '@/utility/inapp-search.js';
-
-const searchIndex = await import('search-index:settings').then(({ searchIndexes }) => genSearchIndexes(searchIndexes));
 
 const indexInfo = {
 	title: i18n.ts.settings,
