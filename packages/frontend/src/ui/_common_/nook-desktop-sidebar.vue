@@ -129,19 +129,24 @@ async function more(ev: PointerEvent) {
 
 <style lang="scss" module>
 .root {
+	--nook-blue: #175cd3;
+	--nook-blue-soft: #eef5ff;
+	--nook-yellow: #ffd84d;
+	--nook-ink: #17324d;
+	--nook-border: #d7e3f1;
 	width: 248px;
 	min-width: 248px;
 	height: 100%;
 	box-sizing: border-box;
-	padding: 18px 14px 14px;
+	padding: 20px 14px 14px;
 	display: flex;
 	flex-direction: column;
-	background: var(--MI_THEME-navBg);
-	color: var(--MI_THEME-navFg);
+	background: #fff;
+	color: var(--nook-ink);
 }
 
 .brandRow {
-	padding: 2px 8px 18px;
+	padding: 2px 10px 20px;
 }
 
 .brand {
@@ -150,14 +155,14 @@ async function more(ev: PointerEvent) {
 	line-height: 1;
 	letter-spacing: -0.055em;
 	text-decoration: none;
-	color: var(--MI_THEME-accent);
+	color: var(--nook-blue);
 }
 
 .primary,
 .secondary {
 	display: flex;
 	flex-direction: column;
-	gap: 3px;
+	gap: 2px;
 }
 
 .primary {
@@ -166,32 +171,28 @@ async function more(ev: PointerEvent) {
 
 .secondary {
 	padding-top: 10px;
-	border-top: solid 0.5px var(--MI_THEME-divider);
+	border-top: 1px solid var(--nook-border);
 }
 
 .item {
 	position: relative;
 	width: 100%;
-	min-height: 48px;
+	min-height: 46px;
 	padding: 0 13px;
 	display: flex;
 	align-items: center;
-	gap: 14px;
-	border-radius: 14px;
+	gap: 13px;
+	border-radius: 9px;
 	box-sizing: border-box;
 	font-size: 15px;
 	font-weight: 650;
 	text-align: left;
 	text-decoration: none;
-	color: var(--MI_THEME-navFg);
-	transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+	color: var(--nook-ink);
+	transition: background-color 0.12s ease, color 0.12s ease;
 
 	&:hover {
-		background: color(from var(--MI_THEME-navFg) srgb r g b / 0.07);
-	}
-
-	&:active {
-		transform: scale(0.985);
+		background: #f7faff;
 	}
 
 	&:disabled {
@@ -207,8 +208,8 @@ async function more(ev: PointerEvent) {
 }
 
 .active {
-	background: color(from var(--MI_THEME-accent) srgb r g b / 0.12);
-	color: var(--MI_THEME-accent);
+	background: var(--nook-blue-soft);
+	color: var(--nook-blue);
 }
 
 .iconWrap {
@@ -219,47 +220,46 @@ async function more(ev: PointerEvent) {
 
 .icon {
 	width: 22px;
-	font-size: 21px;
+	font-size: 20px;
 	text-align: center;
+}
+
+.unread,
+.menuUnread {
+	color: var(--nook-yellow);
 }
 
 .unread {
 	position: absolute;
 	top: -2px;
 	right: -5px;
-	color: var(--MI_THEME-indicator);
 }
 
 .menuUnread {
 	position: absolute;
 	top: 10px;
 	right: 10px;
-	color: var(--MI_THEME-indicator);
 }
 
 .create {
 	width: 100%;
-	min-height: 50px;
+	min-height: 48px;
 	margin-top: 12px;
 	padding: 0 18px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 10px;
-	border-radius: 15px;
-	background: linear-gradient(90deg, var(--MI_THEME-buttonGradateA), var(--MI_THEME-buttonGradateB));
-	color: var(--MI_THEME-fgOnAccent);
+	gap: 9px;
+	border: 1px solid #e4bd29;
+	border-radius: 9px;
+	background: var(--nook-yellow);
+	color: #17324d;
 	font-size: 15px;
-	font-weight: 750;
-	box-shadow: 0 5px 16px color(from var(--MI_THEME-accent) srgb r g b / 0.18);
-	transition: transform 0.15s ease, filter 0.15s ease;
+	font-weight: 800;
+	transition: background-color 0.12s ease;
 
 	&:hover {
-		filter: brightness(1.05);
-	}
-
-	&:active {
-		transform: scale(0.985);
+		background: #ffdf69;
 	}
 }
 
@@ -275,12 +275,12 @@ async function more(ev: PointerEvent) {
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	border-radius: 14px;
+	border-radius: 9px;
 	text-align: left;
-	transition: background-color 0.15s ease;
+	transition: background-color 0.12s ease;
 
 	&:hover {
-		background: color(from var(--MI_THEME-navFg) srgb r g b / 0.07);
+		background: #f7faff;
 	}
 }
 
