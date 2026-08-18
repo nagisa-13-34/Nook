@@ -13,6 +13,8 @@ const nookLocale = lang === 'ja-JP'
 	? {
 		nookBookmarks: 'ブックマーク',
 		nookBookmarksEmpty: '保存した投稿はここに表示されます。',
+		nookCommunity: 'コミュニティ',
+		nookUnreadChat: '未読のチャットがあります',
 		nookShorts: 'ショート',
 		chooseServerOnMisskeyHub: 'サーバー一覧から選択',
 		serverHostPlaceholder: '例: social.example.com',
@@ -22,6 +24,8 @@ const nookLocale = lang === 'ja-JP'
 	: {
 		nookBookmarks: 'Bookmarks',
 		nookBookmarksEmpty: 'Posts you save will appear here.',
+		nookCommunity: 'Community',
+		nookUnreadChat: 'You have unread chat messages',
 		nookShorts: 'Shorts',
 		chooseServerOnMisskeyHub: 'Choose from the server directory',
 		serverHostPlaceholder: 'e.g. social.example.com',
