@@ -38,19 +38,14 @@ import { i18n } from '@/i18n.js';
 import MkSuperMenu from '@/components/MkSuperMenu.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import { instance } from '@/instance.js';
-import { lookup } from '@/utility/lookup.js';
-import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { lookupUser, lookupUserByEmail, lookupFile } from '@/utility/admin-lookup.js';
 import { definePage, provideMetadataReceiver, provideReactiveMetadata } from '@/page.js';
 import { useRouter } from '@/router.js';
 import { genSearchIndexes } from '@/utility/inapp-search.js';
 import { iAmAdmin } from '@/i.js';
 
 const searchIndex = await import('search-index:admin').then(({ searchIndexes }) => genSearchIndexes(searchIndexes));
-
 const isEmpty = (x: string | null) => x == null || x === '';
-
 const router = useRouter();
 
 const indexInfo = {
@@ -64,9 +59,7 @@ provide('shouldOmitHeaderTitle', false);
 const INFO = ref<PageMetadata>(indexInfo);
 const childInfo = ref<null | PageMetadata>(null);
 const narrow = ref(false);
-const view = ref(null);
 const el = ref<HTMLDivElement | null>(null);
-const pageProps = ref({});
 const noMaintainerInformation = computed(() => isEmpty(instance.maintainerName) || isEmpty(instance.maintainerEmail));
 const noBotProtection = computed(() => !instance.disableRegistration && !instance.enableHcaptcha && !instance.enableRecaptcha && !instance.enableTurnstile && !instance.enableMcaptcha);
 const noEmailServer = computed(() => !instance.enableEmail);
@@ -82,25 +75,12 @@ misskeyApi('admin/abuse-user-reports', {
 });
 
 const NARROW_THRESHOLD = 600;
-const ro = new ResizeObserver((entries, observer) => {
+const ro = new ResizeObserver((entries) => {
 	if (entries.length === 0) return;
 	narrow.value = entries[0].borderBoxSize[0].inlineSize < NARROW_THRESHOLD;
 });
 
 const menuDef = computed<SuperMenuDef[]>(() => [{
-	title: i18n.ts.quickAction,
-	items: [{
-		type: 'button',
-		icon: 'ti ti-search',
-		text: i18n.ts.lookup,
-		action: adminLookup,
-	}, ...(instance.disableRegistration ? [{
-		type: 'button' as const,
-		icon: 'ti ti-user-plus',
-		text: i18n.ts.createInviteCode,
-		action: invite,
-	}] : [])],
-}, {
 	title: i18n.ts.administration,
 	items: [{
 		icon: 'ti ti-dashboard',
@@ -128,45 +108,10 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		to: '/admin/emojis',
 		active: currentPage.value?.route.name === 'emojis',
 	}, {
-		icon: 'ti ti-icons',
-		text: i18n.ts.customEmojis + '(beta)',
-		to: '/admin/emojis2',
-		active: currentPage.value?.route.name === 'emojis2',
-	}, {
-		icon: 'ti ti-sparkles',
-		text: i18n.ts.avatarDecorations,
-		to: '/admin/avatar-decorations',
-		active: currentPage.value?.route.name === 'avatarDecorations',
-	}, {
-		icon: 'ti ti-whirl',
-		text: i18n.ts.federation,
-		to: '/admin/federation',
-		active: currentPage.value?.route.name === 'federation',
-	}, {
-		icon: 'ti ti-clock-play',
-		text: i18n.ts.federationJobs,
-		to: '/admin/federation-job-queue',
-		active: currentPage.value?.route.name === 'federationJobQueue',
-	}, {
-		icon: 'ti ti-clock-play',
-		text: i18n.ts.jobQueue,
-		to: '/admin/job-queue',
-		active: currentPage.value?.route.name === 'jobQueue',
-	}, {
-		icon: 'ti ti-cloud',
-		text: i18n.ts.files,
-		to: '/admin/files',
-		active: currentPage.value?.route.name === 'files',
-	}, {
 		icon: 'ti ti-speakerphone',
 		text: i18n.ts.announcements,
 		to: '/admin/announcements',
 		active: currentPage.value?.route.name === 'announcements',
-	}, {
-		icon: 'ti ti-ad',
-		text: i18n.ts.ads,
-		to: '/admin/ads',
-		active: currentPage.value?.route.name === 'ads',
 	}, {
 		icon: 'ti ti-exclamation-circle',
 		text: i18n.ts.abuseReports,
@@ -201,6 +146,11 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		to: '/admin/moderation',
 		active: currentPage.value?.route.name === 'moderation',
 	}, {
+		icon: 'ti ti-lock',
+		text: i18n.ts.security,
+		to: '/admin/security',
+		active: currentPage.value?.route.name === 'security',
+	}, {
 		icon: 'ti ti-mail',
 		text: i18n.ts.emailServer,
 		to: '/admin/email-settings',
@@ -210,39 +160,6 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		text: i18n.ts.objectStorage,
 		to: '/admin/object-storage',
 		active: currentPage.value?.route.name === 'object-storage',
-	}, {
-		icon: 'ti ti-lock',
-		text: i18n.ts.security,
-		to: '/admin/security',
-		active: currentPage.value?.route.name === 'security',
-	}, {
-		icon: 'ti ti-planet',
-		text: i18n.ts.relays,
-		to: '/admin/relays',
-		active: currentPage.value?.route.name === 'relays',
-	}, {
-		icon: 'ti ti-link',
-		text: i18n.ts.externalServices,
-		to: '/admin/external-services',
-		active: currentPage.value?.route.name === 'external-services',
-	}, {
-		icon: 'ti ti-webhook',
-		text: 'Webhook',
-		to: '/admin/system-webhook',
-		active: currentPage.value?.route.name === 'system-webhook',
-	}, {
-		icon: 'ti ti-bolt',
-		text: i18n.ts.performance,
-		to: '/admin/performance',
-		active: currentPage.value?.route.name === 'performance',
-	}],
-}, {
-	title: i18n.ts.info,
-	items: [{
-		icon: 'ti ti-database',
-		text: i18n.ts.database,
-		to: '/admin/database',
-		active: currentPage.value?.route.name === 'database',
 	}],
 }]);
 
@@ -251,18 +168,12 @@ onMounted(() => {
 		ro.observe(el.value);
 		narrow.value = el.value.offsetWidth < NARROW_THRESHOLD;
 	}
-	if (currentPage.value?.route.name == null && !narrow.value) {
-		router.replace('/admin/overview');
-	}
+	if (currentPage.value?.route.name == null && !narrow.value) router.replace('/admin/overview');
 });
 
 onActivated(() => {
-	if (el.value != null) {
-		narrow.value = el.value.offsetWidth < NARROW_THRESHOLD;
-	}
-	if (currentPage.value?.route.name == null && !narrow.value) {
-		router.replace('/admin/overview');
-	}
+	if (el.value != null) narrow.value = el.value.offsetWidth < NARROW_THRESHOLD;
+	if (currentPage.value?.route.name == null && !narrow.value) router.replace('/admin/overview');
 });
 
 onUnmounted(() => {
@@ -286,50 +197,7 @@ provideMetadataReceiver((metadataGetter) => {
 });
 provideReactiveMetadata(INFO);
 
-function invite() {
-	misskeyApi('admin/invite/create').then(x => {
-		os.alert({
-			type: 'info',
-			text: x[0].code,
-		});
-	}).catch(err => {
-		os.alert({
-			type: 'error',
-			text: err,
-		});
-	});
-}
-
-function adminLookup(ev: PointerEvent) {
-	os.popupMenu([{
-		text: i18n.ts.user,
-		icon: 'ti ti-user',
-		action: () => {
-			lookupUser();
-		},
-	}, {
-		text: `${i18n.ts.user} (${i18n.ts.email})`,
-		icon: 'ti ti-user',
-		action: () => {
-			lookupUserByEmail();
-		},
-	}, {
-		text: i18n.ts.file,
-		icon: 'ti ti-cloud',
-		action: () => {
-			lookupFile();
-		},
-	}, {
-		text: i18n.ts.lookup,
-		icon: 'ti ti-world-search',
-		action: () => {
-			lookup();
-		},
-	}], ev.currentTarget ?? ev.target);
-}
-
 const headerActions = computed(() => []);
-
 const headerTabs = computed(() => []);
 
 definePage(() => INFO.value);
@@ -349,7 +217,7 @@ definePage(() => INFO.value);
 			width: 32%;
 			max-width: 280px;
 			box-sizing: border-box;
-			border-right: solid 0.5px var(--MI_THEME-divider);
+			border-right: solid 1px var(--MI_THEME-divider);
 			overflow: auto;
 			height: 100cqh;
 		}
