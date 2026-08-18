@@ -5,9 +5,8 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { DataSource, In } from 'typeorm';
-import type { DriveFilesRepository } from '@/models/_.js';
+import type { DriveFilesRepository, UsersRepository } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
-import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { requireNookCommunityMember, NookCommunityAccessError } from '@/nook/community/access.js';
@@ -37,8 +36,8 @@ export const paramDef = { type: 'object', properties: { communityId: { type: 'st
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		@Inject(DI.db) private db: DataSource,
+		@Inject(DI.usersRepository) private usersRepository: UsersRepository,
 		@Inject(DI.driveFilesRepository) private driveFilesRepository: DriveFilesRepository,
-		private userEntityService: UserEntityService,
 		private driveFileEntityService: DriveFileEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
@@ -71,9 +70,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				});
 			}
 
-			const packedUsers = await this.userEntityService.packMany(members.map(member => member.userId), me, { schema: 'UserLite' });
-			const users = new Map(packedUsers.map(user => [user.id, user]));
-			const avatarIds = members.flatMap(member => member.avatarId == null ? [] : [member.avatarId]);
+			const userIds = [...new Set(members.map(member => member.userId))];
+			const userRows = userIds.length === 0 ? [] : await this.usersRepository.findBy({ id: In(userIds) });
+			const users = new Map(userRows.map(user => [user.id, user]));
+			const avatarIds = [...new Set(members.flatMap(member => member.avatarId == null ? [] : [member.avatarId]))];
 			const avatarFiles = avatarIds.length === 0 ? [] : await this.driveFilesRepository.findBy({ id: In(avatarIds) });
 			const avatars = new Map(avatarFiles.map(file => [file.id, file]));
 			const canManageRoles = membership.permissions.has('*') || membership.permissions.has('roles.manage');
