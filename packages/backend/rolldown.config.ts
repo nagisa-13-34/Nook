@@ -51,7 +51,10 @@ function backendDevServerPlugin(): Plugin {
 
 	return {
 		name: 'backend-dev-server',
-		async closeBundle() {
+		// Start the backend only after Rolldown has actually written built/entry.js.
+		// On Windows, closeBundle can run before the emitted file becomes available,
+		// which races execaNode and causes ERR_MODULE_NOT_FOUND on the first build.
+		async writeBundle() {
 			await runBuildAssets();
 			if (backendProcess) {
 				await killBackendProcess();
