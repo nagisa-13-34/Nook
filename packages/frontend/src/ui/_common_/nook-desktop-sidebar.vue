@@ -14,9 +14,24 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<i class="ti ti-home" :class="$style.icon"></i>
 			<span :class="$style.itemText">{{ i18n.ts.home }}</span>
 		</MkA>
+		<MkA v-tooltip.noDelay.right="i18n.ts.search" :class="$style.item" :activeClass="$style.active" to="/search">
+			<i class="ti ti-search" :class="$style.icon"></i>
+			<span :class="$style.itemText">{{ i18n.ts.search }}</span>
+		</MkA>
 		<MkA v-tooltip.noDelay.right="i18n.ts.explore" :class="$style.item" :activeClass="$style.active" to="/explore">
 			<i class="ti ti-compass" :class="$style.icon"></i>
 			<span :class="$style.itemText">{{ i18n.ts.explore }}</span>
+		</MkA>
+		<MkA v-if="$i != null" v-tooltip.noDelay.right="i18n.ts.notifications" :class="$style.item" :activeClass="$style.active" to="/my/notifications">
+			<span :class="$style.iconWrap">
+				<i class="ti ti-bell" :class="$style.icon"></i>
+				<i v-if="$i.hasUnreadNotification" :class="$style.unread" class="_indicatorCircle"></i>
+			</span>
+			<span :class="$style.itemText">{{ i18n.ts.notifications }}</span>
+		</MkA>
+		<MkA v-if="$i != null" v-tooltip.noDelay.right="i18n.ts.nookBookmarks" :class="$style.item" :activeClass="$style.active" to="/my/favorites">
+			<i class="ti ti-bookmark" :class="$style.icon"></i>
+			<span :class="$style.itemText">{{ i18n.ts.nookBookmarks }}</span>
 		</MkA>
 		<MkA v-tooltip.noDelay.right="i18n.ts.nookCommunity" :class="$style.item" :activeClass="$style.active" to="/channels">
 			<i class="ti ti-users-group" :class="$style.icon"></i>
@@ -35,10 +50,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</span>
 			<span :class="$style.itemText">{{ i18n.ts.chat }}</span>
 		</MkA>
-		<button v-else v-tooltip.noDelay.right="i18n.ts.chat" class="_button" :class="$style.item" disabled>
-			<i class="ti ti-messages" :class="$style.icon"></i>
-			<span :class="$style.itemText">{{ i18n.ts.chat }}</span>
-		</button>
 
 		<button v-tooltip.noDelay.right="i18n.ts.create" class="_button" :class="$style.create" data-testid="open-post-form" @click="os.post()">
 			<i class="ti ti-plus" :class="$style.createIcon"></i>
@@ -47,26 +58,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</div>
 
 	<div :class="$style.secondary">
-		<MkA v-if="$i != null" v-tooltip.noDelay.right="i18n.ts.notifications" :class="$style.item" :activeClass="$style.active" to="/my/notifications">
-			<span :class="$style.iconWrap">
-				<i class="ti ti-bell" :class="$style.icon"></i>
-				<i v-if="$i.hasUnreadNotification" :class="$style.unread" class="_indicatorCircle"></i>
-			</span>
-			<span :class="$style.itemText">{{ i18n.ts.notifications }}</span>
-		</MkA>
-		<button v-if="showWidgetButton" v-tooltip.noDelay.right="i18n.ts.widgets" class="_button" :class="$style.item" @click="emit('widgetButtonClick')">
-			<i class="ti ti-apps" :class="$style.icon"></i>
-			<span :class="$style.itemText">{{ i18n.ts.widgets }}</span>
-		</button>
 		<MkA v-if="$i != null && ($i.isAdmin || $i.isModerator)" v-tooltip.noDelay.right="i18n.ts.controlPanel" :class="$style.item" :activeClass="$style.active" to="/admin">
 			<i class="ti ti-dashboard" :class="$style.icon"></i>
 			<span :class="$style.itemText">{{ i18n.ts.controlPanel }}</span>
 		</MkA>
-		<button v-tooltip.noDelay.right="i18n.ts.more" class="_button" :class="$style.item" @click="more">
-			<i class="ti ti-grid-dots" :class="$style.icon"></i>
-			<span :class="$style.itemText">{{ i18n.ts.more }}</span>
-			<i v-if="otherMenuItemIndicated" :class="$style.menuUnread" class="_indicatorCircle"></i>
-		</button>
 		<MkA v-tooltip.noDelay.right="i18n.ts.settings" :class="$style.item" :activeClass="$style.active" to="/settings">
 			<i class="ti ti-settings" :class="$style.icon"></i>
 			<span :class="$style.itemText">{{ i18n.ts.settings }}</span>
@@ -85,45 +80,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue';
 import { $i } from '@/i.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
-import { navbarItemDef } from '@/navbar.js';
 import { getAccountMenu } from '@/accounts.js';
-import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
-
-const props = defineProps<{
-	showWidgetButton?: boolean;
-}>();
-
-const emit = defineEmits<{
-	(ev: 'widgetButtonClick'): void;
-}>();
-
-const showWidgetButton = computed(() => props.showWidgetButton !== false);
-
-const otherMenuItemIndicated = computed(() => {
-	for (const def in navbarItemDef) {
-		if (['notifications', 'chat'].includes(def)) continue;
-		if (navbarItemDef[def].indicated) return true;
-	}
-	return false;
-});
 
 async function openAccountMenu(ev: PointerEvent) {
-	const menuItems = await getAccountMenu({ withExtraOperation: true });
+	const menuItems = await getAccountMenu({ withExtraOperation: false });
 	os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
-}
-
-async function more(ev: PointerEvent) {
-	const target = getHTMLElementOrNull(ev.currentTarget ?? ev.target);
-	if (!target) return;
-	const { dispose } = await os.popupAsyncWithDialog(import('@/components/MkLaunchPad.vue').then(x => x.default), {
-		anchorElement: target,
-	}, {
-		closed: () => dispose(),
-	});
 }
 </script>
 
@@ -167,6 +131,7 @@ async function more(ev: PointerEvent) {
 
 .primary {
 	flex: 1;
+	overflow-y: auto;
 }
 
 .secondary {
@@ -177,12 +142,12 @@ async function more(ev: PointerEvent) {
 .item {
 	position: relative;
 	width: 100%;
-	min-height: 46px;
+	min-height: 44px;
 	padding: 0 13px;
 	display: flex;
 	align-items: center;
 	gap: 13px;
-	border-radius: 9px;
+	border-radius: 8px;
 	box-sizing: border-box;
 	font-size: 15px;
 	font-weight: 650;
@@ -193,11 +158,6 @@ async function more(ev: PointerEvent) {
 
 	&:hover {
 		background: #f7faff;
-	}
-
-	&:disabled {
-		opacity: 0.42;
-		cursor: default;
 	}
 }
 
@@ -224,39 +184,28 @@ async function more(ev: PointerEvent) {
 	text-align: center;
 }
 
-.unread,
-.menuUnread {
-	color: var(--nook-yellow);
-}
-
 .unread {
 	position: absolute;
 	top: -2px;
 	right: -5px;
-}
-
-.menuUnread {
-	position: absolute;
-	top: 10px;
-	right: 10px;
+	color: var(--nook-yellow);
 }
 
 .create {
 	width: 100%;
-	min-height: 48px;
-	margin-top: 12px;
+	min-height: 46px;
+	margin-top: 10px;
 	padding: 0 18px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	gap: 9px;
 	border: 1px solid #e4bd29;
-	border-radius: 9px;
+	border-radius: 8px;
 	background: var(--nook-yellow);
-	color: #17324d;
+	color: var(--nook-ink);
 	font-size: 15px;
 	font-weight: 800;
-	transition: background-color 0.12s ease;
 
 	&:hover {
 		background: #ffdf69;
@@ -269,15 +218,14 @@ async function more(ev: PointerEvent) {
 
 .account {
 	width: 100%;
-	min-height: 58px;
+	min-height: 56px;
 	margin-top: 8px;
 	padding: 7px 10px;
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	border-radius: 9px;
+	border-radius: 8px;
 	text-align: left;
-	transition: background-color 0.12s ease;
 
 	&:hover {
 		background: #f7faff;
@@ -348,11 +296,6 @@ async function more(ev: PointerEvent) {
 
 	.itemText {
 		display: none;
-	}
-
-	.menuUnread {
-		top: 8px;
-		right: 8px;
 	}
 
 	.create {
