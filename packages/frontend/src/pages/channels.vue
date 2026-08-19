@@ -52,14 +52,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 						</div>
 					</MkPagination>
 				</div>
-				<div v-else-if="tab === 'owned'" class="_gaps">
-					<MkButton v-if="$i?.policies.canCreateChannel" type="routerLink" primary rounded to="/channels/new"><i class="ti ti-plus"></i> {{ i18n.ts.createNew }}</MkButton>
-					<MkPagination v-slot="{items}" :paginator="ownedPaginator">
-						<div :class="$style.root">
-							<MkChannelPreview v-for="channel in items" :key="channel.id" :channel="channel"/>
-						</div>
-					</MkPagination>
-				</div>
 			</div>
 		</div>
 	</div>
@@ -90,6 +82,7 @@ const props = defineProps<{
 
 const key = ref('');
 const tab = ref('featured');
+const showDiscoveryTabs = ref(false);
 const searchQuery = ref('');
 const searchType = ref<SearchType>('nameAndDescription');
 const channelPaginator = shallowRef();
@@ -102,7 +95,6 @@ onMounted(() => {
 const featuredPaginator = markRaw(new Paginator('channels/featured', { limit: 10, noPaging: true }));
 const favoritesPaginator = markRaw(new Paginator('channels/my-favorites', { limit: 100, noPaging: true }));
 const followingPaginator = markRaw(new Paginator('channels/followed', { limit: 10 }));
-const ownedPaginator = markRaw(new Paginator('channels/owned', { limit: 10 }));
 
 async function search() {
 	const query = searchQuery.value.toString().trim();
@@ -113,14 +105,23 @@ async function search() {
 	key.value = query + type;
 }
 
+function toggleDiscoveryTabs(): void {
+	showDiscoveryTabs.value = !showDiscoveryTabs.value;
+}
+
 const headerActions = computed(() => []);
-const headerTabs = computed(() => [{ key: 'search', title: i18n.ts.search, icon: 'ti ti-search' },
+const headerTabs = computed(() => showDiscoveryTabs.value ? [
+	{ key: 'search', title: i18n.ts.search, icon: 'ti ti-search' },
 	{ key: 'featured', title: i18n.ts._channel.featured, icon: 'ti ti-sparkles' },
 	{ key: 'favorites', title: i18n.ts.favorites, icon: 'ti ti-bookmark' },
 	{ key: 'following', title: i18n.ts._channel.following, icon: 'ti ti-users' },
-	{ key: 'owned', title: i18n.ts._channel.owned, icon: 'ti ti-user-star' }]);
+] : []);
 
-definePage(() => ({ title: i18n.ts.nookCommunity, icon: 'ti ti-users' }));
+definePage(() => ({
+	title: i18n.ts.nookCommunity,
+	icon: 'ti ti-users',
+	onTitleClick: toggleDiscoveryTabs,
+}));
 </script>
 
 <style lang="scss" module>
