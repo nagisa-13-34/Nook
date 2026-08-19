@@ -96,11 +96,6 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		to: '/admin/invites',
 		active: currentPage.value?.route.name === 'invites',
 	}, {
-		icon: 'ti ti-badges',
-		text: i18n.ts.roles,
-		to: '/admin/roles',
-		active: currentPage.value?.route.name === 'roles',
-	}, {
 		icon: 'ti ti-icons',
 		text: i18n.ts.customEmojis,
 		to: '/admin/emojis',
