@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					large
 					autofocus
 					type="search"
-					placeholder="投稿、ユーザー、ネストを検索"
+					placeholder="投稿、ユーザー、ネスト、イベントを検索"
 				>
 					<template #prefix><i class="ti ti-search"></i></template>
 				</MkInput>
@@ -60,7 +60,7 @@ import { useRouter } from '@/router.js';
 import MkInput from '@/components/MkInput.vue';
 import MkButton from '@/components/MkButton.vue';
 
-type SearchResultTab = 'note' | 'user' | 'nest';
+type SearchResultTab = 'note' | 'user' | 'nest' | 'event';
 type SearchDiscoverTab = SearchResultTab | 'featured' | 'discoverUsers';
 
 const props = withDefaults(defineProps<{
@@ -85,7 +85,7 @@ const router = useRouter();
 const XSearchResults = defineAsyncComponent(() => import('./search.results.vue'));
 
 function normalizeTab(value: SearchDiscoverTab | undefined): SearchResultTab {
-	if (value === 'user' || value === 'nest') return value;
+	if (value === 'user' || value === 'nest' || value === 'event') return value;
 	return 'note';
 }
 
@@ -115,6 +115,10 @@ const resultTabs: Array<{ key: SearchResultTab; title: string; icon: string }> =
 	key: 'nest',
 	title: i18n.ts.nookCommunity,
 	icon: 'ti ti-users-group',
+}, {
+	key: 'event',
+	title: 'イベント',
+	icon: 'ti ti-calendar-event',
 }];
 
 function syncUrl() {
@@ -166,7 +170,7 @@ definePage(() => ({
 
 .tabs {
 	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
+	grid-template-columns: repeat(4, minmax(0, 1fr));
 	background: var(--MI_THEME-panel);
 	border: 1px solid var(--MI_THEME-divider);
 	border-radius: 8px;
@@ -221,10 +225,23 @@ definePage(() => ({
 		grid-template-columns: 1fr;
 	}
 
+	.tabs {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
 	.tab {
 		min-height: 42px;
 		padding-inline: 6px;
 		font-size: 13px;
+	}
+
+	.tab:nth-child(3),
+	.tab:nth-child(4) {
+		border-top: 1px solid var(--MI_THEME-divider);
+	}
+
+	.tab:nth-child(3) {
+		border-left: 0;
 	}
 }
 </style>
