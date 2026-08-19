@@ -24,7 +24,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import XFeatured from './explore.featured.vue';
 import XVideos from './explore.videos.vue';
 import XUsers from './explore.users.vue';
@@ -49,6 +49,10 @@ function normalizeInitialTab(value: string): string {
 }
 
 const tab = ref(normalizeInitialTab(props.initialTab));
+
+watch(() => props.initialTab, (value) => {
+	tab.value = normalizeInitialTab(value);
+});
 
 const headerActions = computed(() => []);
 
