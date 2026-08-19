@@ -129,9 +129,14 @@ function onContextmenu(ev: PointerEvent) {
 	--nook-bg: #f7f8fa;
 	--nook-yellow: #f6c94c;
 	--nook-yellow-soft: #fff5d6;
+	--nook-on-yellow: #1d2939;
 	--nook-white: #ffffff;
 	--nook-border: #e2e7ee;
 	--nook-muted: #667085;
+	--nook-panel-highlight: #f9fafb;
+	--nook-input-hover: #aab4c4;
+	--nook-switch-off: #d8dee8;
+	--nook-post-button-hover: #f8d469;
 
 	/* Nook owns the visual system while keeping Misskey's internals intact. */
 	--MI_THEME-accent: var(--nook-blue);
@@ -148,15 +153,15 @@ function onContextmenu(ev: PointerEvent) {
 	--MI_THEME-buttonGradateB: var(--nook-yellow);
 	--MI_THEME-fgOnAccent: #ffffff;
 	--MI_THEME-accentedBg: var(--nook-blue-soft);
-	--MI_THEME-panelHighlight: #f9fafb;
+	--MI_THEME-panelHighlight: var(--nook-panel-highlight);
 	--MI_THEME-focus: var(--nook-blue);
 	--MI_THEME-link: var(--nook-blue);
 	--MI_THEME-switchOnBg: var(--nook-blue);
 	--MI_THEME-switchOnFg: #ffffff;
-	--MI_THEME-switchOffBg: #d8dee8;
+	--MI_THEME-switchOffBg: var(--nook-switch-off);
 	--MI_THEME-switchOffFg: #ffffff;
 	--MI_THEME-inputBorder: var(--nook-border);
-	--MI_THEME-inputBorderHover: #aab4c4;
+	--MI_THEME-inputBorderHover: var(--nook-input-hover);
 	--MI-radius: 8px;
 
 	height: 100dvh;
@@ -166,6 +171,22 @@ function onContextmenu(ev: PointerEvent) {
 	flex-direction: column;
 	background: var(--nook-bg);
 	color: var(--nook-blue-deep);
+}
+
+:global(html[data-color-scheme='dark']) .root {
+	--nook-blue: #8ea2ff;
+	--nook-blue-deep: #f2f4f7;
+	--nook-blue-soft: #202a4d;
+	--nook-bg: #0f141c;
+	--nook-yellow: #f4ca5c;
+	--nook-yellow-soft: #302817;
+	--nook-white: #161c26;
+	--nook-border: #2c3542;
+	--nook-muted: #98a2b3;
+	--nook-panel-highlight: #1d2531;
+	--nook-input-hover: #566273;
+	--nook-switch-off: #4a5565;
+	--nook-post-button-hover: #f6d66d;
 }
 
 .nonTitlebarArea {
@@ -253,13 +274,13 @@ function onContextmenu(ev: PointerEvent) {
 
 :global(.nook-ui [data-testid="post-form-submit"] > div) {
 	background: var(--nook-yellow) !important;
-	color: var(--nook-blue-deep) !important;
+	color: var(--nook-on-yellow) !important;
 	border-radius: 6px;
 	box-shadow: none !important;
 }
 
 :global(.nook-ui [data-testid="post-form-submit"]:not(:disabled):hover > div) {
-	background: #f8d469 !important;
+	background: var(--nook-post-button-hover) !important;
 }
 
 /* Tabs use a simple blue underline instead of pill-like selected states. */
@@ -282,7 +303,7 @@ function onContextmenu(ev: PointerEvent) {
 /* Keep controls crisp: no decorative gradient or floating-card shadow. */
 :global(.nook-ui ._buttonGradate) {
 	background: var(--nook-yellow) !important;
-	color: var(--nook-blue-deep) !important;
+	color: var(--nook-on-yellow) !important;
 	box-shadow: none !important;
 }
 
