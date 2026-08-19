@@ -10,9 +10,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<i v-if="menuIndicated" :class="$style.unread" class="_indicatorCircle"></i>
 	</button>
 	<div :class="$style.brand">Nook</div>
-	<button class="_button" :class="[$style.action, $style.widgets]" :aria-label="i18n.ts.widgets" @click="widgetsShowing = true">
-		<i class="ti ti-apps"></i>
-	</button>
 	<button class="_button" :class="[$style.action, $style.notifications]" :aria-label="$i?.hasUnreadNotification ? i18n.tsx.nookUnreadNotifications({ count: $i.unreadNotificationsCount }) : i18n.ts.notifications" @click="mainRouter.push('/my/notifications')">
 		<i class="ti ti-bell"></i>
 		<i v-if="$i?.hasUnreadNotification" :class="$style.unread" class="_indicatorCircle"></i>
@@ -28,7 +25,6 @@ import { mainRouter } from '@/router.js';
 import { navbarItemDef } from '@/navbar.js';
 
 const drawerMenuShowing = defineModel<boolean>('drawerMenuShowing', { required: true });
-const widgetsShowing = defineModel<boolean>('widgetsShowing', { required: true });
 
 const menuIndicated = computed(() => {
 	for (const def in navbarItemDef) {
@@ -47,7 +43,7 @@ const menuIndicated = computed(() => {
 	--nook-border: #d7e3f1;
 	position: relative;
 	display: grid;
-	grid-template-columns: 48px 1fr 48px 48px;
+	grid-template-columns: 48px 1fr 48px;
 	align-items: center;
 	min-height: 48px;
 	padding-top: env(safe-area-inset-top, 0px);
@@ -71,12 +67,8 @@ const menuIndicated = computed(() => {
 	grid-column: 1;
 }
 
-.widgets {
-	grid-column: 3;
-}
-
 .notifications {
-	grid-column: 4;
+	grid-column: 3;
 }
 
 .action {
