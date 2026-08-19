@@ -60,6 +60,59 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkA>
 		</div>
 	</section>
+
+	<section :class="$style.section">
+		<div :class="$style.sectionHeader">
+			<h2>おすすめネスト</h2>
+			<MkA to="/channels">もっと見る</MkA>
+		</div>
+
+		<div v-if="loadingNests" :class="$style.state">読み込み中...</div>
+		<div v-else-if="recommendedNests.length === 0" :class="$style.state">おすすめはまだありません</div>
+		<div v-else :class="$style.nestList">
+			<MkA
+				v-for="nest in recommendedNests"
+				:key="nest.id"
+				:to="`/channels/${nest.id}`"
+				:class="$style.nest"
+			>
+				<img v-if="nest.bannerUrl && !nest.isSensitive" :class="$style.nestIcon" :src="nest.bannerUrl" alt="">
+				<span v-else :class="$style.nestFallback">{{ initial(nest.name) }}</span>
+				<div :class="$style.nestText">
+					<strong>{{ nest.name }}</strong>
+					<span>{{ nest.usersCount }} メンバー</span>
+				</div>
+				<i class="ti ti-chevron-right" :class="$style.chevron" aria-hidden="true"></i>
+			</MkA>
+		</div>
+	</section>
+
+	<section :class="$style.section">
+		<div :class="$style.sectionHeader">
+			<h2>イベント</h2>
+		</div>
+
+		<div v-if="loadingEvents" :class="$style.state">読み込み中...</div>
+		<div v-else-if="upcomingEvents.length === 0" :class="$style.state">予定されているイベントはありません</div>
+		<div v-else :class="$style.eventList">
+			<MkA
+				v-for="event in upcomingEvents"
+				:key="event.id"
+				:to="`/channels/${event.communityId}`"
+				:class="$style.event"
+			>
+				<span :class="$style.eventDate">
+					<strong>{{ formatEventDay(event.startsAt) }}</strong>
+					<small>{{ formatEventTime(event.startsAt) }}</small>
+				</span>
+				<div :class="$style.eventText">
+					<strong>{{ event.title }}</strong>
+					<span>{{ event.communityName }}</span>
+				</div>
+				<i class="ti ti-chevron-right" :class="$style.chevron" aria-hidden="true"></i>
+			</MkA>
+		</div>
+	</section>
 </aside>
 </template>
 
@@ -69,12 +122,38 @@ import * as Misskey from 'misskey-js';
 import { mainRouter } from '@/router.js';
 import { misskeyApi, misskeyApiGet } from '@/utility/misskey-api.js';
 import { userPage } from '@/filters/user.js';
+import { nookApi } from '@/nook/community/nook-api.js';
+
+interface JoinedNestRow {
+	communityId: string;
+	name: string;
+}
+
+interface CommunityEvent {
+	id: string;
+	communityId: string;
+	title: string;
+	startsAt: string;
+	cancelledAt: string | null;
+}
+
+interface DiscoveryEvent extends CommunityEvent {
+	communityName: string;
+}
 
 const searchQuery = ref('');
 const trends = ref<Misskey.entities.HashtagsTrendResponse>([]);
 const recommendedUsers = ref<Misskey.entities.UserDetailed[]>([]);
+const recommendedNests = ref<Misskey.entities.Channel[]>([]);
+const upcomingEvents = ref<DiscoveryEvent[]>([]);
 const loadingTrends = ref(true);
 const loadingUsers = ref(true);
+const loadingNests = ref(true);
+const loadingEvents = ref(true);
+
+function initial(name: string | null | undefined): string {
+	return name?.trim().slice(0, 1).toUpperCase() || 'N';
+}
 
 function submitSearch() {
 	const query = searchQuery.value.trim();
@@ -91,12 +170,26 @@ function submitSearch() {
 	});
 }
 
+function formatEventDay(value: string): string {
+	return new Intl.DateTimeFormat('ja-JP', {
+		month: 'numeric',
+		day: 'numeric',
+	}).format(new Date(value));
+}
+
+function formatEventTime(value: string): string {
+	return new Intl.DateTimeFormat('ja-JP', {
+		hour: '2-digit',
+		minute: '2-digit',
+	}).format(new Date(value));
+}
+
 async function loadTrends() {
 	try {
 		const response = await misskeyApiGet('hashtags/trend');
 		trends.value = response.slice(0, 5);
 	} catch (error) {
-		console.error('Failed to load Nook home trends', error);
+		console.error('Failed to load Nook discovery trends', error);
 	} finally {
 		loadingTrends.value = false;
 	}
@@ -114,9 +207,48 @@ async function loadRecommendedUsers() {
 	}
 }
 
+async function loadNestsAndEvents() {
+	let joinedNests: JoinedNestRow[] = [];
+	try {
+		joinedNests = await nookApi<JoinedNestRow[]>('nook/community/my-list').catch(() => []);
+		const joinedIds = new Set(joinedNests.map(nest => nest.communityId));
+		const featured = await misskeyApi('channels/featured', {});
+		recommendedNests.value = featured
+			.filter(nest => !joinedIds.has(nest.id) && !nest.isSensitive)
+			.slice(0, 4);
+	} catch (error) {
+		console.error('Failed to load Nook recommended nests', error);
+	} finally {
+		loadingNests.value = false;
+	}
+
+	try {
+		const from = new Date().toISOString();
+		const eventGroups = await Promise.all(joinedNests.slice(0, 12).map(async nest => {
+			const events = await nookApi<CommunityEvent[]>('nook/community/events/list', {
+				communityId: nest.communityId,
+				from,
+				limit: 5,
+			}).catch(() => []);
+			return events
+				.filter(event => event.cancelledAt == null)
+				.map(event => ({ ...event, communityName: nest.name }));
+		}));
+		upcomingEvents.value = eventGroups
+			.flat()
+			.sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
+			.slice(0, 5);
+	} catch (error) {
+		console.error('Failed to load Nook community events', error);
+	} finally {
+		loadingEvents.value = false;
+	}
+}
+
 onMounted(() => {
 	void loadTrends();
 	void loadRecommendedUsers();
+	void loadNestsAndEvents();
 });
 </script>
 
@@ -200,7 +332,9 @@ onMounted(() => {
 }
 
 .trendList,
-.userList {
+.userList,
+.nestList,
+.eventList {
 	display: flex;
 	flex-direction: column;
 }
@@ -232,7 +366,9 @@ onMounted(() => {
 	}
 }
 
-.user {
+.user,
+.nest,
+.event {
 	display: flex;
 	align-items: center;
 	gap: 10px;
@@ -247,13 +383,31 @@ onMounted(() => {
 	}
 }
 
-.avatar {
+.avatar,
+.nestIcon,
+.nestFallback {
 	flex: 0 0 auto;
 	width: 40px;
 	height: 40px;
 }
 
-.userText {
+.nestIcon {
+	border-radius: 10px;
+	object-fit: cover;
+}
+
+.nestFallback {
+	display: grid;
+	place-items: center;
+	border-radius: 10px;
+	background: var(--nook-blue-soft);
+	color: var(--nook-blue);
+	font-weight: 800;
+}
+
+.userText,
+.nestText,
+.eventText {
 	display: flex;
 	flex: 1;
 	min-width: 0;
@@ -262,20 +416,51 @@ onMounted(() => {
 }
 
 .userName,
-.userAcct {
+.userAcct,
+.nestText > strong,
+.nestText > span,
+.eventText > strong,
+.eventText > span {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
-.userName {
+.userName,
+.nestText > strong,
+.eventText > strong {
 	font-size: 14px;
 	font-weight: 650;
 }
 
-.userAcct {
+.userAcct,
+.nestText > span,
+.eventText > span {
 	font-size: 11px;
 	color: var(--nook-muted);
+}
+
+.eventDate {
+	display: flex;
+	width: 44px;
+	height: 44px;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
+	border-radius: 10px;
+	background: var(--nook-blue-soft);
+	color: var(--nook-blue);
+	line-height: 1.1;
+}
+
+.eventDate > strong {
+	font-size: 12px;
+}
+
+.eventDate > small {
+	margin-top: 3px;
+	font-size: 9px;
 }
 
 .chevron {
