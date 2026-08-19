@@ -47,28 +47,22 @@ import { Paginator } from '@/utility/paginator.js';
 import { $i } from '@/i.js';
 
 const tab = ref('featured');
-const showDiscoveryTabs = ref(false);
 
 const featuredPaginator = markRaw(new Paginator('channels/featured', { limit: 10, noPaging: true }));
 const favoritesPaginator = markRaw(new Paginator('channels/my-favorites', { limit: 100, noPaging: true }));
 const followingPaginator = markRaw(new Paginator('channels/followed', { limit: 10 }));
 
-function toggleDiscoveryTabs(): void {
-	showDiscoveryTabs.value = !showDiscoveryTabs.value;
-}
-
 const headerActions = computed(() => []);
-const headerTabs = computed(() => showDiscoveryTabs.value ? [
-	{ key: 'featured', title: i18n.ts._channel.featured, icon: 'ti ti-sparkles' },
+const headerTabs = computed(() => [
+	{ key: 'featured', title: 'トレンド', icon: 'ti ti-sparkles' },
 	{ key: 'favorites', title: 'ブックマーク', icon: 'ti ti-bookmark' },
 	{ key: 'following', title: '参加中', icon: 'ti ti-users' },
-] : []);
+]);
 
 definePage(() => ({
 	title: i18n.ts.nookCommunity,
 	icon: 'ti ti-users',
-	onTitleClick: toggleDiscoveryTabs,
-	titleActive: !showDiscoveryTabs.value,
+	titleActive: true,
 }));
 </script>
 
