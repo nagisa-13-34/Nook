@@ -114,7 +114,7 @@ const headerTabs = computed(() => [{ key: 'search', title: i18n.ts.search, icon:
 	{ key: 'following', title: i18n.ts._channel.following, icon: 'ti ti-users' },
 	{ key: 'owned', title: i18n.ts._channel.owned, icon: 'ti ti-user-star' }]);
 
-definePage(() => ({ title: i18n.ts.channel, icon: 'ti ti-users' }));
+definePage(() => ({ title: i18n.ts.nookCommunity, icon: 'ti ti-users' }));
 </script>
 
 <style lang="scss" module>
