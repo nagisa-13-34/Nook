@@ -5,7 +5,7 @@
 
 import type { NookCommunityBotRecord } from './bots.js';
 import type { NookCommunityChannelRecord } from './channels.js';
-import type { NookCommunityEventRecord } from './events.js';
+import type { NookCommunityEventRecord, NookEventRecord } from './events.js';
 import type { NookCommunityMessageRecord } from './messages.js';
 
 export function serializeNookCommunityBot(bot: NookCommunityBotRecord) {
@@ -32,7 +32,7 @@ export function serializeNookCommunityMessage(message: NookCommunityMessageRecor
 	};
 }
 
-export function serializeNookCommunityEvent(event: NookCommunityEventRecord) {
+export function serializeNookEvent(event: NookEventRecord) {
 	return {
 		...event,
 		startsAt: event.startsAt.toISOString(),
@@ -41,4 +41,8 @@ export function serializeNookCommunityEvent(event: NookCommunityEventRecord) {
 		createdAt: event.createdAt.toISOString(),
 		updatedAt: event.updatedAt.toISOString(),
 	};
+}
+
+export function serializeNookCommunityEvent(event: NookCommunityEventRecord) {
+	return serializeNookEvent(event);
 }
