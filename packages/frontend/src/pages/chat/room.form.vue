@@ -9,34 +9,52 @@ SPDX-License-Identifier: AGPL-3.0-only
 	@dragover.stop="onDragover"
 	@drop.stop="onDrop"
 >
-	<textarea
-		ref="textareaEl"
-		v-model="text"
-		:class="$style.textarea"
-		class="_acrylic"
-		:placeholder="i18n.ts.inputMessageHere"
-		:readonly="textareaReadOnly"
-		@keydown="onKeydown"
-		@paste="onPaste"
-	></textarea>
-	<footer :class="$style.footer">
-		<div v-if="file" :class="$style.file" @click="file = null">{{ file.name }}</div>
-		<div :class="$style.buttons">
-			<button class="_button" :class="$style.button" @click="chooseFile"><i class="ti ti-photo-plus"></i></button>
-			<button class="_button" :class="$style.button" @click="insertEmoji"><i class="ti ti-mood-happy"></i></button>
-			<button class="_button" :class="[$style.button, $style.send]" :disabled="!canSend || sending" :title="i18n.ts.send" @click="send">
-				<template v-if="!sending"><i class="ti ti-send"></i></template><template v-if="sending"><MkLoading :em="true"/></template>
-			</button>
+	<div v-if="replyingTo" :class="$style.replyPreview">
+		<div :class="$style.replyMark"></div>
+		<div :class="$style.replyBody">
+			<strong>{{ replySender }}</strong>
+			<span>{{ replyPreview }}</span>
 		</div>
-	</footer>
+		<button class="_button" :class="$style.replyClose" aria-label="返信をやめる" @click="replyingTo = null"><i class="ti ti-x"></i></button>
+	</div>
+
+	<div v-if="file" :class="$style.filePreview">
+		<i class="ti ti-paperclip"></i>
+		<span>{{ file.name }}</span>
+		<button class="_button" aria-label="添付を外す" @click="file = null"><i class="ti ti-x"></i></button>
+	</div>
+
+	<div :class="$style.composer">
+		<div :class="$style.leadingButtons">
+			<button class="_button" :class="$style.iconButton" title="端末からファイルを追加" @click="openLocalFile"><i class="ti ti-plus"></i></button>
+			<button class="_button" :class="$style.iconButton" title="Nookのファイルから選ぶ" @click="chooseDriveFile"><i class="ti ti-photo"></i></button>
+		</div>
+
+		<textarea
+			ref="textareaEl"
+			v-model="text"
+			:class="$style.textarea"
+			placeholder="メッセージ"
+			:readonly="textareaReadOnly"
+			rows="1"
+			@keydown="onKeydown"
+			@paste="onPaste"
+		></textarea>
+
+		<button class="_button" :class="$style.emojiButton" title="絵文字" @click="insertEmoji"><i class="ti ti-mood-happy"></i></button>
+		<button class="_button" :class="$style.send" :disabled="!canSend || sending" :title="i18n.ts.send" @click="send">
+			<template v-if="!sending"><i class="ti ti-send"></i></template>
+			<template v-else><MkLoading :em="true"/></template>
+		</button>
+	</div>
+
 	<input ref="fileEl" style="display: none;" type="file" @change="onChangeFile"/>
 </div>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, watch, ref, shallowRef, computed, nextTick, readonly, onBeforeUnmount } from 'vue';
+import { onMounted, watch, ref, shallowRef, computed, nextTick, onBeforeUnmount } from 'vue';
 import * as Misskey from 'misskey-js';
-//import insertTextAtCursor from 'insert-text-at-cursor';
 import { formatTimeString } from '@/utility/format-time-string.js';
 import { selectFile } from '@/utility/drive.js';
 import * as os from '@/os.js';
@@ -53,16 +71,32 @@ const props = defineProps<{
 	room?: Misskey.entities.ChatRoom | null;
 }>();
 
+type ReplyTarget = {
+	id: string;
+	fromUserId: string;
+	text?: string | null;
+	file?: { name: string } | null;
+	fromUser?: { name?: string | null; username: string } | null;
+};
+
 const textareaEl = shallowRef<HTMLTextAreaElement>();
 const fileEl = shallowRef<HTMLInputElement>();
-
-const text = ref<string>('');
+const text = ref('');
 const file = ref<Misskey.entities.DriveFile | null>(null);
+const replyingTo = shallowRef<ReplyTarget | null>(null);
 const sending = ref(false);
 const textareaReadOnly = ref(false);
 let autocompleteInstance: Autocomplete | null = null;
 
-const canSend = computed(() => (text.value != null && text.value !== '') || file.value != null);
+const canSend = computed(() => text.value.trim().length > 0 || file.value != null);
+const replySender = computed(() => replyingTo.value?.fromUser?.name?.trim() || replyingTo.value?.fromUser?.username || 'メッセージ');
+const replyPreview = computed(() => {
+	if (!replyingTo.value) return '';
+	const preview = replyingTo.value.text?.replace(/\s+/g, ' ').trim();
+	if (preview) return preview.slice(0, 120);
+	if (replyingTo.value.file) return `📎 ${replyingTo.value.file.name}`;
+	return 'メッセージ';
+});
 
 function getDraftKey() {
 	return props.user ? 'user:' + props.user.id : 'room:' + props.room?.id;
@@ -70,105 +104,92 @@ function getDraftKey() {
 
 watch([text, file], saveDraft);
 
+function onReplyEvent(event: Event) {
+	const customEvent = event as CustomEvent<{ message?: ReplyTarget }>;
+	if (!customEvent.detail?.message) return;
+	replyingTo.value = customEvent.detail.message;
+	void nextTick(() => textareaEl.value?.focus());
+}
+
 async function onPaste(ev: ClipboardEvent) {
 	if (!ev.clipboardData) return;
 
 	const pastedFileName = 'yyyy-MM-dd HH-mm-ss [{{number}}]';
+	const items = ev.clipboardData.items;
 
-	const clipboardData = ev.clipboardData;
-	const items = clipboardData.items;
-
-	if (items.length === 1) {
-		if (items[0].kind === 'file') {
-			const pastedFile = items[0].getAsFile();
-			if (!pastedFile) return;
-			const lio = pastedFile.name.lastIndexOf('.');
-			const ext = lio >= 0 ? pastedFile.name.slice(lio) : '';
-			const formattedName = formatTimeString(new Date(pastedFile.lastModified), pastedFileName).replace(/{{number}}/g, '1') + ext;
-			const renamedFile = new File([pastedFile], formattedName, { type: pastedFile.type });
-			os.launchUploader([renamedFile], { multiple: false }).then(driveFiles => {
-				file.value = driveFiles[0];
-			});
-		}
-	} else {
-		if (items[0].kind === 'file') {
-			os.alert({
-				type: 'error',
-				text: i18n.ts.onlyOneFileCanBeAttached,
-			});
-		}
+	if (items.length === 1 && items[0].kind === 'file') {
+		const pastedFile = items[0].getAsFile();
+		if (!pastedFile) return;
+		const lio = pastedFile.name.lastIndexOf('.');
+		const ext = lio >= 0 ? pastedFile.name.slice(lio) : '';
+		const formattedName = formatTimeString(new Date(pastedFile.lastModified), pastedFileName).replace(/{{number}}/g, '1') + ext;
+		const renamedFile = new File([pastedFile], formattedName, { type: pastedFile.type });
+		const driveFiles = await os.launchUploader([renamedFile], { multiple: false });
+		file.value = driveFiles[0] ?? null;
+	} else if (items.length > 1 && items[0].kind === 'file') {
+		void os.alert({
+			type: 'error',
+			text: i18n.ts.onlyOneFileCanBeAttached,
+		});
 	}
 }
 
 function onDragover(ev: DragEvent) {
-	if (!ev.dataTransfer) return;
+	if (!ev.dataTransfer || ev.dataTransfer.items.length === 0) return;
 
 	const isFile = ev.dataTransfer.items[0].kind === 'file';
 	if (isFile || checkDragDataType(ev, ['driveFiles'])) {
 		ev.preventDefault();
-		switch (ev.dataTransfer.effectAllowed) {
-			case 'all':
-			case 'uninitialized':
-			case 'copy':
-			case 'copyLink':
-			case 'copyMove':
-				ev.dataTransfer.dropEffect = 'copy';
-				break;
-			case 'linkMove':
-			case 'move':
-				ev.dataTransfer.dropEffect = 'move';
-				break;
-			default:
-				ev.dataTransfer.dropEffect = 'none';
-				break;
-		}
+		ev.dataTransfer.dropEffect = 'copy';
 	}
 }
 
-function onDrop(ev: DragEvent): void {
+async function onDrop(ev: DragEvent): Promise<void> {
 	if (!ev.dataTransfer) return;
 
-	// ファイルだったら
 	if (ev.dataTransfer.files.length === 1) {
 		ev.preventDefault();
-		os.launchUploader([Array.from(ev.dataTransfer.files)[0]], { multiple: false });
+		const driveFiles = await os.launchUploader([Array.from(ev.dataTransfer.files)[0]], { multiple: false });
+		file.value = driveFiles[0] ?? null;
 		return;
-	} else if (ev.dataTransfer.files.length > 1) {
+	}
+
+	if (ev.dataTransfer.files.length > 1) {
 		ev.preventDefault();
-		os.alert({
+		void os.alert({
 			type: 'error',
 			text: i18n.ts.onlyOneFileCanBeAttached,
 		});
 		return;
 	}
 
-	//#region ドライブのファイル
-	{
-		const droppedData = getDragData(ev, 'driveFiles');
-		if (droppedData != null) {
-			file.value = droppedData[0];
-			ev.preventDefault();
-		}
+	const droppedData = getDragData(ev, 'driveFiles');
+	if (droppedData != null) {
+		file.value = droppedData[0] ?? null;
+		ev.preventDefault();
 	}
-	//#endregion
 }
 
 function onKeydown(ev: KeyboardEvent) {
 	if (ev.isComposing || ev.key === 'Process' || ev.keyCode === 229) return;
-	if (ev.key === 'Enter') {
-		if (prefer.s['chat.sendOnEnter']) {
-			if (!(ev.ctrlKey || ev.metaKey || ev.shiftKey)) {
-				send();
-			}
-		} else {
-			if ((ev.ctrlKey || ev.metaKey)) {
-				send();
-			}
+	if (ev.key !== 'Enter') return;
+
+	if (prefer.s['chat.sendOnEnter']) {
+		if (!(ev.ctrlKey || ev.metaKey || ev.shiftKey)) {
+			ev.preventDefault();
+			void send();
 		}
+	} else if (ev.ctrlKey || ev.metaKey) {
+		ev.preventDefault();
+		void send();
 	}
 }
 
-function chooseFile(ev: PointerEvent) {
+function openLocalFile() {
+	fileEl.value?.click();
+}
+
+function chooseDriveFile(ev: PointerEvent) {
 	selectFile({
 		anchorElement: ev.currentTarget ?? ev.target,
 		multiple: false,
@@ -178,57 +199,58 @@ function chooseFile(ev: PointerEvent) {
 	});
 }
 
-function onChangeFile() {
-	if (fileEl.value == null || fileEl.value.files == null) return;
-
-	if (fileEl.value.files[0]) {
-		os.launchUploader(Array.from(fileEl.value.files), { multiple: false }).then(driveFiles => {
-			file.value = driveFiles[0];
-		});
-	}
+async function onChangeFile() {
+	if (fileEl.value?.files?.[0] == null) return;
+	const driveFiles = await os.launchUploader([fileEl.value.files[0]], { multiple: false });
+	file.value = driveFiles[0] ?? null;
+	fileEl.value.value = '';
 }
 
-function send() {
-	if (!canSend.value) return;
+function buildOutgoingText(): string | undefined {
+	const body = text.value.trim();
+	if (!replyingTo.value) return body.length > 0 ? body : undefined;
 
+	const quote = `> ${replySender.value}: ${replyPreview.value}`;
+	return body.length > 0 ? `${quote}\n${body}` : quote;
+}
+
+async function send() {
+	if (!canSend.value || sending.value) return;
 	sending.value = true;
 
-	if (props.user) {
-		misskeyApi('chat/messages/create-to-user', {
-			toUserId: props.user.id,
-			text: text.value ? text.value : undefined,
-			fileId: file.value ? file.value.id : undefined,
-		}).then(message => {
-			clear();
-		}).catch(err => {
-			console.error(err);
-		}).then(() => {
-			sending.value = false;
-		});
-	} else if (props.room) {
-		misskeyApi('chat/messages/create-to-room', {
-			toRoomId: props.room.id,
-			text: text.value ? text.value : undefined,
-			fileId: file.value ? file.value.id : undefined,
-		}).then(message => {
-			clear();
-		}).catch(err => {
-			console.error(err);
-		}).then(() => {
-			sending.value = false;
-		});
+	try {
+		const outgoingText = buildOutgoingText();
+		if (props.user) {
+			await misskeyApi('chat/messages/create-to-user', {
+				toUserId: props.user.id,
+				text: outgoingText,
+				fileId: file.value?.id,
+			});
+		} else if (props.room) {
+			await misskeyApi('chat/messages/create-to-room', {
+				toRoomId: props.room.id,
+				text: outgoingText,
+				fileId: file.value?.id,
+			});
+		}
+		clear();
+	} catch (err) {
+		console.error(err);
+		void os.alert({ type: 'error', text: i18n.ts.somethingHappened });
+	} finally {
+		sending.value = false;
 	}
 }
 
 function clear() {
 	text.value = '';
 	file.value = null;
+	replyingTo.value = null;
 	deleteDraft();
 }
 
 function saveDraft() {
 	const drafts = JSON.parse(miLocalStorage.getItem('chatMessageDrafts') || '{}');
-
 	drafts[getDraftKey()] = {
 		updatedAt: new Date(),
 		data: {
@@ -236,15 +258,12 @@ function saveDraft() {
 			file: file.value,
 		},
 	};
-
 	miLocalStorage.setItem('chatMessageDrafts', JSON.stringify(drafts));
 }
 
 function deleteDraft() {
 	const drafts = JSON.parse(miLocalStorage.getItem('chatMessageDrafts') || '{}');
-
 	delete drafts[getDraftKey()];
-
 	miLocalStorage.setItem('chatMessageDrafts', JSON.stringify(drafts));
 }
 
@@ -252,12 +271,6 @@ async function insertEmoji(ev: MouseEvent) {
 	textareaReadOnly.value = true;
 	const target = ev.currentTarget ?? ev.target;
 	if (target == null) return;
-
-	// emojiPickerはダイアログが閉じずにtextareaとやりとりするので、
-	// focustrapをかけているとinsertTextAtCursorが効かない
-	// そのため、投稿フォームのテキストに直接注入する
-	// See: https://github.com/misskey-dev/misskey/pull/14282
-	//      https://github.com/misskey-dev/misskey/issues/14274
 
 	let pos = textareaEl.value?.selectionStart ?? 0;
 	let posEnd = textareaEl.value?.selectionEnd ?? text.value.length;
@@ -272,7 +285,7 @@ async function insertEmoji(ev: MouseEvent) {
 		},
 		() => {
 			textareaReadOnly.value = false;
-			nextTick(() => focus());
+			void nextTick(() => textareaEl.value?.focus());
 		},
 	);
 }
@@ -282,15 +295,17 @@ onMounted(() => {
 		autocompleteInstance = new Autocomplete(textareaEl.value, text);
 	}
 
-	// 書きかけの投稿を復元
 	const draft = JSON.parse(miLocalStorage.getItem('chatMessageDrafts') || '{}')[getDraftKey()];
 	if (draft) {
 		text.value = draft.data.text;
 		file.value = draft.data.file;
 	}
+
+	window.addEventListener('nook-chat-reply', onReplyEvent);
 });
 
 onBeforeUnmount(() => {
+	window.removeEventListener('nook-chat-reply', onReplyEvent);
 	if (autocompleteInstance) {
 		autocompleteInstance.detach();
 		autocompleteInstance = null;
@@ -301,57 +316,164 @@ onBeforeUnmount(() => {
 <style lang="scss" module>
 .root {
 	position: relative;
-	border-bottom: none;
+	overflow: hidden;
+	background: #fff;
+	border: 1px solid #d7e3f1;
 	border-radius: 14px 14px 0 0;
-	overflow: clip;
+	box-shadow: 0 -4px 18px rgba(23, 50, 77, 0.05);
+}
+
+.replyPreview,
+.filePreview {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	min-width: 0;
+	padding: 8px 12px;
+	border-bottom: 1px solid #e3ebf5;
+	background: #f8fbff;
+	color: #17324d;
+}
+
+.replyMark {
+	width: 3px;
+	height: 34px;
+	flex: 0 0 auto;
+	border-radius: 3px;
+	background: #175cd3;
+}
+
+.replyBody {
+	display: flex;
+	min-width: 0;
+	flex: 1;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.replyBody strong {
+	color: #175cd3;
+	font-size: 11px;
+}
+
+.replyBody span,
+.filePreview span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: #667a91;
+	font-size: 11px;
+}
+
+.replyClose {
+	width: 28px;
+	height: 28px;
+	flex: 0 0 auto;
+	border-radius: 7px;
+	color: #718399;
+}
+
+.filePreview i {
+	color: #175cd3;
+}
+
+.filePreview span {
+	flex: 1;
+}
+
+.composer {
+	display: flex;
+	align-items: flex-end;
+	gap: 6px;
+	padding: 8px;
+}
+
+.leadingButtons {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	padding-bottom: 2px;
+}
+
+.iconButton,
+.emojiButton {
+	display: grid;
+	width: 34px;
+	height: 34px;
+	flex: 0 0 auto;
+	place-items: center;
+	border-radius: 9px;
+	color: #667a91;
+}
+
+.iconButton:hover,
+.emojiButton:hover {
+	background: #eef5ff;
+	color: #175cd3;
 }
 
 .textarea {
-	cursor: auto;
 	display: block;
-	width: 100%;
-	min-width: 100%;
-	max-width: 100%;
-	min-height: 80px;
+	min-width: 0;
+	max-height: 160px;
+	min-height: 38px;
+	flex: 1;
 	margin: 0;
-	padding: 16px 16px 0 16px;
+	padding: 9px 12px;
 	resize: none;
-	font-size: 1em;
-	font-family: inherit;
-	outline: none;
-	border: none;
-	border-radius: 0;
-	box-shadow: none;
 	box-sizing: border-box;
-	color: var(--MI_THEME-fg);
+	background: #f5f8fc;
+	border: 1px solid #d7e3f1;
+	border-radius: 14px;
+	outline: none;
+	color: #17324d;
+	font: inherit;
+	line-height: 1.4;
 	field-sizing: content;
 }
 
-.footer {
-	position: sticky;
-	bottom: 0;
-	background: var(--MI_THEME-panel);
+.textarea:focus {
+	background: #fff;
+	border-color: #9ebce8;
+	box-shadow: 0 0 0 2px #eef5ff;
 }
 
-.file {
-	padding: 8px;
-	cursor: pointer;
+.emojiButton {
+	margin-bottom: 2px;
 }
 
-.buttons {
-	display: flex;
-}
-
-.button {
-	height: 50px;
-	aspect-ratio: 1;
-
-	&:hover {
-		color: var(--MI_THEME-accent);
-	}
-}
 .send {
-	margin-left: auto;
-	color: var(--MI_THEME-accent);
+	display: grid;
+	width: 40px;
+	height: 40px;
+	flex: 0 0 auto;
+	place-items: center;
+	margin-bottom: 1px;
+	border: 1px solid #e2bc2d;
+	border-radius: 12px;
+	background: #ffd84d;
+	color: #17324d;
+	font-size: 17px;
+}
+
+.send:disabled {
+	opacity: 0.45;
+}
+
+@media (max-width: 500px) {
+	.composer {
+		gap: 4px;
+		padding: 7px;
+	}
+
+	.leadingButtons .iconButton:nth-child(2) {
+		display: none;
+	}
+
+	.iconButton,
+	.emojiButton {
+		width: 32px;
+		height: 32px;
+	}
 }
 </style>
