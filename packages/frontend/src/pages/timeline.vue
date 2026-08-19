@@ -216,7 +216,7 @@ definePage(() => ({
 	margin-bottom: var(--MI-margin);
 	padding: 4px;
 	background: #fff;
-	border: 1px solid #d7e3f1;
+	border: 1px solid #e2e7ee;
 	border-radius: 9px;
 }
 
@@ -228,23 +228,23 @@ definePage(() => ({
 	min-height: 42px;
 	padding: 6px 10px;
 	border-radius: 7px;
-	color: #667a91;
+	color: #667085;
 	font-weight: 700;
 
 	&:hover {
-		background: #f7faff;
-		color: #17324d;
+		background: #f9fafb;
+		color: #1d2939;
 	}
 
 	&:focus-visible {
-		outline: 2px solid #175cd3;
+		outline: 2px solid #3657d6;
 		outline-offset: -2px;
 	}
 }
 
 .nookTabActive {
-	background: #eef5ff;
-	color: #175cd3;
+	background: #eef1ff;
+	color: #3657d6;
 }
 
 .tl {
