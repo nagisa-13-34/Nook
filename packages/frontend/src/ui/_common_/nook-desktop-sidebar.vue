@@ -18,9 +18,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<i class="ti ti-search" :class="$style.icon"></i>
 			<span :class="$style.itemText">{{ i18n.ts.search }}</span>
 		</MkA>
-		<MkA v-tooltip.noDelay.right="i18n.ts.explore" :class="$style.item" :activeClass="$style.active" to="/explore">
+		<MkA v-tooltip.noDelay.right="i18n.ts.explore" :class="[$style.item, { [$style.active]: exploreRootActive }]" to="/explore">
 			<i class="ti ti-compass" :class="$style.icon"></i>
 			<span :class="$style.itemText">{{ i18n.ts.explore }}</span>
+		</MkA>
+		<MkA v-if="videoFeedAvailable" v-tooltip.noDelay.right="i18n.ts.nookShorts" :class="[$style.item, { [$style.active]: sparkActive }]" to="/explore#spark">
+			<i class="ti ti-sparkles" :class="$style.icon"></i>
+			<span :class="$style.itemText">{{ i18n.ts.nookShorts }}</span>
+		</MkA>
+		<MkA v-if="videoFeedAvailable" v-tooltip.noDelay.right="i18n.ts.nookVideos" :class="[$style.item, { [$style.active]: theaterActive }]" to="/explore#theater">
+			<i class="ti ti-device-tv" :class="$style.icon"></i>
+			<span :class="$style.itemText">{{ i18n.ts.nookVideos }}</span>
 		</MkA>
 		<MkA v-if="$i != null" v-tooltip.noDelay.right="i18n.ts.notifications" :class="$style.item" :activeClass="$style.active" to="/my/notifications">
 			<span :class="$style.iconWrap">
@@ -80,10 +88,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
+import { computed } from 'vue';
 import { $i } from '@/i.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { getAccountMenu } from '@/accounts.js';
+import { isNookVideoFeedAvailable } from '@/nook/video-feed.js';
+import { mainRouter } from '@/router.js';
+import { availableBasicTimelines } from '@/timelines.js';
 
 defineProps<{
 	showWidgetButton?: boolean;
@@ -92,6 +104,13 @@ defineProps<{
 defineEmits<{
 	(ev: 'widgetButtonClick'): void;
 }>();
+
+const videoFeedAvailable = computed(() => isNookVideoFeedAvailable(availableBasicTimelines()));
+const currentPath = computed(() => mainRouter.currentRoute.value.path);
+const currentHash = computed(() => mainRouter.currentRoute.value.hash);
+const sparkActive = computed(() => currentPath.value === '/explore' && currentHash.value === '#spark');
+const theaterActive = computed(() => currentPath.value === '/explore' && currentHash.value === '#theater');
+const exploreRootActive = computed(() => currentPath.value === '/explore' && !sparkActive.value && !theaterActive.value);
 
 async function openAccountMenu(ev: PointerEvent) {
 	const menuItems = await getAccountMenu({ withExtraOperation: false });
