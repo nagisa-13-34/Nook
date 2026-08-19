@@ -10,7 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div :class="$style.nonTitlebarArea">
 		<XSidebar v-if="!isMobile" :class="$style.sidebar" :showWidgetButton="false"/>
 
-		<div :class="[$style.contents, isRoot ? $style.homeContents : null, showHomeDiscoveryRail ? $style.homeWithDiscovery : null]" @contextmenu.stop="onContextmenu">
+		<div :class="[$style.contents, isDiscoveryPage ? $style.homeContents : null, showDiscoveryRail ? $style.homeWithDiscovery : null]" @contextmenu.stop="onContextmenu">
 			<div>
 				<XReloadSuggestion v-if="shouldSuggestReload"/>
 				<XPreferenceRestore v-if="shouldSuggestRestoreBackup"/>
@@ -20,7 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 			<StackingRouterView v-if="prefer.s['experimental.stackingRouterView']" :class="$style.content"/>
 			<RouterView v-else :class="$style.content"/>
-			<XNookHomeDiscoveryRail v-if="showHomeDiscoveryRail" :class="$style.homeDiscoveryRail"/>
+			<XNookHomeDiscoveryRail v-if="showDiscoveryRail" :class="$style.homeDiscoveryRail"/>
 			<XMobileFooterMenu v-if="isMobile" ref="navFooter" v-model:drawerMenuShowing="drawerMenuShowing"/>
 		</div>
 	</div>
@@ -60,7 +60,10 @@ const XStatusBars = defineAsyncComponent(() => import('@/ui/_common_/statusbars.
 const XAnnouncements = defineAsyncComponent(() => import('@/ui/_common_/announcements.vue'));
 
 const currentPath = ref(mainRouter.getCurrentFullPath());
-const isRoot = computed(() => currentPath.value === '/' || mainRouter.currentRoute.value.name === 'index');
+const currentBasePath = computed(() => currentPath.value.split(/[?#]/, 1)[0] ?? '/');
+const isRoot = computed(() => currentBasePath.value === '/' || mainRouter.currentRoute.value.name === 'index');
+const discoveryPaths = new Set(['/', '/search', '/my/favorites']);
+const isDiscoveryPage = computed(() => discoveryPaths.has(currentBasePath.value));
 
 const MOBILE_THRESHOLD = 500;
 const HOME_DISCOVERY_RAIL_THRESHOLD = 1100;
@@ -68,7 +71,7 @@ const HOME_DISCOVERY_RAIL_THRESHOLD = 1100;
 // デスクトップでウィンドウを狭くしたときモバイルUIが表示されて欲しいことはあるので deviceKind === 'desktop' の判定は行わない
 const viewportWidth = ref(window.innerWidth);
 const isMobile = ref(deviceKind === 'smartphone' || viewportWidth.value <= MOBILE_THRESHOLD);
-const showHomeDiscoveryRail = computed(() => isRoot.value && $i != null && !isMobile.value && viewportWidth.value >= HOME_DISCOVERY_RAIL_THRESHOLD);
+const showDiscoveryRail = computed(() => isDiscoveryPage.value && $i != null && !isMobile.value && viewportWidth.value >= HOME_DISCOVERY_RAIL_THRESHOLD);
 
 function updateResponsiveLayout() {
 	viewportWidth.value = window.innerWidth;
