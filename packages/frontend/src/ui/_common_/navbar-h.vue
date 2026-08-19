@@ -12,11 +12,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<MkA v-tooltip="i18n.ts.home" :class="$style.item" :activeClass="$style.active" to="/" exact>
 				<i :class="$style.itemIcon" class="ti ti-home"></i>
 			</MkA>
-			<MkA v-tooltip="i18n.ts.search" :class="$style.item" :activeClass="$style.active" to="/search">
+			<MkA v-tooltip="i18n.ts.nookSearchDiscover" :class="$style.item" :activeClass="$style.active" to="/search">
 				<i :class="$style.itemIcon" class="ti ti-search"></i>
-			</MkA>
-			<MkA v-tooltip="i18n.ts.explore" :class="$style.item" :activeClass="$style.active" to="/explore">
-				<i :class="$style.itemIcon" class="ti ti-compass"></i>
 			</MkA>
 			<MkA v-if="$i" v-tooltip="i18n.ts.notifications" :class="$style.item" :activeClass="$style.active" to="/my/notifications">
 				<i :class="$style.itemIcon" class="ti ti-bell"></i>
@@ -58,9 +55,7 @@ import { i18n } from '@/i18n.js';
 import { getAccountMenu } from '@/accounts.js';
 import { $i } from '@/i.js';
 
-defineProps<{
-	acrylic?: boolean;
-}>();
+defineProps<{ acrylic?: boolean }>();
 
 async function openAccountMenu(ev: PointerEvent) {
 	const menuItems = await getAccountMenu({ withExtraOperation: false });
@@ -69,115 +64,19 @@ async function openAccountMenu(ev: PointerEvent) {
 </script>
 
 <style lang="scss" module>
-.root {
-	--height: 58px;
-	--nook-blue: #175cd3;
-	--nook-yellow: #ffd84d;
-	--nook-ink: #17324d;
-	--nook-border: #d7e3f1;
-	position: sticky;
-	top: 0;
-	z-index: 1000;
-	width: 100%;
-	height: var(--height);
-	background: #fff;
-	border-bottom: 1px solid var(--nook-border);
-	color: var(--nook-ink);
-}
-
-.acrylic {
-	background: rgba(255, 255, 255, 0.94);
-	backdrop-filter: blur(10px);
-}
-
-.body {
-	height: 100%;
-	display: flex;
-	align-items: center;
-	padding: 0 12px;
-	box-sizing: border-box;
-	overflow-x: auto;
-	white-space: nowrap;
-}
-
-.brand {
-	padding: 0 12px 0 4px;
-	font-size: 21px;
-	font-weight: 850;
-	letter-spacing: -0.05em;
-	color: var(--nook-blue);
-	text-decoration: none;
-}
-
-.mainNav,
-.right {
-	display: flex;
-	align-items: center;
-}
-
-.right {
-	margin-left: auto;
-}
-
-.item {
-	position: relative;
-	width: 44px;
-	height: 44px;
-	display: grid;
-	place-items: center;
-	border-radius: 8px;
-	color: var(--nook-ink);
-	text-decoration: none;
-}
-
-.item:hover {
-	background: #f7faff;
-}
-
-.active {
-	color: var(--nook-blue);
-	background: #eef5ff;
-}
-
-.itemIcon {
-	font-size: 20px;
-}
-
-.indicator {
-	position: absolute;
-	top: 8px;
-	right: 8px;
-	color: var(--nook-yellow);
-	font-size: 7px;
-}
-
-.account {
-	padding: 0;
-}
-
-.avatar {
-	width: 30px;
-	height: 30px;
-}
-
-.postButton {
-	width: 40px;
-	height: 40px;
-	margin-left: 6px;
-	border: 1px solid #e4bd29;
-	border-radius: 8px;
-	background: var(--nook-yellow);
-	color: var(--nook-ink);
-	font-size: 19px;
-}
-
-@media (max-width: 720px) {
-	.brand {
-		display: none;
-	}
-
-	.item {
-		width: 40px;
-	}
-}
+.root { --height: 58px; --nook-blue: #175cd3; --nook-yellow: #ffd84d; --nook-ink: #17324d; --nook-border: #d7e3f1; position: sticky; top: 0; z-index: 1000; width: 100%; height: var(--height); background: #fff; border-bottom: 1px solid var(--nook-border); color: var(--nook-ink); }
+.acrylic { background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(10px); }
+.body { height: 100%; display: flex; align-items: center; padding: 0 12px; box-sizing: border-box; overflow-x: auto; white-space: nowrap; }
+.brand { padding: 0 12px 0 4px; font-size: 21px; font-weight: 850; letter-spacing: -0.05em; color: var(--nook-blue); text-decoration: none; }
+.mainNav, .right { display: flex; align-items: center; }
+.right { margin-left: auto; }
+.item { position: relative; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 8px; color: var(--nook-ink); text-decoration: none; }
+.item:hover { background: #f7faff; }
+.active { color: var(--nook-blue); background: #eef5ff; }
+.itemIcon { font-size: 20px; }
+.indicator { position: absolute; top: 8px; right: 8px; color: var(--nook-yellow); font-size: 7px; }
+.account { padding: 0; }
+.avatar { width: 30px; height: 30px; }
+.postButton { width: 40px; height: 40px; margin-left: 6px; border: 1px solid #e4bd29; border-radius: 8px; background: var(--nook-yellow); color: var(--nook-ink); font-size: 19px; }
+@media (max-width: 720px) { .brand { display: none; } .item { width: 40px; } }
 </style>
