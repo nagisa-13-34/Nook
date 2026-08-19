@@ -6,6 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div class="_spacer" style="--MI_SPACER-w: 900px;">
 	<MkTab
+		v-if="props.showTabs"
 		v-model="tab"
 		:tabs="[
 			{ key: 'shorts', label: i18n.ts.nookShorts },
@@ -53,11 +54,19 @@ import { store } from '@/store.js';
 import { availableBasicTimelines } from '@/timelines.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 
+const props = withDefaults(defineProps<{
+	initialTab?: NookVideoTab;
+	showTabs?: boolean;
+}>(), {
+	initialTab: 'shorts',
+	showTabs: true,
+});
+
 const FETCH_LIMIT = 50;
 const MAX_BACKFILL_PAGES = 4;
 const TARGET_TAB_NOTES = 12;
 
-const tab = ref<NookVideoTab>('shorts');
+const tab = ref<NookVideoTab>(props.initialTab);
 const videoNotes = ref<Misskey.entities.Note[]>([]);
 const fetching = ref(false);
 const error = ref(false);
@@ -172,6 +181,10 @@ async function reload(): Promise<void> {
 	error.value = false;
 	await loadMore();
 }
+
+watch(() => props.initialTab, (value) => {
+	if (tab.value !== value) tab.value = value;
+});
 
 watch(tab, () => {
 	if (activeNotes.value.length === 0 && canFetchMore.value) void loadMore();
