@@ -10,9 +10,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<span :class="$style.itemLabel">{{ i18n.ts.home }}</span>
 	</button>
 
-	<button :class="[$style.item, { [$style.active]: currentPath.startsWith('/explore') }]" class="_button" :aria-label="i18n.ts.explore" :aria-current="currentPath.startsWith('/explore') ? 'page' : undefined" @click="mainRouter.push('/explore')">
-		<i :class="$style.itemIcon" class="ti ti-compass"></i>
-		<span :class="$style.itemLabel">{{ i18n.ts.explore }}</span>
+	<button :class="[$style.item, { [$style.active]: currentPath.startsWith('/search') }]" class="_button" :aria-label="i18n.ts.nookSearchDiscover" :aria-current="currentPath.startsWith('/search') ? 'page' : undefined" @click="mainRouter.push('/search')">
+		<i :class="$style.itemIcon" class="ti ti-search"></i>
+		<span :class="$style.itemLabel">{{ i18n.ts.search }}</span>
 	</button>
 
 	<button :class="[$style.item, $style.create]" class="_button" :aria-label="i18n.ts.create" data-testid="open-post-form" @click="os.post()">
@@ -46,9 +46,7 @@ defineModel<boolean>('drawerMenuShowing');
 defineModel<boolean>('widgetsShowing');
 
 const rootEl = useTemplateRef('rootEl');
-
 const currentPath = computed(() => mainRouter.currentRoute.value.path);
-
 const rootElHeight = ref(0);
 
 watch(rootEl, () => {
@@ -59,85 +57,18 @@ watch(rootEl, () => {
 		rootElHeight.value = 0;
 		window.document.body.style.setProperty('--MI-minBottomSpacing', '0px');
 	}
-}, {
-	immediate: true,
-});
+}, { immediate: true });
 </script>
 
 <style lang="scss" module>
-.root {
-	--nook-blue: #175cd3;
-	--nook-blue-soft: #eef5ff;
-	--nook-yellow: #ffd84d;
-	--nook-ink: #17324d;
-	--nook-border: #d7e3f1;
-	position: relative;
-	z-index: 1;
-	padding-bottom: env(safe-area-inset-bottom, 0px);
-	display: grid;
-	grid-template-columns: repeat(5, 1fr);
-	width: 100%;
-	box-sizing: border-box;
-	background: #fff;
-	color: var(--nook-ink);
-	border-top: 1px solid var(--nook-border);
-}
-
-.item {
-	display: flex;
-	min-width: 0;
-	padding: 8px 2px 7px;
-	flex-direction: column;
-	align-items: center;
-	gap: 3px;
-	color: var(--nook-ink);
-
-	&.active {
-		color: var(--nook-blue);
-	}
-
-	&:disabled {
-		opacity: 0.45;
-	}
-}
-
-.create {
-	margin-top: -9px;
-}
-
-.createIcon {
-	display: grid;
-	width: 42px;
-	height: 42px;
-	place-items: center;
-	border: 1px solid #e4bd29;
-	border-radius: 11px;
-	background: var(--nook-yellow);
-	color: var(--nook-ink);
-}
-
-.iconWrapper {
-	position: relative;
-}
-
-.itemIcon {
-	font-size: 20px;
-}
-
-.itemLabel {
-	max-width: 100%;
-	overflow: hidden;
-	font-size: 10px;
-	font-weight: 650;
-	line-height: 1.2;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.unread {
-	position: absolute;
-	top: -2px;
-	right: -5px;
-	color: var(--nook-yellow);
-}
+.root { --nook-blue: #175cd3; --nook-blue-soft: #eef5ff; --nook-yellow: #ffd84d; --nook-ink: #17324d; --nook-border: #d7e3f1; position: relative; z-index: 1; padding-bottom: env(safe-area-inset-bottom, 0px); display: grid; grid-template-columns: repeat(5, 1fr); width: 100%; box-sizing: border-box; background: #fff; color: var(--nook-ink); border-top: 1px solid var(--nook-border); }
+.item { display: flex; min-width: 0; padding: 8px 2px 7px; flex-direction: column; align-items: center; gap: 3px; color: var(--nook-ink); }
+.item.active { color: var(--nook-blue); }
+.item:disabled { opacity: 0.45; }
+.create { margin-top: -9px; }
+.createIcon { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid #e4bd29; border-radius: 11px; background: var(--nook-yellow); color: var(--nook-ink); }
+.iconWrapper { position: relative; }
+.itemIcon { font-size: 20px; }
+.itemLabel { max-width: 100%; overflow: hidden; font-size: 10px; font-weight: 650; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.unread { position: absolute; top: -2px; right: -5px; color: var(--nook-yellow); }
 </style>
