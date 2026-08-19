@@ -123,18 +123,19 @@ function onContextmenu(ev: PointerEvent) {
 
 <style lang="scss" module>
 .root {
-	--nook-blue: #175cd3;
-	--nook-blue-deep: #17324d;
-	--nook-blue-soft: #eef5ff;
-	--nook-yellow: #ffd84d;
-	--nook-yellow-soft: #fff7cc;
+	--nook-blue: #3657d6;
+	--nook-blue-deep: #1d2939;
+	--nook-blue-soft: #eef1ff;
+	--nook-bg: #f7f8fa;
+	--nook-yellow: #f6c94c;
+	--nook-yellow-soft: #fff5d6;
 	--nook-white: #ffffff;
-	--nook-border: #d7e3f1;
-	--nook-muted: #667a91;
+	--nook-border: #e2e7ee;
+	--nook-muted: #667085;
 
 	/* Nook owns the visual system while keeping Misskey's internals intact. */
 	--MI_THEME-accent: var(--nook-blue);
-	--MI_THEME-bg: var(--nook-blue-soft);
+	--MI_THEME-bg: var(--nook-bg);
 	--MI_THEME-panel: var(--nook-white);
 	--MI_THEME-popup: var(--nook-white);
 	--MI_THEME-navBg: var(--nook-white);
@@ -146,8 +147,8 @@ function onContextmenu(ev: PointerEvent) {
 	--MI_THEME-buttonGradateA: var(--nook-yellow);
 	--MI_THEME-buttonGradateB: var(--nook-yellow);
 	--MI_THEME-fgOnAccent: var(--nook-blue-deep);
-	--MI_THEME-accentedBg: #e6f0ff;
-	--MI_THEME-panelHighlight: #f7faff;
+	--MI_THEME-accentedBg: var(--nook-blue-soft);
+	--MI_THEME-panelHighlight: #f9fafb;
 	--MI_THEME-focus: var(--nook-blue);
 	--MI-radius: 8px;
 
@@ -156,7 +157,7 @@ function onContextmenu(ev: PointerEvent) {
 	contain: strict;
 	display: flex;
 	flex-direction: column;
-	background: var(--nook-blue-soft);
+	background: var(--nook-bg);
 	color: var(--nook-blue-deep);
 }
 
@@ -176,10 +177,10 @@ function onContextmenu(ev: PointerEvent) {
 	flex: 1;
 	height: 100%;
 	min-width: 0;
-	background: var(--nook-blue-soft);
+	background: var(--nook-bg);
 
 	&.withSidebarAndTitlebar {
-		background: var(--nook-blue-soft);
+		background: var(--nook-bg);
 		border-radius: 0;
 		overflow: clip;
 	}
@@ -251,7 +252,7 @@ function onContextmenu(ev: PointerEvent) {
 }
 
 :global(.nook-ui [data-testid="post-form-submit"]:not(:disabled):hover > div) {
-	background: #ffdf66 !important;
+	background: #f8d469 !important;
 }
 
 /* Tabs use a simple blue underline instead of pill-like selected states. */
