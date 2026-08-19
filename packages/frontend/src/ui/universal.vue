@@ -10,7 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div :class="$style.nonTitlebarArea">
 		<XSidebar v-if="!isMobile" :class="$style.sidebar" :showWidgetButton="false"/>
 
-		<div :class="[$style.contents, isRoot ? $style.homeContents : null]" @contextmenu.stop="onContextmenu">
+		<div :class="[$style.contents, isRoot ? $style.homeContents : null, showHomeDiscoveryRail ? $style.homeWithDiscovery : null]" @contextmenu.stop="onContextmenu">
 			<div>
 				<XReloadSuggestion v-if="shouldSuggestReload"/>
 				<XPreferenceRestore v-if="shouldSuggestRestoreBackup"/>
@@ -59,10 +59,11 @@ const XSidebar = XNookDesktopSidebar;
 const XStatusBars = defineAsyncComponent(() => import('@/ui/_common_/statusbars.vue'));
 const XAnnouncements = defineAsyncComponent(() => import('@/ui/_common_/announcements.vue'));
 
-const isRoot = computed(() => mainRouter.currentRoute.value.name === 'index');
+const currentPath = ref(mainRouter.getCurrentFullPath());
+const isRoot = computed(() => currentPath.value === '/' || mainRouter.currentRoute.value.name === 'index');
 
 const MOBILE_THRESHOLD = 500;
-const HOME_DISCOVERY_RAIL_THRESHOLD = 1320;
+const HOME_DISCOVERY_RAIL_THRESHOLD = 1100;
 
 // デスクトップでウィンドウを狭くしたときモバイルUIが表示されて欲しいことはあるので deviceKind === 'desktop' の判定は行わない
 const viewportWidth = ref(window.innerWidth);
@@ -94,7 +95,8 @@ provideReactiveMetadata(pageMetadata);
 
 const drawerMenuShowing = ref(false);
 
-mainRouter.on('change', () => {
+mainRouter.on('change', ({ fullPath }) => {
+	currentPath.value = fullPath;
 	drawerMenuShowing.value = false;
 });
 
@@ -218,23 +220,48 @@ function onContextmenu(ev: PointerEvent) {
 	min-height: 0;
 }
 
+.homeContents {
+	padding-inline: 24px;
+	box-sizing: border-box;
+}
+
 .homeContents > .content {
-	width: min(calc(100% - 48px), 720px);
-	margin-left: 24px;
-	margin-right: auto;
+	width: min(100%, 720px);
+	margin: 0;
 	box-sizing: border-box;
 	background: var(--nook-white);
 	border-inline: solid 1px var(--nook-border);
 }
 
+.homeWithDiscovery {
+	display: grid;
+	grid-template-columns: minmax(0, 720px) minmax(260px, 320px);
+	grid-template-rows: auto minmax(0, 1fr);
+	column-gap: 24px;
+	align-items: start;
+	justify-content: start;
+}
+
+.homeWithDiscovery > :first-child {
+	grid-column: 1 / -1;
+}
+
+.homeWithDiscovery > .content {
+	grid-column: 1;
+	grid-row: 2;
+	width: 100%;
+}
+
 .homeDiscoveryRail {
-	position: absolute;
-	top: 16px;
-	bottom: 16px;
-	left: 768px;
-	z-index: 2;
+	grid-column: 2;
+	grid-row: 2;
+	align-self: start;
+	width: 100%;
+	max-height: calc(100dvh - 32px);
 	overflow-y: auto;
-	padding-right: 8px;
+	padding-top: 16px;
+	padding-right: 4px;
+	box-sizing: border-box;
 	scrollbar-width: thin;
 }
 
@@ -323,16 +350,18 @@ function onContextmenu(ev: PointerEvent) {
 }
 
 @media (max-width: 900px) {
-	.homeContents > .content {
-		width: min(calc(100% - 24px), 720px);
-		margin-left: 12px;
+	.homeContents {
+		padding-inline: 12px;
 	}
 }
 
 @media (max-width: 500px) {
+	.homeContents {
+		padding-inline: 0;
+	}
+
 	.homeContents > .content {
 		width: 100%;
-		margin-left: 0;
 		border-inline: 0;
 	}
 
