@@ -8,12 +8,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div v-if="tab === 'featured'">
 		<XFeatured/>
 	</div>
-	<div v-else-if="tab === 'spark'">
-		<XVideos initialTab="shorts" :showTabs="false"/>
-	</div>
-	<div v-else-if="tab === 'theater'">
-		<XVideos initialTab="videos" :showTabs="false"/>
-	</div>
 	<div v-else-if="tab === 'users'">
 		<XUsers/>
 	</div>
@@ -26,13 +20,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue';
 import XFeatured from './explore.featured.vue';
-import XVideos from './explore.videos.vue';
 import XUsers from './explore.users.vue';
 import XRoles from './explore.roles.vue';
 import { i18n } from '@/i18n.js';
-import { isNookVideoFeedAvailable } from '@/nook/video-feed.js';
 import { definePage } from '@/page.js';
-import { availableBasicTimelines } from '@/timelines.js';
 
 const props = withDefaults(defineProps<{
 	initialTab?: string;
@@ -40,12 +31,9 @@ const props = withDefaults(defineProps<{
 	initialTab: 'featured',
 });
 
-const videoFeedAvailable = computed(() => isNookVideoFeedAvailable(availableBasicTimelines()));
-
 function normalizeInitialTab(value: string): string {
-	const normalized = value === 'shorts' ? 'spark' : value === 'videos' ? 'theater' : value;
-	if ((normalized === 'spark' || normalized === 'theater') && !videoFeedAvailable.value) return 'featured';
-	return normalized;
+	if (value === 'spark' || value === 'theater' || value === 'shorts' || value === 'videos') return 'featured';
+	return value;
 }
 
 const tab = ref(normalizeInitialTab(props.initialTab));
@@ -60,15 +48,7 @@ const headerTabs = computed(() => [{
 	key: 'featured',
 	icon: 'ti ti-bolt',
 	title: i18n.ts.featured,
-}, ...(videoFeedAvailable.value ? [{
-	key: 'spark',
-	icon: 'ti ti-sparkles',
-	title: i18n.ts.nookShorts,
 }, {
-	key: 'theater',
-	icon: 'ti ti-device-tv',
-	title: i18n.ts.nookVideos,
-}] : []), {
 	key: 'users',
 	icon: 'ti ti-users',
 	title: i18n.ts.users,
