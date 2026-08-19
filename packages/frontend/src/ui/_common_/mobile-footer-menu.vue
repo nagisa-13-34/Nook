@@ -61,12 +61,42 @@ watch(rootEl, () => {
 </script>
 
 <style lang="scss" module>
-.root { --nook-blue: #3657d6; --nook-blue-soft: #eef1ff; --nook-yellow: #f6c94c; --nook-ink: #1d2939; --nook-border: #e2e7ee; position: relative; z-index: 1; padding-bottom: env(safe-area-inset-bottom, 0px); display: grid; grid-template-columns: repeat(5, 1fr); width: 100%; box-sizing: border-box; background: #fff; color: var(--nook-ink); border-top: 1px solid var(--nook-border); }
+.root {
+	--nook-blue: #3657d6;
+	--nook-blue-soft: #eef1ff;
+	--nook-yellow: #f6c94c;
+	--nook-ink: #1d2939;
+	--nook-border: #e2e7ee;
+	--nook-surface: #ffffff;
+	--nook-on-yellow: #1d2939;
+	--nook-create-border: #d6aa2e;
+	position: relative;
+	z-index: 1;
+	padding-bottom: env(safe-area-inset-bottom, 0px);
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	width: 100%;
+	box-sizing: border-box;
+	background: var(--nook-surface);
+	color: var(--nook-ink);
+	border-top: 1px solid var(--nook-border);
+}
+
+:global(html[data-color-scheme='dark']) .root {
+	--nook-blue: #8ea2ff;
+	--nook-blue-soft: #202a4d;
+	--nook-yellow: #f4ca5c;
+	--nook-ink: #f2f4f7;
+	--nook-border: #2c3542;
+	--nook-surface: #161c26;
+	--nook-create-border: #9a7b2e;
+}
+
 .item { display: flex; min-width: 0; padding: 8px 2px 7px; flex-direction: column; align-items: center; gap: 3px; color: var(--nook-ink); }
 .item.active { color: var(--nook-blue); }
 .item:disabled { opacity: 0.45; }
 .create { margin-top: -9px; }
-.createIcon { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid #d6aa2e; border-radius: 11px; background: var(--nook-yellow); color: var(--nook-ink); }
+.createIcon { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid var(--nook-create-border); border-radius: 11px; background: var(--nook-yellow); color: var(--nook-on-yellow); }
 .iconWrapper { position: relative; }
 .itemIcon { font-size: 20px; }
 .itemLabel { max-width: 100%; overflow: hidden; font-size: 10px; font-weight: 650; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
