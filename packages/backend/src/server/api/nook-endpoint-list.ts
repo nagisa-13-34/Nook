@@ -10,6 +10,7 @@ export * as 'notes/recommended' from './endpoints/notes/recommended.js';
 export * as 'notes/recommended-page' from './endpoints/notes/recommended-page.js';
 export * as 'nook/features' from './endpoints/nook/features.js';
 export * as 'nook/community/show' from './endpoints/nook/community/show.js';
+export * as 'nook/community/my-list' from './endpoints/nook/community/my-list.js';
 export * as 'nook/community/settings-update' from './endpoints/nook/community/settings-update.js';
 export * as 'nook/community/profile-show' from './endpoints/nook/community/profile-show.js';
 export * as 'nook/community/profile-update' from './endpoints/nook/community/profile-update.js';
