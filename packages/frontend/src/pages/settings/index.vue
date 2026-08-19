@@ -94,16 +94,6 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		to: '/settings/preferences',
 		active: currentPage.value?.route.name === 'preferences',
 	}, {
-		icon: 'ti ti-palette',
-		text: i18n.ts.theme,
-		to: '/settings/theme',
-		active: currentPage.value?.route.name === 'theme',
-	}, {
-		icon: 'ti ti-music',
-		text: i18n.ts.sounds,
-		to: '/settings/sounds',
-		active: currentPage.value?.route.name === 'sounds',
-	}, {
 		icon: 'ti ti-ban',
 		text: i18n.ts.muteAndBlock,
 		to: '/settings/mute-block',
