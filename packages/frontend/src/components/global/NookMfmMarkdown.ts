@@ -38,6 +38,88 @@ type MarkdownBlock =
 	| { type: 'code'; text: string }
 	| { type: 'hr' };
 
+// mfm-js intentionally rejects number-only hashtags such as #123.
+// Nook accepts them, so convert only those leftover text fragments into
+// normal MFM hashtag nodes after parsing. This keeps every other MFM rule intact.
+const numericHashtagPattern = /(^|[^A-Za-z0-9\\])#([0-9]+)(?=$|[ \u3000\t\r\n.,!?'"\/#:\[\]【】()「」（）<>])/g;
+
+function splitNumericHashtags(text: string): mfm.MfmNode[] {
+	const nodes: mfm.MfmNode[] = [];
+	let cursor = 0;
+	let matched = false;
+
+	for (const match of text.matchAll(numericHashtagPattern)) {
+		matched = true;
+		const prefix = match[1] ?? '';
+		const hashtag = match[2];
+		const matchIndex = match.index ?? 0;
+		const hashtagStart = matchIndex + prefix.length;
+
+		if (hashtagStart > cursor) {
+			nodes.push({
+				type: 'text',
+				props: { text: text.slice(cursor, hashtagStart) },
+			} as mfm.MfmNode);
+		}
+
+		nodes.push({
+			type: 'hashtag',
+			props: { hashtag },
+		} as mfm.MfmNode);
+
+		cursor = hashtagStart + hashtag.length + 1;
+	}
+
+	if (!matched) {
+		return [{
+			type: 'text',
+			props: { text },
+		} as mfm.MfmNode];
+	}
+
+	if (cursor < text.length) {
+		nodes.push({
+			type: 'text',
+			props: { text: text.slice(cursor) },
+		} as mfm.MfmNode);
+	}
+
+	return nodes;
+}
+
+function injectNumericHashtags(nodes: mfm.MfmNode[]): mfm.MfmNode[] {
+	const output: mfm.MfmNode[] = [];
+
+	for (const node of nodes) {
+		if (node.type === 'text') {
+			output.push(...splitNumericHashtags(node.props.text));
+			continue;
+		}
+
+		// mfm-js intentionally disables hashtag parsing inside link labels.
+		if (node.type === 'link') {
+			output.push(node);
+			continue;
+		}
+
+		if ('children' in node && Array.isArray(node.children)) {
+			output.push({
+				...node,
+				children: injectNumericHashtags(node.children as mfm.MfmNode[]),
+			} as mfm.MfmNode);
+			continue;
+		}
+
+		output.push(node);
+	}
+
+	return output;
+}
+
+function parseNookMfm(text: string): mfm.MfmNode[] {
+	return injectNumericHashtags(mfm.parse(text));
+}
+
 function hasCompleteCodeFence(source: string): boolean {
 	const lines = source.replace(/\r\n?/g, '\n').split('\n');
 	let open = false;
@@ -175,7 +257,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 			// Always parse the text currently being rendered. Some note views pass a
 			// pre-parsed MFM tree; reusing it here can make Markdown rendering and the
 			// visible source disagree when a note is refreshed or replaced in-place.
-			parsedNodes: undefined,
+			parsedNodes: props.plain ? undefined : parseNookMfm(props.text),
 			onClickEv: forwardClick,
 		});
 	}
@@ -185,7 +267,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 		text,
 		plain: false,
 		nowrap: false,
-		parsedNodes: undefined,
+		parsedNodes: parseNookMfm(text),
 		onClickEv: forwardClick,
 	});
 
