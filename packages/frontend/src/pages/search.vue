@@ -6,12 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <PageWithHeader v-model:tab="tab" :actions="headerActions" :tabs="headerTabs" :swipable="true">
 	<div v-if="tab === 'note'" class="_spacer" style="--MI_SPACER-w: 800px;">
-		<div v-if="notesSearchAvailable || ignoreNotesSearchAvailable">
-			<XNote v-bind="props"/>
-		</div>
-		<div v-else>
-			<MkInfo warn>{{ i18n.ts.notesSearchNotAvailable }}</MkInfo>
-		</div>
+		<XNote v-bind="props"/>
 	</div>
 
 	<div v-else-if="tab === 'user'" class="_spacer" style="--MI_SPACER-w: 800px;">
@@ -37,7 +32,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, defineAsyncComponent, ref, toRef, watch } from 'vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { notesSearchAvailable, usersSearchAvailable } from '@/utility/check-permissions.js';
+import { usersSearchAvailable } from '@/utility/check-permissions.js';
 import MkInfo from '@/components/MkInfo.vue';
 
 type SearchDiscoverTab = 'note' | 'user' | 'featured' | 'discoverUsers';
