@@ -31,10 +31,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<template #label><SearchLabel>{{ i18n.ts.realtimeMode }}</SearchLabel></template>
 				</MkSwitch>
 
-				<MkSwitch v-model="showTitlebar">
-					<template #label><SearchLabel>{{ i18n.ts.showTitlebar }}</SearchLabel></template>
-				</MkSwitch>
-
 				<MkSwitch v-model="enableInfiniteScroll">
 					<template #label><SearchLabel>{{ i18n.ts.enableInfiniteScroll }}</SearchLabel></template>
 				</MkSwitch>
@@ -127,7 +123,6 @@ import { suggestReload } from '@/utility/reload-suggest.js';
 const lang = ref(miLocalStorage.getItem('lang'));
 const realtimeMode = store.model('realtimeMode');
 const overridedDeviceKind = prefer.model('overridedDeviceKind');
-const showTitlebar = prefer.model('showTitlebar');
 const enableInfiniteScroll = prefer.model('enableInfiniteScroll');
 const reduceAnimation = prefer.model('animation', v => !v, v => !v);
 const showFixedPostForm = prefer.model('showFixedPostForm');
