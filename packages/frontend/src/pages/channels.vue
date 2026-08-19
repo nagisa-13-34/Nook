@@ -9,28 +9,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div :class="$style.pageLayout">
 			<NookCommunityRail v-if="$i"/>
 			<div :class="$style.content">
-				<div v-if="tab === 'search'" :class="$style.searchRoot">
-					<div class="_gaps">
-						<MkInput v-model="searchQuery" :large="true" :autofocus="true" type="search" @enter="search">
-							<template #prefix><i class="ti ti-search"></i></template>
-						</MkInput>
-						<MkRadios
-							v-model="searchType"
-							:options="[
-								{ value: 'nameAndDescription', label: i18n.ts._channel.nameAndDescription },
-								{ value: 'nameOnly', label: i18n.ts._channel.nameOnly },
-							]"
-							@update:modelValue="search()"
-						>
-						</MkRadios>
-						<MkButton large primary gradate rounded @click="search">{{ i18n.ts.search }}</MkButton>
-					</div>
-
-					<MkFoldableSection v-if="channelPaginator">
-						<template #header>{{ i18n.ts.searchResult }}</template>
-						<MkChannelList :key="key" :paginator="channelPaginator"/>
-					</MkFoldableSection>
-				</div>
 				<div v-if="tab === 'featured'">
 					<MkPagination v-slot="{items}" :paginator="featuredPaginator">
 						<div :class="$style.root">
@@ -59,51 +37,21 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, markRaw, onMounted, ref, shallowRef } from 'vue';
+import { computed, markRaw, ref } from 'vue';
 import MkChannelPreview from '@/components/MkChannelPreview.vue';
-import MkChannelList from '@/components/MkChannelList.vue';
 import MkPagination from '@/components/MkPagination.vue';
-import MkInput from '@/components/MkInput.vue';
-import MkRadios from '@/components/MkRadios.vue';
-import MkButton from '@/components/MkButton.vue';
-import MkFoldableSection from '@/components/MkFoldableSection.vue';
 import NookCommunityRail from '@/nook/community/NookCommunityRail.vue';
 import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
 import { Paginator } from '@/utility/paginator.js';
 import { $i } from '@/i.js';
 
-type SearchType = 'nameAndDescription' | 'nameOnly';
-
-const props = defineProps<{
-	query: string;
-	type?: SearchType;
-}>();
-
-const key = ref('');
 const tab = ref('featured');
 const showDiscoveryTabs = ref(false);
-const searchQuery = ref('');
-const searchType = ref<SearchType>('nameAndDescription');
-const channelPaginator = shallowRef();
-
-onMounted(() => {
-	searchQuery.value = props.query ?? '';
-	searchType.value = props.type ?? 'nameAndDescription';
-});
 
 const featuredPaginator = markRaw(new Paginator('channels/featured', { limit: 10, noPaging: true }));
 const favoritesPaginator = markRaw(new Paginator('channels/my-favorites', { limit: 100, noPaging: true }));
 const followingPaginator = markRaw(new Paginator('channels/followed', { limit: 10 }));
-
-async function search() {
-	const query = searchQuery.value.toString().trim();
-	if (query == null) return;
-	const type = searchType.value.toString().trim();
-	if (type !== 'nameAndDescription' && type !== 'nameOnly') return;
-	channelPaginator.value = markRaw(new Paginator('channels/search', { limit: 10, params: { query: searchQuery.value, type } }));
-	key.value = query + type;
-}
 
 function toggleDiscoveryTabs(): void {
 	showDiscoveryTabs.value = !showDiscoveryTabs.value;
@@ -111,10 +59,9 @@ function toggleDiscoveryTabs(): void {
 
 const headerActions = computed(() => []);
 const headerTabs = computed(() => showDiscoveryTabs.value ? [
-	{ key: 'search', title: i18n.ts.search, icon: 'ti ti-search' },
 	{ key: 'featured', title: i18n.ts._channel.featured, icon: 'ti ti-sparkles' },
-	{ key: 'favorites', title: i18n.ts.favorites, icon: 'ti ti-bookmark' },
-	{ key: 'following', title: i18n.ts._channel.following, icon: 'ti ti-users' },
+	{ key: 'favorites', title: 'ブックマーク', icon: 'ti ti-bookmark' },
+	{ key: 'following', title: '参加中', icon: 'ti ti-users' },
 ] : []);
 
 definePage(() => ({
@@ -137,7 +84,6 @@ definePage(() => ({
 	flex: 1;
 }
 
-.searchRoot { width: 100%; max-width: 700px; margin: 0 auto; }
 .root { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: var(--MI-margin); }
 
 @media (max-width: 700px) {
