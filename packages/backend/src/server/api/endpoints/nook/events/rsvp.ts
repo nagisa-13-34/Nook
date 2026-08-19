@@ -6,6 +6,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { DI } from '@/di-symbols.js';
+import { NookCommunityAccessError, requireNookCommunityMember } from '@/nook/community/access.js';
 import { setNookEventRsvp } from '@/nook/community/events.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { ApiError } from '../../../error.js';
@@ -41,6 +42,23 @@ export const paramDef = {
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(@Inject(DI.db) private db: DataSource) {
 		super(meta, paramDef, async (ps, me) => {
+			const rows = await this.db.query<Array<{ communityId: string | null; participation: 'anyone' | 'community' }>>(
+				'SELECT "communityId", "participation" FROM "nook_community_event" WHERE "id"=$1 LIMIT 1',
+				[ps.eventId],
+			);
+			const event = rows[0];
+			if (event == null) throw new ApiError(meta.errors.eventUnavailable);
+
+			if (event.participation === 'community') {
+				if (event.communityId == null) throw new ApiError(meta.errors.eventUnavailable);
+				try {
+					await requireNookCommunityMember(this.db, event.communityId, me.id);
+				} catch (error) {
+					if (error instanceof NookCommunityAccessError) throw new ApiError(meta.errors.eventUnavailable);
+					throw error;
+				}
+			}
+
 			try {
 				await setNookEventRsvp(this.db, ps.eventId, me.id, ps.response);
 			} catch (error) {
