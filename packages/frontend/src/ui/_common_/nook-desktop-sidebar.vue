@@ -58,23 +58,28 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</div>
 
 	<div :class="$style.secondary">
-		<MkA v-if="$i != null && ($i.isAdmin || $i.isModerator)" v-tooltip.noDelay.right="i18n.ts.controlPanel" :class="$style.item" :activeClass="$style.active" to="/admin">
-			<i class="ti ti-dashboard" :class="$style.icon"></i>
-			<span :class="$style.itemText">{{ i18n.ts.controlPanel }}</span>
-		</MkA>
-		<MkA v-tooltip.noDelay.right="i18n.ts.settings" :class="$style.item" :activeClass="$style.active" to="/settings">
-			<i class="ti ti-settings" :class="$style.icon"></i>
-			<span :class="$style.itemText">{{ i18n.ts.settings }}</span>
-		</MkA>
-
-		<button v-if="$i" v-tooltip.noDelay.right="`${i18n.ts.account}: @${$i.username}`" class="_button" :class="$style.account" @click="openAccountMenu">
-			<MkAvatar :user="$i" :class="$style.avatar"/>
-			<span :class="$style.accountText">
-				<strong :class="$style.accountName">{{ $i.name || $i.username }}</strong>
-				<span :class="$style.accountHandle">@{{ $i.username }}</span>
-			</span>
-			<i class="ti ti-dots" :class="$style.accountMore"></i>
-		</button>
+		<div v-if="$i" :class="$style.accountRow">
+			<MkA
+				v-tooltip.noDelay.right="`${i18n.ts.profile}: @${$i.username}`"
+				:class="$style.accountMain"
+				:to="`/@${$i.username}`"
+			>
+				<MkAvatar :user="$i" :class="$style.avatar"/>
+				<span :class="$style.accountText">
+					<strong :class="$style.accountName">{{ $i.name || $i.username }}</strong>
+					<span :class="$style.accountHandle">@{{ $i.username }}</span>
+				</span>
+			</MkA>
+			<button
+				v-tooltip.noDelay.right="i18n.ts.menu"
+				class="_button"
+				:class="$style.accountMoreButton"
+				:aria-label="i18n.ts.menu"
+				@click="openAccountMenu"
+			>
+				<i class="ti ti-dots"></i>
+			</button>
+		</div>
 	</div>
 </nav>
 </template>
@@ -85,6 +90,7 @@ import { $i } from '@/i.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { getAccountMenu } from '@/accounts.js';
+import type { MenuItem } from '@/types/menu.js';
 import { isNookVideoFeedAvailable } from '@/nook/video-feed.js';
 import { availableBasicTimelines } from '@/timelines.js';
 
@@ -99,7 +105,28 @@ defineEmits<{
 const videoFeedAvailable = computed(() => isNookVideoFeedAvailable(availableBasicTimelines()));
 
 async function openAccountMenu(ev: PointerEvent) {
-	const menuItems = await getAccountMenu({ withExtraOperation: false });
+	if ($i == null) return;
+	const menuItems: MenuItem[] = [{
+		type: 'link',
+		icon: 'ti ti-settings',
+		text: i18n.ts.settings,
+		to: '/settings',
+	}];
+
+	if ($i.isAdmin || $i.isModerator) {
+		menuItems.push({
+			type: 'link',
+			icon: 'ti ti-dashboard',
+			text: i18n.ts.controlPanel,
+			to: '/admin',
+		});
+	}
+
+	const accountItems = await getAccountMenu({ withExtraOperation: false });
+	if (accountItems.length > 0) {
+		menuItems.push({ type: 'divider' }, ...accountItems);
+	}
+
 	os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
 }
 </script>
@@ -137,14 +164,16 @@ async function openAccountMenu(ev: PointerEvent) {
 .create { width: 100%; min-height: 46px; margin-top: 10px; padding: 0 18px; display: flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid #e4bd29; border-radius: 8px; background: var(--nook-yellow); color: var(--nook-ink); font-size: 15px; font-weight: 800; }
 .create:hover { background: #ffdf69; }
 .createIcon { font-size: 19px; }
-.account { width: 100%; min-height: 56px; margin-top: 8px; padding: 7px 10px; display: flex; align-items: center; gap: 10px; border-radius: 8px; text-align: left; }
-.account:hover { background: #f7faff; }
+.accountRow { width: 100%; min-height: 56px; margin-top: 4px; display: flex; align-items: center; border-radius: 8px; overflow: hidden; }
+.accountRow:hover { background: #f7faff; }
+.accountMain { min-width: 0; min-height: 56px; padding: 7px 4px 7px 10px; display: flex; flex: 1; align-items: center; gap: 10px; box-sizing: border-box; color: var(--nook-ink); text-decoration: none; }
 .avatar { width: 36px; height: 36px; flex: 0 0 auto; }
 .accountText { min-width: 0; display: flex; flex: 1; flex-direction: column; gap: 1px; }
 .accountName, .accountHandle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .accountName { font-size: 13px; font-weight: 700; }
 .accountHandle { font-size: 11px; opacity: 0.58; }
-.accountMore { font-size: 17px; opacity: 0.55; }
+.accountMoreButton { width: 38px; min-width: 38px; height: 40px; margin-right: 4px; display: grid; place-items: center; border-radius: 7px; font-size: 18px; opacity: 0.62; }
+.accountMoreButton:hover { background: var(--nook-blue-soft); color: var(--nook-blue); opacity: 1; }
 
 @media (max-width: 1279px) {
 	.root { width: 78px; min-width: 78px; padding-inline: 10px; }
@@ -154,7 +183,10 @@ async function openAccountMenu(ev: PointerEvent) {
 	.item { justify-content: center; padding: 0; }
 	.itemText { display: none; }
 	.create { padding: 0; }
-	.account { justify-content: center; padding-inline: 0; }
-	.accountText, .accountMore { display: none; }
+	.accountRow { justify-content: center; overflow: visible; }
+	.accountMain { min-width: 32px; padding: 0; justify-content: center; }
+	.avatar { width: 32px; height: 32px; }
+	.accountText { display: none; }
+	.accountMoreButton { width: 24px; min-width: 24px; margin-right: 0; font-size: 16px; }
 }
 </style>
