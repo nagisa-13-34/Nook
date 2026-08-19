@@ -13,9 +13,10 @@ const nookLocale = lang === 'ja-JP'
 	? {
 		nookBookmarks: 'ブックマーク',
 		nookBookmarksEmpty: '保存した投稿はここに表示されます。',
-		nookCommunity: 'コミュニティ',
+		nookCommunity: 'ネスト',
 		nookUnreadChat: '未読のチャットがあります',
-		nookShorts: 'ショート',
+		nookShorts: 'スパーク',
+		nookVideos: 'シアター',
 		nookFollowing: 'フォロー中',
 		nookDiscover: 'みつける',
 		nookMedia: 'メディア',
@@ -27,9 +28,10 @@ const nookLocale = lang === 'ja-JP'
 	: {
 		nookBookmarks: 'Bookmarks',
 		nookBookmarksEmpty: 'Posts you save will appear here.',
-		nookCommunity: 'Community',
+		nookCommunity: 'Nest',
 		nookUnreadChat: 'You have unread chat messages',
-		nookShorts: 'Shorts',
+		nookShorts: 'Spark',
+		nookVideos: 'Theater',
 		nookFollowing: 'Following',
 		nookDiscover: 'Discover',
 		nookMedia: 'Media',
@@ -45,7 +47,7 @@ function brandAsNook<T>(value: T): T {
 	if (typeof value === 'string') {
 		let text = value.replaceAll('Misskey', 'Nook');
 		if (lang === 'ja-JP') {
-			text = text.replaceAll('リノート', 'リポスト').replaceAll('ノート', '投稿');
+			text = text.replaceAll('リノート', 'バトン').replaceAll('ノート', '投稿');
 		}
 		return text as T;
 	}
