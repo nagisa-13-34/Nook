@@ -11,10 +11,15 @@ import { ROUTE_DEF } from '@/router.definition.js';
 import { analytics } from '@/analytics.js';
 import { DI } from '@/di.js';
 
-export type Router = Nirax<typeof ROUTE_DEF>;
+const NOOK_ROUTE_DEF = [{
+	path: '/videos',
+	component: page(() => import('@/pages/videos.vue')),
+}, ...ROUTE_DEF];
+
+export type Router = Nirax<typeof NOOK_ROUTE_DEF>;
 
 export function createRouter(fullPath: string): Router {
-	return new Nirax(ROUTE_DEF, fullPath, !!$i, page(() => import('@/pages/not-found.vue')));
+	return new Nirax(NOOK_ROUTE_DEF, fullPath, !!$i, page(() => import('@/pages/not-found.vue')));
 }
 
 export const mainRouter = createRouter(window.location.pathname + window.location.search + window.location.hash);
