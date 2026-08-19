@@ -7,9 +7,7 @@ import { Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { SearchService } from '@/core/SearchService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
-import { RoleService } from '@/core/RoleService.js';
 import { IdService } from '@/core/IdService.js';
-import { ApiError } from '../../error.js';
 
 export const meta = {
 	tags: ['notes'],
@@ -23,14 +21,6 @@ export const meta = {
 			type: 'object',
 			optional: false, nullable: false,
 			ref: 'Note',
-		},
-	},
-
-	errors: {
-		unavailable: {
-			message: 'Search of notes unavailable.',
-			code: 'UNAVAILABLE',
-			id: '0b44998d-77aa-4427-80d0-d2c9b8523011',
 		},
 	},
 } as const;
@@ -64,17 +54,11 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	constructor(
 		private noteEntityService: NoteEntityService,
 		private searchService: SearchService,
-		private roleService: RoleService,
 		private idService: IdService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const untilId = ps.untilId ?? (ps.untilDate ? this.idService.gen(ps.untilDate!) : undefined);
 			const sinceId = ps.sinceId ?? (ps.sinceDate ? this.idService.gen(ps.sinceDate!) : undefined);
-
-			const policies = await this.roleService.getUserPolicies(me ? me.id : null);
-			if (!policies.canSearchNotes) {
-				throw new ApiError(meta.errors.unavailable);
-			}
 
 			const notes = await this.searchService.searchNote(ps.query, me, {
 				userId: ps.userId,
