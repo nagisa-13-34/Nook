@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div v-else-if="!thin_ && narrow && !hideTitle" :class="$style.buttons"></div>
 
 		<template v-if="pageMetadata">
-			<div v-if="!hideTitle" :class="[$style.titleContainer, { [$style.clickableTitle]: pageMetadata.onTitleClick != null }]" @click="onTitleClick">
+			<div v-if="!hideTitle" :class="[$style.titleContainer, { [$style.clickableTitle]: pageMetadata.onTitleClick != null, [$style.activeTitle]: pageMetadata.titleActive }]" @click="onTitleClick">
 				<div v-if="pageMetadata.avatar" :class="$style.titleAvatarContainer">
 					<MkAvatar :class="$style.titleAvatar" :user="pageMetadata.avatar" indicator/>
 				</div>
@@ -265,11 +265,19 @@ onUnmounted(() => {
 
 .clickableTitle {
 	cursor: pointer;
-	transition: color 0.12s ease;
+	transition: color 0.12s ease, background-color 0.12s ease;
 
 	&:hover {
 		color: var(--MI_THEME-accent);
 	}
+}
+
+.activeTitle {
+	padding: 7px 10px;
+	margin-left: 14px;
+	border-radius: 8px;
+	background: #eef5ff;
+	color: #175cd3;
 }
 
 .titleAvatarContainer {
