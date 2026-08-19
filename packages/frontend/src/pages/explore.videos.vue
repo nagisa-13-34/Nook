@@ -30,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 		<div v-if="activeNotes.length === 0 && !fetching" :class="$style.empty">
 			<i class="ti ti-video-off" :class="$style.emptyIcon"></i>
-			<span>{{ i18n.ts.noNotes }}</span>
+			<span>{{ normalizedSearchQuery !== '' ? '一致する動画はありません' : i18n.ts.noNotes }}</span>
 		</div>
 
 		<div v-if="canFetchMore" :class="$style.more">
@@ -53,13 +53,16 @@ import type { NookVideoTab, NookVideoTimelineSource } from '@/nook/video-feed.js
 import { store } from '@/store.js';
 import { availableBasicTimelines } from '@/timelines.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
+import { instance } from '@/instance.js';
 
 const props = withDefaults(defineProps<{
 	initialTab?: NookVideoTab;
 	showTabs?: boolean;
+	searchQuery?: string;
 }>(), {
 	initialTab: 'shorts',
 	showTabs: true,
+	searchQuery: '',
 });
 
 const FETCH_LIMIT = 50;
@@ -75,18 +78,34 @@ const untilId = ref<string | null>(null);
 const requestGeneration = ref(0);
 
 const source = computed(() => resolveNookVideoTimelineSource(availableBasicTimelines()));
+const normalizedSearchQuery = computed(() => props.searchQuery.trim());
 const withSensitive = computed(() => store.r.tl.value.filter.withSensitive);
 const activeNotes = computed(() => videoNotes.value.filter(note => noteMatchesNookVideoTab(note, tab.value)));
 
 provide('inTimeline', true);
 provide('tl_withSensitive', withSensitive);
 
-function isCurrentRequest(generation: number, requestedSource: NookVideoTimelineSource): boolean {
-	return generation === requestGeneration.value && requestedSource === source.value;
+function isCurrentRequest(generation: number, requestedSource: NookVideoTimelineSource | null, requestedQuery: string): boolean {
+	return generation === requestGeneration.value
+		&& requestedSource === source.value
+		&& requestedQuery === normalizedSearchQuery.value;
 }
 
-async function fetchVideoPage(requestedSource: NookVideoTimelineSource, cursor: string | null): Promise<Misskey.entities.Note[]> {
+async function fetchVideoPage(
+	requestedSource: NookVideoTimelineSource | null,
+	requestedQuery: string,
+	cursor: string | null,
+): Promise<Misskey.entities.Note[]> {
 	const pagination = cursor == null ? {} : { untilId: cursor };
+
+	if (requestedQuery !== '') {
+		return await misskeyApi('notes/search', {
+			query: requestedQuery,
+			limit: FETCH_LIMIT,
+			...(instance.federation === 'none' || instance.noteSearchableScope === 'local' ? { host: '.' } : {}),
+			...pagination,
+		});
+	}
 
 	if (requestedSource === 'local') {
 		return await misskeyApi('notes/local-timeline', {
@@ -99,19 +118,24 @@ async function fetchVideoPage(requestedSource: NookVideoTimelineSource, cursor: 
 		});
 	}
 
-	return await misskeyApi('notes/global-timeline', {
-		withFiles: true,
-		withRenotes: false,
-		limit: FETCH_LIMIT,
-		...pagination,
-	});
+	if (requestedSource === 'global') {
+		return await misskeyApi('notes/global-timeline', {
+			withFiles: true,
+			withRenotes: false,
+			limit: FETCH_LIMIT,
+			...pagination,
+		});
+	}
+
+	return [];
 }
 
 async function loadMore(): Promise<void> {
 	if (fetching.value || !canFetchMore.value) return;
 
 	const requestedSource = source.value;
-	if (requestedSource == null) {
+	const requestedQuery = normalizedSearchQuery.value;
+	if (requestedSource == null && requestedQuery === '') {
 		canFetchMore.value = false;
 		return;
 	}
@@ -125,11 +149,11 @@ async function loadMore(): Promise<void> {
 
 	try {
 		for (let pagesFetched = 0; pagesFetched < MAX_BACKFILL_PAGES && canFetchMore.value; pagesFetched++) {
-			if (!isCurrentRequest(generation, requestedSource)) return;
+			if (!isCurrentRequest(generation, requestedSource, requestedQuery)) return;
 
 			const previousUntilId = untilId.value;
-			const page = await fetchVideoPage(requestedSource, previousUntilId);
-			if (!isCurrentRequest(generation, requestedSource)) return;
+			const page = await fetchVideoPage(requestedSource, requestedQuery, previousUntilId);
+			if (!isCurrentRequest(generation, requestedSource, requestedQuery)) return;
 
 			if (page.length === 0) {
 				canFetchMore.value = false;
@@ -158,11 +182,11 @@ async function loadMore(): Promise<void> {
 			if (matchingCount - initialMatchingCount >= TARGET_TAB_NOTES) break;
 		}
 	} catch {
-		if (isCurrentRequest(generation, requestedSource)) {
+		if (isCurrentRequest(generation, requestedSource, requestedQuery)) {
 			error.value = true;
 		}
 	} finally {
-		if (isCurrentRequest(generation, requestedSource)) {
+		if (isCurrentRequest(generation, requestedSource, requestedQuery)) {
 			fetching.value = false;
 
 			if (tab.value !== requestedTab && activeNotes.value.length === 0 && canFetchMore.value) {
@@ -176,7 +200,7 @@ async function reload(): Promise<void> {
 	requestGeneration.value++;
 	videoNotes.value = [];
 	untilId.value = null;
-	canFetchMore.value = source.value != null;
+	canFetchMore.value = normalizedSearchQuery.value !== '' || source.value != null;
 	fetching.value = false;
 	error.value = false;
 	await loadMore();
@@ -188,6 +212,10 @@ watch(() => props.initialTab, (value) => {
 
 watch(tab, () => {
 	if (activeNotes.value.length === 0 && canFetchMore.value) void loadMore();
+});
+
+watch(normalizedSearchQuery, () => {
+	void reload();
 });
 
 watch(source, () => {
