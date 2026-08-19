@@ -133,11 +133,11 @@ async function openAccountMenu(ev: PointerEvent) {
 
 <style lang="scss" module>
 .root {
-	--nook-blue: #175cd3;
-	--nook-blue-soft: #eef5ff;
-	--nook-yellow: #ffd84d;
-	--nook-ink: #17324d;
-	--nook-border: #d7e3f1;
+	--nook-blue: #3657d6;
+	--nook-blue-soft: #eef1ff;
+	--nook-yellow: #f6c94c;
+	--nook-ink: #1d2939;
+	--nook-border: #e2e7ee;
 	width: 248px;
 	min-width: 248px;
 	height: 100%;
@@ -155,17 +155,17 @@ async function openAccountMenu(ev: PointerEvent) {
 .primary { flex: 1; overflow-y: auto; }
 .secondary { padding-top: 10px; border-top: 1px solid var(--nook-border); }
 .item { position: relative; width: 100%; min-height: 44px; padding: 0 13px; display: flex; align-items: center; gap: 13px; border-radius: 8px; box-sizing: border-box; font-size: 15px; font-weight: 650; text-align: left; text-decoration: none; color: var(--nook-ink); transition: background-color 0.12s ease, color 0.12s ease; }
-.item:hover { background: #f7faff; }
+.item:hover { background: #f9fafb; }
 .itemText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .active { background: var(--nook-blue-soft); color: var(--nook-blue); }
 .iconWrap { position: relative; display: inline-grid; place-items: center; }
 .icon { width: 22px; font-size: 20px; text-align: center; }
 .unread { position: absolute; top: -2px; right: -5px; color: var(--nook-yellow); }
-.create { width: 100%; min-height: 46px; margin-top: 10px; padding: 0 18px; display: flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid #e4bd29; border-radius: 8px; background: var(--nook-yellow); color: var(--nook-ink); font-size: 15px; font-weight: 800; }
-.create:hover { background: #ffdf69; }
+.create { width: 100%; min-height: 46px; margin-top: 10px; padding: 0 18px; display: flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid #d6aa2e; border-radius: 8px; background: var(--nook-yellow); color: var(--nook-ink); font-size: 15px; font-weight: 800; }
+.create:hover { background: #f8d469; }
 .createIcon { font-size: 19px; }
 .accountRow { width: 100%; min-height: 56px; margin-top: 4px; display: flex; align-items: center; border-radius: 8px; overflow: hidden; }
-.accountRow:hover { background: #f7faff; }
+.accountRow:hover { background: #f9fafb; }
 .accountMain { min-width: 0; min-height: 56px; padding: 7px 4px 7px 10px; display: flex; flex: 1; align-items: center; gap: 10px; box-sizing: border-box; color: var(--nook-ink); text-decoration: none; }
 .avatar { width: 36px; height: 36px; flex: 0 0 auto; }
 .accountText { min-width: 0; display: flex; flex: 1; flex-direction: column; gap: 1px; }
