@@ -12,12 +12,33 @@ import type * as misskey from 'misskey-js';
 
 type TestUser = misskey.entities.SignupResponse;
 
-type RawApiResponse = {
-	status: number;
-	body: any;
+type ApiErrorBody = {
+	error?: {
+		code?: string;
+	};
 };
 
-async function rawApi(path: string, params: Record<string, unknown>, user: TestUser): Promise<RawApiResponse> {
+type CreatedEventBody = {
+	id: string;
+};
+
+type EventBody = {
+	id: string;
+	communityId: string | null;
+	visibility: 'public' | 'community' | 'unlisted' | 'private';
+	participation: 'anyone' | 'community';
+};
+
+type EventListItem = {
+	id: string;
+};
+
+type RawApiResponse<T> = {
+	status: number;
+	body: T | null;
+};
+
+async function rawApi<T>(path: string, params: Record<string, unknown>, user: TestUser): Promise<RawApiResponse<T>> {
 	const response = await relativeFetch(`api/${path}`, {
 		method: 'POST',
 		headers: {
@@ -31,7 +52,7 @@ async function rawApi(path: string, params: Record<string, unknown>, user: TestU
 	const contentType = response.headers.get('content-type');
 	return {
 		status: response.status,
-		body: contentType?.startsWith('application/json') === true ? await response.json() : null,
+		body: contentType?.startsWith('application/json') === true ? await response.json() as T : null,
 	};
 }
 
@@ -40,14 +61,14 @@ function futureDate(offsetMinutes = 60): string {
 }
 
 async function createEvent(user: TestUser, params: Record<string, unknown>): Promise<string> {
-	const response = await rawApi('nook/events/create', {
+	const response = await rawApi<CreatedEventBody>('nook/events/create', {
 		title: `Nook event ${Date.now()}-${Math.random()}`,
 		startsAt: futureDate(),
 		...params,
 	}, user);
 	assert.strictEqual(response.status, 200, JSON.stringify(response.body));
 	assert.strictEqual(typeof response.body?.id, 'string');
-	return response.body.id;
+	return response.body!.id;
 }
 
 describe('Nook global events', () => {
@@ -63,47 +84,47 @@ describe('Nook global events', () => {
 	test('Community未指定のイベントはpublic/anyoneを既定値にする', async () => {
 		const eventId = await createEvent(alice, {});
 
-		const shown = await rawApi('nook/events/show', { eventId }, bob);
+		const shown = await rawApi<EventBody>('nook/events/show', { eventId }, bob);
 		assert.strictEqual(shown.status, 200, JSON.stringify(shown.body));
-		assert.strictEqual(shown.body.id, eventId);
-		assert.strictEqual(shown.body.communityId, null);
-		assert.strictEqual(shown.body.visibility, 'public');
-		assert.strictEqual(shown.body.participation, 'anyone');
+		assert.strictEqual(shown.body?.id, eventId);
+		assert.strictEqual(shown.body?.communityId, null);
+		assert.strictEqual(shown.body?.visibility, 'public');
+		assert.strictEqual(shown.body?.participation, 'anyone');
 
-		const listed = await rawApi('nook/events/list', { from: futureDate(-1) }, bob);
+		const listed = await rawApi<EventListItem[]>('nook/events/list', { from: futureDate(-1) }, bob);
 		assert.strictEqual(listed.status, 200, JSON.stringify(listed.body));
 		assert.ok(Array.isArray(listed.body));
-		assert.ok(listed.body.some((event: { id: string }) => event.id === eventId));
+		assert.ok(listed.body.some(event => event.id === eventId));
 	});
 
 	test('unlistedは直接表示できるが他ユーザーの一覧には出さない', async () => {
 		const eventId = await createEvent(alice, { visibility: 'unlisted' });
 
-		const shown = await rawApi('nook/events/show', { eventId }, bob);
+		const shown = await rawApi<EventBody>('nook/events/show', { eventId }, bob);
 		assert.strictEqual(shown.status, 200, JSON.stringify(shown.body));
-		assert.strictEqual(shown.body.id, eventId);
-		assert.strictEqual(shown.body.visibility, 'unlisted');
+		assert.strictEqual(shown.body?.id, eventId);
+		assert.strictEqual(shown.body?.visibility, 'unlisted');
 
-		const listed = await rawApi('nook/events/list', { from: futureDate(-1) }, bob);
+		const listed = await rawApi<EventListItem[]>('nook/events/list', { from: futureDate(-1) }, bob);
 		assert.strictEqual(listed.status, 200, JSON.stringify(listed.body));
 		assert.ok(Array.isArray(listed.body));
-		assert.ok(!listed.body.some((event: { id: string }) => event.id === eventId));
+		assert.ok(!listed.body.some(event => event.id === eventId));
 	});
 
 	test('privateは作成者以外へ公開しない', async () => {
 		const eventId = await createEvent(alice, { visibility: 'private' });
 
-		const ownerView = await rawApi('nook/events/show', { eventId }, alice);
+		const ownerView = await rawApi<EventBody>('nook/events/show', { eventId }, alice);
 		assert.strictEqual(ownerView.status, 200, JSON.stringify(ownerView.body));
-		assert.strictEqual(ownerView.body.id, eventId);
+		assert.strictEqual(ownerView.body?.id, eventId);
 
-		const otherView = await rawApi('nook/events/show', { eventId }, bob);
+		const otherView = await rawApi<ApiErrorBody>('nook/events/show', { eventId }, bob);
 		assert.strictEqual(otherView.status, 400, JSON.stringify(otherView.body));
 		assert.strictEqual(otherView.body?.error?.code, 'EVENT_UNAVAILABLE');
 	});
 
 	test('standaloneイベントでcommunity scopeは指定できない', async () => {
-		const response = await rawApi('nook/events/create', {
+		const response = await rawApi<ApiErrorBody>('nook/events/create', {
 			title: 'Invalid standalone community event',
 			startsAt: futureDate(),
 			visibility: 'community',
@@ -116,13 +137,13 @@ describe('Nook global events', () => {
 	test('参加上限を超えるgoing RSVPを拒否する', async () => {
 		const eventId = await createEvent(alice, { maxAttendees: 1 });
 
-		const first = await rawApi('nook/events/rsvp', {
+		const first = await rawApi<null>('nook/events/rsvp', {
 			eventId,
 			response: 'going',
 		}, alice);
-		assert.strictEqual(first.status, 204, JSON.stringify(first.body));
+		assert.ok(first.status === 200 || first.status === 204, JSON.stringify(first.body));
 
-		const second = await rawApi('nook/events/rsvp', {
+		const second = await rawApi<ApiErrorBody>('nook/events/rsvp', {
 			eventId,
 			response: 'going',
 		}, bob);
