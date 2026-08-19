@@ -5,8 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <PageWithHeader v-model:tab="tab" :actions="headerActions" :tabs="headerTabs" :swipable="true">
-	<MkPolkadots v-if="tab === 'home'" accented :height="200" style="margin-bottom: -200px;"/>
-	<div class="_spacer" style="--MI_SPACER-w: 700px;">
+	<div class="_spacer" style="--MI_SPACER-w: 900px; --MI_SPACER-min: 12px; --MI_SPACER-max: 24px;">
 		<XHome v-if="tab === 'home'"/>
 		<XInvitations v-else-if="tab === 'invitations'"/>
 		<XJoiningRooms v-else-if="tab === 'joiningRooms'"/>
@@ -21,9 +20,7 @@ import XHome from './home.home.vue';
 import XInvitations from './home.invitations.vue';
 import XJoiningRooms from './home.joiningRooms.vue';
 import XOwnedRooms from './home.ownedRooms.vue';
-import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkPolkadots from '@/components/MkPolkadots.vue';
 
 const tab = ref('home');
 
@@ -31,25 +28,25 @@ const headerActions = computed(() => []);
 
 const headerTabs = computed(() => [{
 	key: 'home',
-	title: i18n.ts._chat.home,
-	icon: 'ti ti-home',
+	title: 'トーク',
+	icon: 'ti ti-message-circle',
 }, {
 	key: 'invitations',
-	title: i18n.ts._chat.invitations,
-	icon: 'ti ti-ticket',
+	title: '招待',
+	icon: 'ti ti-mail-opened',
 }, {
 	key: 'joiningRooms',
-	title: i18n.ts._chat.joiningRooms,
+	title: 'グループ',
 	icon: 'ti ti-users-group',
 }, {
 	key: 'ownedRooms',
-	title: i18n.ts._chat.yourRooms,
+	title: 'グループ管理',
 	icon: 'ti ti-settings',
 }]);
 
 definePage(() => ({
-	title: i18n.ts.directMessage,
-	icon: 'ti ti-messages',
+	title: 'Chat',
+	icon: 'ti ti-message-circle',
 }));
 </script>
 
