@@ -107,9 +107,9 @@ defineEmits<{
 
 const videoFeedAvailable = computed(() => isNookVideoFeedAvailable(availableBasicTimelines()));
 const currentPath = computed(() => mainRouter.currentRoute.value.path);
-const currentHash = computed(() => mainRouter.currentRoute.value.hash);
-const sparkActive = computed(() => currentPath.value === '/explore' && currentHash.value === '#spark');
-const theaterActive = computed(() => currentPath.value === '/explore' && currentHash.value === '#theater');
+const currentHash = computed(() => mainRouter.currentRef.value._parsedRoute.hash);
+const sparkActive = computed(() => currentPath.value === '/explore' && currentHash.value === 'spark');
+const theaterActive = computed(() => currentPath.value === '/explore' && currentHash.value === 'theater');
 const exploreRootActive = computed(() => currentPath.value === '/explore' && !sparkActive.value && !theaterActive.value);
 
 async function openAccountMenu(ev: PointerEvent) {
