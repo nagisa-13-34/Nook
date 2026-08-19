@@ -41,15 +41,24 @@ const menuIndicated = computed(() => {
 	--nook-yellow: #f6c94c;
 	--nook-ink: #1d2939;
 	--nook-border: #e2e7ee;
+	--nook-surface: #ffffff;
 	position: relative;
 	display: grid;
 	grid-template-columns: 48px 1fr 48px;
 	align-items: center;
 	min-height: 48px;
 	padding-top: env(safe-area-inset-top, 0px);
-	background: #fff;
+	background: var(--nook-surface);
 	color: var(--nook-ink);
 	border-bottom: 1px solid var(--nook-border);
+}
+
+:global(html[data-color-scheme='dark']) .root {
+	--nook-blue: #8ea2ff;
+	--nook-yellow: #f4ca5c;
+	--nook-ink: #f2f4f7;
+	--nook-border: #2c3542;
+	--nook-surface: #161c26;
 }
 
 .brand {
