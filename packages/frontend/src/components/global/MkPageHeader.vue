@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div v-else-if="!thin_ && narrow && !hideTitle" :class="$style.buttons"></div>
 
 		<template v-if="pageMetadata">
-			<div v-if="!hideTitle" :class="$style.titleContainer" @click="top">
+			<div v-if="!hideTitle" :class="[$style.titleContainer, { [$style.clickableTitle]: pageMetadata.onTitleClick != null }]" @click="onTitleClick">
 				<div v-if="pageMetadata.avatar" :class="$style.titleAvatarContainer">
 					<MkAvatar :class="$style.titleAvatar" :user="pageMetadata.avatar" indicator/>
 				</div>
@@ -99,6 +99,14 @@ const top = () => {
 		scrollToTop(el.value as HTMLElement, { behavior: 'smooth' });
 	}
 };
+
+function onTitleClick(): void {
+	if (pageMetadata.value?.onTitleClick != null) {
+		pageMetadata.value.onTitleClick();
+		return;
+	}
+	top();
+}
 
 async function openAccountMenu(ev: PointerEvent) {
 	const menuItems = await getAccountMenu({
@@ -253,6 +261,15 @@ onUnmounted(() => {
 	font-weight: bold;
 	flex-shrink: 1;
 	margin-left: 24px;
+}
+
+.clickableTitle {
+	cursor: pointer;
+	transition: color 0.12s ease;
+
+	&:hover {
+		color: var(--MI_THEME-accent);
+	}
 }
 
 .titleAvatarContainer {
