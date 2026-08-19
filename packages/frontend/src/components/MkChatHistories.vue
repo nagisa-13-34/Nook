@@ -4,31 +4,36 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div v-if="history.length > 0" class="_gaps_s">
+<div v-if="history.length > 0" :class="$style.list">
 	<MkA
 		v-for="item in history"
 		:key="item.id"
-		:class="[$style.message, { [$style.isMe]: item.isMe, [$style.isRead]: item.message.isRead }]"
-		class="_panel"
+		:class="[$style.message, { [$style.unread]: !item.isMe && !item.message.isRead }]"
 		:to="item.message.toRoomId ? `/chat/room/${item.message.toRoomId}` : `/chat/user/${item.other!.id}`"
 	>
-		<MkAvatar v-if="item.message.toRoomId" :class="$style.messageAvatar" :user="item.message.fromUser" indicator :preview="false"/>
-		<MkAvatar v-else-if="item.other" :class="$style.messageAvatar" :user="item.other" indicator :preview="false"/>
-		<div :class="$style.messageBody">
-			<header v-if="item.message.toRoom" :class="$style.messageHeader">
-				<span :class="$style.messageHeaderName"><i class="ti ti-users"></i> {{ item.message.toRoom.name }}</span>
-				<MkTime :time="item.message.createdAt" :class="$style.messageHeaderTime"/>
-			</header>
-			<header v-else :class="$style.messageHeader">
-				<MkUserName :class="$style.messageHeaderName" :user="item.other!"/>
-				<MkAcct :class="$style.messageHeaderUsername" :user="item.other!"/>
-				<MkTime :time="item.message.createdAt" :class="$style.messageHeaderTime"/>
-			</header>
-			<div :class="$style.messageBodyText"><span v-if="item.isMe" :class="$style.youSaid">{{ i18n.ts.you }}:</span>{{ item.message.text }}</div>
+		<div v-if="item.message.toRoomId" :class="[$style.messageAvatar, $style.roomAvatar]">
+			<i class="ti ti-users-group"></i>
 		</div>
+		<MkAvatar v-else-if="item.other" :class="$style.messageAvatar" :user="item.other" indicator :preview="false"/>
+
+		<div :class="$style.messageBody">
+			<header :class="$style.messageHeader">
+				<span v-if="item.message.toRoom" :class="$style.messageHeaderName">{{ item.message.toRoom.name }}</span>
+				<MkUserName v-else :class="$style.messageHeaderName" :user="item.other!"/>
+				<MkTime :time="item.message.createdAt" :class="$style.messageHeaderTime"/>
+			</header>
+
+			<div :class="$style.previewRow">
+				<div :class="$style.messageBodyText">
+					<span v-if="item.isMe" :class="$style.youSaid">自分: </span>{{ previewText(item.message) }}
+				</div>
+				<span v-if="!item.isMe && !item.message.isRead" :class="$style.unreadBadge">未読</span>
+			</div>
+		</div>
+		<i :class="$style.chevron" class="ti ti-chevron-right"></i>
 	</MkA>
 </div>
-<MkResult v-if="!initializing && history.length == 0" type="empty" :text="i18n.ts._chat.noHistory"/>
+<MkResult v-if="!initializing && history.length === 0" type="empty" text="まだトークはありません"/>
 <MkLoading v-if="initializing"/>
 </template>
 
@@ -37,7 +42,6 @@ import { onActivated, onDeactivated, onMounted, ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import { useInterval } from '@@/js/use-interval.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
-import { i18n } from '@/i18n.js';
 import { ensureSignin } from '@/i.js';
 
 const $i = ensureSignin();
@@ -52,33 +56,42 @@ const history = ref<{
 const initializing = ref(true);
 const fetching = ref(false);
 
+function previewText(message: Misskey.entities.ChatMessage): string {
+	const text = message.text?.replace(/\s+/g, ' ').trim();
+	if (text) return text;
+	if (message.file) return `📎 ${message.file.name}`;
+	return 'メッセージ';
+}
+
 async function fetchHistory() {
 	if (fetching.value) return;
-
 	fetching.value = true;
 
-	const [userMessages, roomMessages] = await Promise.all([
-		misskeyApi('chat/history', { room: false }),
-		misskeyApi('chat/history', { room: true }),
-	]);
+	try {
+		const [userMessages, roomMessages] = await Promise.all([
+			misskeyApi('chat/history', { room: false }),
+			misskeyApi('chat/history', { room: true }),
+		]);
 
-	history.value = [...userMessages, ...roomMessages]
-		.toSorted((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-		.map(m => ({
-			id: m.id,
-			message: m,
-			other: (!('room' in m) || m.room == null) ? (m.fromUserId === $i.id ? m.toUser : m.fromUser) : null,
-			isMe: m.fromUserId === $i.id,
-		}));
-
-	fetching.value = false;
-	initializing.value = false;
+		history.value = [...userMessages, ...roomMessages]
+			.toSorted((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+			.map(m => ({
+				id: m.id,
+				message: m,
+				other: (!('room' in m) || m.room == null) ? (m.fromUserId === $i.id ? m.toUser : m.fromUser) : null,
+				isMe: m.fromUserId === $i.id,
+			}));
+	} finally {
+		fetching.value = false;
+		initializing.value = false;
+	}
 }
 
 let isActivated = true;
 
 onActivated(() => {
 	isActivated = true;
+	void fetchHistory();
 });
 
 onDeactivated(() => {
@@ -86,81 +99,64 @@ onDeactivated(() => {
 });
 
 useInterval(() => {
-	// TODO: DOM的にバックグラウンドになっていないかどうかも考慮する
-	if (isActivated) {
-		fetchHistory();
-	}
+	if (isActivated) void fetchHistory();
 }, 1000 * 10, {
 	immediate: false,
 	afterMounted: true,
 });
 
-onActivated(() => {
-	fetchHistory();
-});
-
 onMounted(() => {
-	fetchHistory();
+	void fetchHistory();
 });
 </script>
 
 <style lang="scss" module>
+.list {
+	overflow: hidden;
+	border: 1px solid #d7e3f1;
+	border-radius: 12px;
+	background: #fff;
+}
+
 .message {
 	position: relative;
 	display: flex;
-	padding: 16px 24px;
-
-	&.isRead,
-	&.isMe {
-		opacity: 0.8;
-	}
-
-	&:not(.isMe):not(.isRead) {
-		&::before {
-			content: '';
-			position: absolute;
-			top: 8px;
-			right: 8px;
-			width: 8px;
-			height: 8px;
-			border-radius: 100%;
-			background-color: var(--MI_THEME-accent);
-		}
-	}
+	align-items: center;
+	gap: 12px;
+	min-height: 72px;
+	padding: 10px 12px;
+	box-sizing: border-box;
+	color: #17324d;
+	text-decoration: none;
+	border-bottom: 1px solid #e8eff7;
+	transition: background-color 0.12s ease;
 }
 
-@container (max-width: 500px) {
-	.message {
-		font-size: 90%;
-		padding: 14px 20px;
-	}
+.message:last-child {
+	border-bottom: 0;
 }
 
-@container (max-width: 450px) {
-	.message {
-		font-size: 80%;
-		padding: 12px 16px;
-	}
+.message:hover {
+	background: #f8fbff;
+}
+
+.unread {
+	background: #f7faff;
 }
 
 .messageAvatar {
-	width: 50px;
-	height: 50px;
-	margin: 0 16px 0 0;
+	width: 48px;
+	height: 48px;
+	flex: 0 0 auto;
 }
 
-@container (max-width: 500px) {
-	.messageAvatar {
-		width: 45px;
-		height: 45px;
-	}
-}
-
-@container (max-width: 450px) {
-	.messageAvatar {
-		width: 40px;
-		height: 40px;
-	}
+.roomAvatar {
+	display: grid;
+	place-items: center;
+	border-radius: 14px;
+	background: #eef5ff;
+	color: #175cd3;
+	font-size: 21px;
 }
 
 .messageBody {
@@ -168,39 +164,78 @@ onMounted(() => {
 	min-width: 0;
 }
 
-.messageHeader {
+.messageHeader,
+.previewRow {
 	display: flex;
 	align-items: center;
-	margin-bottom: 2px;
-	white-space: nowrap;
-	overflow: clip;
+	gap: 8px;
+	min-width: 0;
+}
+
+.messageHeader {
+	margin-bottom: 4px;
 }
 
 .messageHeaderName {
-	margin: 0;
-	padding: 0;
+	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	font-size: 1em;
-	font-weight: bold;
-}
-
-.messageHeaderUsername {
-	margin: 0 8px;
+	white-space: nowrap;
+	font-size: 14px;
+	font-weight: 800;
 }
 
 .messageHeaderTime {
 	margin-left: auto;
+	flex: 0 0 auto;
+	color: #7a8da2;
+	font-size: 10px;
 }
 
 .messageBodyText {
+	min-width: 0;
+	flex: 1;
 	overflow: hidden;
-	overflow-wrap: break-word;
-	font-size: 1.1em;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: #667a91;
+	font-size: 12px;
 }
 
 .youSaid {
-	font-weight: bold;
-	margin-right: 0.5em;
+	color: #175cd3;
+	font-weight: 700;
+}
+
+.unreadBadge {
+	flex: 0 0 auto;
+	padding: 2px 7px;
+	border-radius: 999px;
+	background: #175cd3;
+	color: #fff;
+	font-size: 9px;
+	font-weight: 800;
+}
+
+.chevron {
+	flex: 0 0 auto;
+	color: #9badbf;
+	font-size: 15px;
+}
+
+@media (max-width: 500px) {
+	.message {
+		min-height: 66px;
+		padding: 9px 10px;
+	}
+
+	.messageAvatar {
+		width: 44px;
+		height: 44px;
+	}
+
+	.chevron {
+		display: none;
+	}
 }
 </style>
