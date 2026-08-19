@@ -49,7 +49,7 @@ async function load(): Promise<void> {
 		const channel = await misskeyApi('channels/show', { channelId: row.communityId }).catch(() => null);
 		return {
 			...row,
-			bannerUrl: channel?.bannerUrl ?? null,
+			bannerUrl: channel != null && !channel.isSensitive ? channel.bannerUrl ?? null : null,
 		};
 	}));
 }
