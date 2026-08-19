@@ -5,6 +5,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <aside :class="$style.rail" aria-label="参加中のネスト">
 	<MkA
+		v-tooltip.noDelay.right="'ネスト一覧'"
+		to="/channels"
+		aria-label="ネスト一覧"
+		:class="[$style.item, $style.homeItem, { [$style.active]: !currentCommunityId }]"
+	>
+		<i class="ti ti-layout-grid"></i>
+	</MkA>
+
+	<MkA
 		v-for="nest in nests"
 		:key="nest.communityId"
 		v-tooltip.noDelay.right="nest.name"
@@ -120,6 +129,15 @@ onMounted(load);
 	width: 3px;
 	border-radius: 0 3px 3px 0;
 	background: #175cd3;
+}
+
+.homeItem {
+	background: #fff;
+	font-size: 19px;
+}
+
+.homeItem.active {
+	background: #eef5ff;
 }
 
 .addItem {
