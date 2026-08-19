@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 <template>
-<aside v-if="nests.length > 0" :class="$style.rail" aria-label="参加中のネスト">
+<aside :class="$style.rail" aria-label="参加中のネスト">
 	<MkA
 		v-for="nest in nests"
 		:key="nest.communityId"
@@ -16,6 +16,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<img v-if="nest.bannerUrl" :class="$style.iconImage" :src="nest.bannerUrl" alt="">
 		<span v-else :class="$style.fallback">{{ initial(nest.name) }}</span>
 	</MkA>
+
+	<MkA
+		v-if="$i?.policies.canCreateChannel"
+		v-tooltip.noDelay.right="'ネストを追加'"
+		to="/channels/new"
+		aria-label="ネストを追加"
+		:class="[$style.item, $style.addItem]"
+	>
+		<i class="ti ti-plus"></i>
+	</MkA>
 </aside>
 </template>
 
@@ -23,6 +33,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { onMounted, ref } from 'vue';
 import { nookApi } from './nook-api.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
+import { $i } from '@/i.js';
 
 interface JoinedNestRow {
 	communityId: string;
@@ -87,7 +98,7 @@ onMounted(load);
 	background: #eef5ff;
 	color: #175cd3;
 	text-decoration: none;
-	transition: border-radius 0.12s ease, box-shadow 0.12s ease;
+	transition: border-radius 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
 }
 
 .item:hover,
@@ -109,6 +120,17 @@ onMounted(load);
 	width: 3px;
 	border-radius: 0 3px 3px 0;
 	background: #175cd3;
+}
+
+.addItem {
+	margin-top: 2px;
+	border: 1px dashed #9ebce8;
+	background: #fff;
+	font-size: 22px;
+}
+
+.addItem:hover {
+	background: #eef5ff;
 }
 
 .iconImage {
@@ -143,6 +165,11 @@ onMounted(load);
 	.item {
 		width: 42px;
 		height: 42px;
+	}
+
+	.addItem {
+		margin-top: 0;
+		margin-left: 2px;
 	}
 }
 </style>
