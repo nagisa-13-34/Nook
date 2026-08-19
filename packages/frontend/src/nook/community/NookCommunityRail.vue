@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: syuilo and misskey-project
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 <template>
-<aside :class="$style.rail" aria-label="参加中のネスト">
+<aside v-if="nests.length > 0" :class="$style.rail" aria-label="参加中のネスト">
 	<MkA
 		v-for="nest in nests"
 		:key="nest.communityId"
@@ -33,8 +33,8 @@ interface JoinedNest extends JoinedNestRow {
 	bannerUrl: string | null;
 }
 
-const props = defineProps<{
-	currentCommunityId: string;
+defineProps<{
+	currentCommunityId?: string;
 }>();
 
 const nests = ref<JoinedNest[]>([]);
