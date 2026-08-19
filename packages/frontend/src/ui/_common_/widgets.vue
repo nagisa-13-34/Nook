@@ -40,13 +40,21 @@ const props = withDefaults(defineProps<{
 	place: null,
 });
 
+function isNookVisibleWidget(widget: DefaultStoredWidget | Widget): boolean {
+	// Nook has a dedicated notifications page in the main navigation, so the
+	// old notifications widget is intentionally hidden to keep the side area quiet.
+	return widget.name !== 'notifications';
+}
+
 const widgets = computed(() => {
-	if (props.place === null) return prefer.r.widgets.value;
-	if (props.place === 'left') return prefer.r.widgets.value.filter(w => w.place === 'left');
-	return prefer.r.widgets.value.filter(w => w.place !== 'left');
+	const visibleWidgets = prefer.r.widgets.value.filter(isNookVisibleWidget);
+	if (props.place === null) return visibleWidgets;
+	if (props.place === 'left') return visibleWidgets.filter(w => w.place === 'left');
+	return visibleWidgets.filter(w => w.place !== 'left');
 });
 
 function addWidget(widget: Widget) {
+	if (!isNookVisibleWidget(widget)) return;
 	prefer.commit('widgets', [{
 		...widget,
 		place: props.place,
@@ -67,13 +75,13 @@ function updateWidget(widget: { id: Widget['id']; data: Widget['data']; }) {
 
 function updateWidgets(thisWidgets: Widget[]) {
 	if (props.place === null) {
-		prefer.commit('widgets', thisWidgets as DefaultStoredWidget[]);
+		prefer.commit('widgets', thisWidgets.filter(isNookVisibleWidget) as DefaultStoredWidget[]);
 		return;
 	}
 
 	if (props.place === 'left') {
 		prefer.commit('widgets', [
-			...thisWidgets.map(w => ({ ...w, place: 'left' })),
+			...thisWidgets.filter(isNookVisibleWidget).map(w => ({ ...w, place: 'left' })),
 			...prefer.s.widgets.filter(w => w.place !== 'left' && !thisWidgets.some(t => w.id === t.id)),
 		]);
 		return;
@@ -81,7 +89,7 @@ function updateWidgets(thisWidgets: Widget[]) {
 
 	prefer.commit('widgets', [
 		...prefer.s.widgets.filter(w => w.place === 'left' && !thisWidgets.some(t => w.id === t.id)),
-		...thisWidgets.map(w => ({ ...w, place: 'right' })),
+		...thisWidgets.filter(isNookVisibleWidget).map(w => ({ ...w, place: 'right' })),
 	]);
 }
 </script>
