@@ -20,6 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 			<StackingRouterView v-if="prefer.s['experimental.stackingRouterView']" :class="$style.content"/>
 			<RouterView v-else :class="$style.content"/>
+			<XNookHomeDiscoveryRail v-if="showHomeDiscoveryRail" :class="$style.homeDiscoveryRail"/>
 			<XMobileFooterMenu v-if="isMobile" ref="navFooter" v-model:drawerMenuShowing="drawerMenuShowing"/>
 		</div>
 	</div>
@@ -37,6 +38,7 @@ import type { PageMetadata } from '@/page.js';
 import XMobileFooterMenu from '@/ui/_common_/mobile-footer-menu.vue';
 import XNookDesktopSidebar from '@/ui/_common_/nook-desktop-sidebar.vue';
 import XNookMobileHeader from '@/ui/_common_/nook-mobile-header.vue';
+import XNookHomeDiscoveryRail from '@/ui/_common_/nook-home-discovery-rail.vue';
 import XPreferenceRestore from '@/ui/_common_/PreferenceRestore.vue';
 import XReloadSuggestion from '@/ui/_common_/ReloadSuggestion.vue';
 import XThemePreviewing from '@/ui/_common_/ThemePreviewing.vue';
@@ -60,12 +62,16 @@ const XAnnouncements = defineAsyncComponent(() => import('@/ui/_common_/announce
 const isRoot = computed(() => mainRouter.currentRoute.value.name === 'index');
 
 const MOBILE_THRESHOLD = 500;
+const HOME_DISCOVERY_RAIL_THRESHOLD = 1320;
 
 // デスクトップでウィンドウを狭くしたときモバイルUIが表示されて欲しいことはあるので deviceKind === 'desktop' の判定は行わない
-const isMobile = ref(deviceKind === 'smartphone' || window.innerWidth <= MOBILE_THRESHOLD);
+const viewportWidth = ref(window.innerWidth);
+const isMobile = ref(deviceKind === 'smartphone' || viewportWidth.value <= MOBILE_THRESHOLD);
+const showHomeDiscoveryRail = computed(() => isRoot.value && $i != null && !isMobile.value && viewportWidth.value >= HOME_DISCOVERY_RAIL_THRESHOLD);
 
 function updateResponsiveLayout() {
-	isMobile.value = deviceKind === 'smartphone' || window.innerWidth <= MOBILE_THRESHOLD;
+	viewportWidth.value = window.innerWidth;
+	isMobile.value = deviceKind === 'smartphone' || viewportWidth.value <= MOBILE_THRESHOLD;
 }
 
 window.addEventListener('resize', updateResponsiveLayout);
@@ -198,6 +204,7 @@ function onContextmenu(ev: PointerEvent) {
 }
 
 .contents {
+	position: relative;
 	display: flex;
 	flex-direction: column;
 	flex: 1;
@@ -218,6 +225,17 @@ function onContextmenu(ev: PointerEvent) {
 	box-sizing: border-box;
 	background: var(--nook-white);
 	border-inline: solid 1px var(--nook-border);
+}
+
+.homeDiscoveryRail {
+	position: absolute;
+	top: 16px;
+	bottom: 16px;
+	left: 768px;
+	z-index: 2;
+	overflow-y: auto;
+	padding-right: 8px;
+	scrollbar-width: thin;
 }
 
 .statusbars {
