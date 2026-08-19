@@ -20,9 +20,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<span>{{ tab.title }}</span>
 			</button>
 		</nav>
-		<MkTip v-if="isBasicTimeline(src) && !showRecommendedDiscover" :k="`tl.${src}`" style="margin-bottom: var(--MI-margin);">
-			{{ i18n.ts._timelineDescription[src] }}
-		</MkTip>
 		<MkPostForm v-if="prefer.r.showFixedPostForm.value" :class="$style.postForm" class="_panel" fixed style="margin-bottom: var(--MI-margin);"/>
 		<MkRecommendedNotesTimeline
 			v-if="showRecommendedDiscover"
@@ -155,7 +152,7 @@ function saveSrc(newSrc: TimelinePageSrc): void {
 
 function saveTlFilter(key: keyof typeof store.s.tl.filter, newValue: boolean) {
 	if (key !== 'withReplies' || $i) {
-		const out = deepMerge({ filter: { [key]: newValue } }, store.s.tl);
+		const out = deepMerge({ filter: { [key]: newValue }, }, store.s.tl);
 		store.set('tl', out);
 	}
 }
