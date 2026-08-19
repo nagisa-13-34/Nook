@@ -3,6 +3,7 @@
 ### General
 
 ### Client
+- Feat: Communityに属さないイベントも作成・閲覧できるイベントページを追加
 - Feat: Communityの年齢モードと成人・未成年の安全境界を追加
 - Feat: NookのPolicyとFeature Flagを管理する画面を追加
 - Feat: 管理画面からユーザーの国・確認済み年齢区分・Policyを設定できるように
@@ -11,6 +12,7 @@
 - Feat: プロフィールにPosts・Media・Videos・Worksタブを追加
 
 ### Server
+- Feat: Nookイベントに公開範囲と参加範囲を追加し、Communityに属さないイベントAPIに対応
 - Feat: NookのPolicyとFeature Flagを管理する管理者APIを追加
 - Feat: 投稿作成時にNook Policy Engineの権限判定を適用
 - Feat: Nookのユーザー安全設定を管理するAPIを追加
