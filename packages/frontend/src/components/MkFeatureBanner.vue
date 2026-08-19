@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div v-panel :class="$style.root">
-	<img :class="$style.img" :src="icon"/>
+	<span :class="$style.mark" aria-hidden="true"><i class="ti ti-sparkles"></i></span>
 	<div :class="$style.text">
 		<slot></slot>
 	</div>
@@ -13,31 +13,43 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script setup lang="ts">
-withDefaults(defineProps<{
+// Keep the existing props for compatibility with pages that still pass them.
+defineProps<{
 	icon: string;
 	color: string;
-}>(), {
-});
+}>();
 </script>
 
 <style module lang="scss">
 .root {
-	padding: 20px 24px;
-	text-align: center;
-	border-radius: var(--MI-radius);
-	background: linear-gradient(180deg, color(from v-bind(color) srgb r g b / 0.1), color(from v-bind(color) srgb r g b / 0));
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 16px 18px;
+	text-align: left;
+	border: 1px solid var(--MI_THEME-divider);
+	border-left: 3px solid var(--MI_THEME-accent);
+	border-radius: 8px;
+	background: var(--MI_THEME-panel);
+	box-shadow: none;
 }
 
-.img {
-	display: block;
-	margin: 0 auto;
-	width: 40px;
-	aspect-ratio: 1;
+.mark {
+	display: grid;
+	width: 34px;
+	height: 34px;
+	flex: 0 0 auto;
+	place-items: center;
+	border-radius: 8px;
+	background: var(--MI_THEME-accentedBg);
+	color: var(--MI_THEME-accent);
+	font-size: 17px;
 }
 
 .text {
-	margin-top: 12px;
-	font-size: 85%;
-	mix-blend-mode: luminosity;
+	min-width: 0;
+	color: var(--MI_THEME-fg);
+	font-size: 0.9em;
+	line-height: 1.55;
 }
 </style>
