@@ -121,6 +121,7 @@ definePage(() => ({
 	title: i18n.ts.nookCommunity,
 	icon: 'ti ti-users',
 	onTitleClick: toggleDiscoveryTabs,
+	titleActive: !showDiscoveryTabs.value,
 }));
 </script>
 
