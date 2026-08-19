@@ -37,23 +37,43 @@ type MarkdownBlock =
 	| { type: 'code'; text: string }
 	| { type: 'hr' };
 
-function isMarkdownBlockStart(line: string): boolean {
+function hasCompleteCodeFence(source: string): boolean {
+	const lines = source.replace(/\r\n?/g, '\n').split('\n');
+	let open = false;
+
+	for (const line of lines) {
+		if (!line.trimStart().startsWith('```')) continue;
+		if (!open) {
+			open = true;
+		} else {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+function isMarkdownBlockStart(line: string, allowCodeFence = true): boolean {
 	return /^(#{1,3})\s+/.test(line)
 		|| /^[-+*]\s+/.test(line)
 		|| /^\d+\.\s+/.test(line)
-		|| /^```/.test(line.trimStart())
+		|| (allowCodeFence && /^```/.test(line.trimStart()))
 		|| /^\s*(?:---|___)\s*$/.test(line);
 }
 
 function hasMarkdownBlocks(text: string): boolean {
-	return text
-		.replace(/\r\n?/g, '\n')
+	const normalized = text.replace(/\r\n?/g, '\n');
+	const allowCodeFence = hasCompleteCodeFence(normalized);
+
+	return normalized
 		.split('\n')
-		.some(isMarkdownBlockStart);
+		.some(line => isMarkdownBlockStart(line, allowCodeFence));
 }
 
 function parseMarkdownBlocks(source: string): MarkdownBlock[] {
-	const lines = source.replace(/\r\n?/g, '\n').split('\n');
+	const normalized = source.replace(/\r\n?/g, '\n');
+	const lines = normalized.split('\n');
+	const allowCodeFence = hasCompleteCodeFence(normalized);
 	const blocks: MarkdownBlock[] = [];
 	let index = 0;
 
@@ -65,7 +85,7 @@ function parseMarkdownBlocks(source: string): MarkdownBlock[] {
 			continue;
 		}
 
-		if (line.trimStart().startsWith('```')) {
+		if (allowCodeFence && line.trimStart().startsWith('```')) {
 			index++;
 			const codeLines: string[] = [];
 			while (index < lines.length && !lines[index].trimStart().startsWith('```')) {
@@ -118,7 +138,7 @@ function parseMarkdownBlocks(source: string): MarkdownBlock[] {
 		while (index < lines.length) {
 			const current = lines[index];
 			if (current.trim() === '') break;
-			if (paragraph.length > 0 && isMarkdownBlockStart(current)) break;
+			if (paragraph.length > 0 && isMarkdownBlockStart(current, allowCodeFence)) break;
 			paragraph.push(current);
 			index++;
 		}
@@ -140,6 +160,10 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 	if (props.plain || props.nowrap || !hasMarkdownBlocks(props.text)) {
 		return h(MfmCore, {
 			...props,
+			// Always parse the text currently being rendered. Some note views pass a
+			// pre-parsed MFM tree; reusing it here can make Markdown rendering and the
+			// visible source disagree when a note is refreshed or replaced in-place.
+			parsedNodes: undefined,
 			onClickEv: forwardClick,
 		});
 	}
