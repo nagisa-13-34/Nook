@@ -14,6 +14,9 @@ import { DI } from '@/di.js';
 const NOOK_ROUTE_DEF = [{
 	path: '/videos',
 	component: page(() => import('@/pages/videos.vue')),
+}, {
+	path: '/events',
+	component: page(() => import('@/pages/events.vue')),
 }, ...ROUTE_DEF];
 
 export type Router = Nirax<typeof NOOK_ROUTE_DEF>;

@@ -37,6 +37,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<i class="ti ti-users-group" :class="$style.icon"></i>
 			<span :class="$style.itemText">{{ i18n.ts.nookCommunity }}</span>
 		</MkA>
+		<MkA v-if="$i != null" v-tooltip.noDelay.right="'イベント'" :class="$style.item" :activeClass="$style.active" to="/events">
+			<i class="ti ti-calendar-event" :class="$style.icon"></i>
+			<span :class="$style.itemText">イベント</span>
+		</MkA>
 		<MkA
 			v-if="$i != null && $i.policies.chatAvailability !== 'unavailable'"
 			v-tooltip.noDelay.right="i18n.ts.chat"

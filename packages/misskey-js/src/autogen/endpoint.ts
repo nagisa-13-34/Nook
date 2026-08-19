@@ -697,6 +697,8 @@ import type {
 	NookCommunityChannelsListRequest,
 	NookCommunityChannelsListResponse,
 	NookCommunityChannelsUpdateRequest,
+	NookCommunityDeleteRequest,
+	NookCommunityDeleteResponse,
 	NookCommunityEventsCreateRequest,
 	NookCommunityEventsCreateResponse,
 	NookCommunityEventsDeleteRequest,
@@ -725,11 +727,15 @@ import type {
 	NookCommunityMessagesDeleteRequest,
 	NookCommunityMessagesListRequest,
 	NookCommunityMessagesListResponse,
+	NookCommunityMyListResponse,
 	NookCommunityPinsCreateRequest,
 	NookCommunityPinsCreateResponse,
 	NookCommunityPinsDeleteRequest,
 	NookCommunityPinsListRequest,
 	NookCommunityPinsListResponse,
+	NookCommunityProfileShowRequest,
+	NookCommunityProfileShowResponse,
+	NookCommunityProfileUpdateRequest,
 	NookCommunityRolesAssignRequest,
 	NookCommunityRolesCreateRequest,
 	NookCommunityRolesCreateResponse,
@@ -750,6 +756,8 @@ import type {
 	NookCommunitySettingsUpdateRequest,
 	NookCommunityShowRequest,
 	NookCommunityShowResponse,
+	NookCommunityTransferOwnershipRequest,
+	NookCommunityTransferOwnershipResponse,
 	NookCommunityVoiceConfigUpdateRequest,
 	NookCommunityVoiceHeartbeatRequest,
 	NookCommunityVoiceHeartbeatResponse,
@@ -760,6 +768,15 @@ import type {
 	NookCommunityVoiceSignalRequest,
 	NookCommunityVoiceSignalsRequest,
 	NookCommunityVoiceSignalsResponse,
+	NookEventsCreateRequest,
+	NookEventsCreateResponse,
+	NookEventsDeleteRequest,
+	NookEventsListRequest,
+	NookEventsListResponse,
+	NookEventsRsvpRequest,
+	NookEventsShowRequest,
+	NookEventsShowResponse,
+	NookEventsUpdateRequest,
 	NookFeaturesResponse,
 	NookTranslateRequest,
 	NookTranslateResponse,
@@ -1227,6 +1244,7 @@ export type Endpoints = {
 	'nook/community/channels/delete': { req: NookCommunityChannelsDeleteRequest; res: EmptyResponse };
 	'nook/community/channels/list': { req: NookCommunityChannelsListRequest; res: NookCommunityChannelsListResponse };
 	'nook/community/channels/update': { req: NookCommunityChannelsUpdateRequest; res: EmptyResponse };
+	'nook/community/delete': { req: NookCommunityDeleteRequest; res: NookCommunityDeleteResponse };
 	'nook/community/events/create': { req: NookCommunityEventsCreateRequest; res: NookCommunityEventsCreateResponse };
 	'nook/community/events/delete': { req: NookCommunityEventsDeleteRequest; res: EmptyResponse };
 	'nook/community/events/list': { req: NookCommunityEventsListRequest; res: NookCommunityEventsListResponse };
@@ -1245,9 +1263,12 @@ export type Endpoints = {
 	'nook/community/messages/create': { req: NookCommunityMessagesCreateRequest; res: NookCommunityMessagesCreateResponse };
 	'nook/community/messages/delete': { req: NookCommunityMessagesDeleteRequest; res: EmptyResponse };
 	'nook/community/messages/list': { req: NookCommunityMessagesListRequest; res: NookCommunityMessagesListResponse };
+	'nook/community/my-list': { req: EmptyRequest; res: NookCommunityMyListResponse };
 	'nook/community/pins/create': { req: NookCommunityPinsCreateRequest; res: NookCommunityPinsCreateResponse };
 	'nook/community/pins/delete': { req: NookCommunityPinsDeleteRequest; res: EmptyResponse };
 	'nook/community/pins/list': { req: NookCommunityPinsListRequest; res: NookCommunityPinsListResponse };
+	'nook/community/profile-show': { req: NookCommunityProfileShowRequest; res: NookCommunityProfileShowResponse };
+	'nook/community/profile-update': { req: NookCommunityProfileUpdateRequest; res: EmptyResponse };
 	'nook/community/roles/assign': { req: NookCommunityRolesAssignRequest; res: EmptyResponse };
 	'nook/community/roles/create': { req: NookCommunityRolesCreateRequest; res: NookCommunityRolesCreateResponse };
 	'nook/community/roles/delete': { req: NookCommunityRolesDeleteRequest; res: EmptyResponse };
@@ -1260,6 +1281,7 @@ export type Endpoints = {
 	'nook/community/search': { req: NookCommunitySearchRequest; res: NookCommunitySearchResponse };
 	'nook/community/settings-update': { req: NookCommunitySettingsUpdateRequest; res: EmptyResponse };
 	'nook/community/show': { req: NookCommunityShowRequest; res: NookCommunityShowResponse };
+	'nook/community/transfer-ownership': { req: NookCommunityTransferOwnershipRequest; res: NookCommunityTransferOwnershipResponse };
 	'nook/community/voice/config-update': { req: NookCommunityVoiceConfigUpdateRequest; res: EmptyResponse };
 	'nook/community/voice/heartbeat': { req: NookCommunityVoiceHeartbeatRequest; res: NookCommunityVoiceHeartbeatResponse };
 	'nook/community/voice/join': { req: NookCommunityVoiceJoinRequest; res: NookCommunityVoiceJoinResponse };
@@ -1267,6 +1289,12 @@ export type Endpoints = {
 	'nook/community/voice/music-update': { req: NookCommunityVoiceMusicUpdateRequest; res: EmptyResponse };
 	'nook/community/voice/signal': { req: NookCommunityVoiceSignalRequest; res: EmptyResponse };
 	'nook/community/voice/signals': { req: NookCommunityVoiceSignalsRequest; res: NookCommunityVoiceSignalsResponse };
+	'nook/events/create': { req: NookEventsCreateRequest; res: NookEventsCreateResponse };
+	'nook/events/delete': { req: NookEventsDeleteRequest; res: EmptyResponse };
+	'nook/events/list': { req: NookEventsListRequest; res: NookEventsListResponse };
+	'nook/events/rsvp': { req: NookEventsRsvpRequest; res: EmptyResponse };
+	'nook/events/show': { req: NookEventsShowRequest; res: NookEventsShowResponse };
+	'nook/events/update': { req: NookEventsUpdateRequest; res: EmptyResponse };
 	'nook/features': { req: EmptyRequest; res: NookFeaturesResponse };
 	'nook/translate': { req: NookTranslateRequest; res: NookTranslateResponse };
 	'notes/recommended': { req: NotesRecommendedRequest; res: NotesRecommendedResponse };

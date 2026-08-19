@@ -9,6 +9,12 @@
 export * as 'notes/recommended' from './endpoints/notes/recommended.js';
 export * as 'notes/recommended-page' from './endpoints/notes/recommended-page.js';
 export * as 'nook/features' from './endpoints/nook/features.js';
+export * as 'nook/events/list' from './endpoints/nook/events/list.js';
+export * as 'nook/events/show' from './endpoints/nook/events/show.js';
+export * as 'nook/events/create' from './endpoints/nook/events/create.js';
+export * as 'nook/events/update' from './endpoints/nook/events/update.js';
+export * as 'nook/events/delete' from './endpoints/nook/events/delete.js';
+export * as 'nook/events/rsvp' from './endpoints/nook/events/rsvp.js';
 export * as 'nook/community/show' from './endpoints/nook/community/show.js';
 export * as 'nook/community/my-list' from './endpoints/nook/community/my-list.js';
 export * as 'nook/community/settings-update' from './endpoints/nook/community/settings-update.js';
