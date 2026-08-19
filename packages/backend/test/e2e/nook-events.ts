@@ -67,8 +67,8 @@ async function createEvent(user: TestUser, params: Record<string, unknown>): Pro
 		...params,
 	}, user);
 	assert.strictEqual(response.status, 200, JSON.stringify(response.body));
-	assert.strictEqual(typeof response.body?.id, 'string');
-	return response.body!.id;
+	if (response.body == null || typeof response.body.id !== 'string') throw new Error('nook/events/create did not return an event id');
+	return response.body.id;
 }
 
 describe('Nook global events', () => {
