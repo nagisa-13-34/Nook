@@ -10,7 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div :class="$style.heroIcon"><i class="ti ti-calendar-event"></i></div>
 			<div>
 				<h1 :class="$style.title">イベント</h1>
-				<p :class="$style.description">公開イベントを探したり、自分のイベントを作成できます。</p>
+				<p :class="$style.description">公開イベントを探したり、個人・ネストのイベントを作成できます。</p>
 			</div>
 		</section>
 
@@ -18,11 +18,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div :class="$style.sectionHeading">
 				<div>
 					<h2>イベントを作成</h2>
-					<p>ここで作るイベントはネストに属さない個人イベントです。</p>
+					<p>個人イベントとネストイベントを同じフォームから作成できます。</p>
 				</div>
 			</div>
 
 			<form :class="$style.form" @submit.prevent="createEvent">
+				<label :class="$style.field">
+					<span>作成先</span>
+					<select v-model="selectedCommunityId">
+						<option value="">個人イベント</option>
+						<option v-for="nest in manageableNests" :key="nest.communityId" :value="nest.communityId">{{ nest.name }}</option>
+					</select>
+					<small v-if="manageableNests.length === 0" :class="$style.hint">イベントを管理できるネストがある場合はここに表示されます。</small>
+				</label>
 				<label :class="$style.field">
 					<span>タイトル</span>
 					<input v-model="title" required maxlength="160" placeholder="イベント名">
@@ -50,12 +58,20 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<label :class="$style.field">
 					<span>公開範囲</span>
 					<select v-model="visibility">
+						<option v-if="isNestEvent" value="community">ネストのみ</option>
 						<option value="public">公開</option>
 						<option value="unlisted">限定公開</option>
 						<option value="private">自分のみ</option>
 					</select>
 				</label>
-				<div :class="$style.field">
+				<label v-if="isNestEvent" :class="$style.field">
+					<span>参加範囲</span>
+					<select v-model="participation">
+						<option value="community">ネスト参加者のみ</option>
+						<option value="anyone">誰でも参加可能</option>
+					</select>
+				</label>
+				<div v-else :class="$style.field">
 					<span>参加範囲</span>
 					<div :class="$style.fixedValue">誰でも参加可能</div>
 				</div>
@@ -87,7 +103,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<div :class="$style.eventTopline">
 							<div :class="$style.badges">
 								<span :class="$style.badge">{{ visibilityLabel(event.visibility) }}</span>
-								<span v-if="event.communityId" :class="$style.badge">ネストイベント</span>
+								<span v-if="event.communityId" :class="$style.badge">{{ nestName(event.communityId) }}</span>
 								<span v-if="event.participation === 'community'" :class="$style.badge">ネスト参加者のみ参加可</span>
 								<span v-if="event.cancelledAt" :class="[$style.badge, $style.cancelled]">中止</span>
 							</div>
@@ -120,16 +136,24 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { $i } from '@/i.js';
 import { nookApi } from '@/nook/community/nook-api.js';
-import type { NookEvent, NookEventResponse, NookEventVisibility } from '@/nook/community/types.js';
+import type { CommunityDetail, NookEvent, NookEventParticipation, NookEventResponse, NookEventVisibility } from '@/nook/community/types.js';
 import * as os from '@/os.js';
 import { definePage } from '@/page.js';
 
+interface JoinedNest {
+	communityId: string;
+	name: string;
+}
+
 const events = ref<NookEvent[]>([]);
+const joinedNests = ref<JoinedNest[]>([]);
+const manageableNests = ref<JoinedNest[]>([]);
 const loading = ref(true);
 const creating = ref(false);
+const selectedCommunityId = ref('');
 const title = ref('');
 const description = ref('');
 const location = ref('');
@@ -137,8 +161,10 @@ const startsAt = ref('');
 const endsAt = ref('');
 const maxAttendees = ref('');
 const visibility = ref<NookEventVisibility>('public');
+const participation = ref<NookEventParticipation>('anyone');
 const createError = ref('');
 const eventErrors = ref<Record<string, string>>({});
+const isNestEvent = computed(() => selectedCommunityId.value !== '');
 
 function errorMessage(error: unknown): string {
 	if (error instanceof Error && error.message) return error.message;
@@ -160,12 +186,24 @@ async function loadEvents(): Promise<void> {
 	}
 }
 
+async function loadNests(): Promise<void> {
+	joinedNests.value = await nookApi<JoinedNest[]>('nook/community/my-list').catch(() => []);
+	const manageable = await Promise.all(joinedNests.value.map(async nest => {
+		const detail = await nookApi<CommunityDetail>('nook/community/show', { communityId: nest.communityId }).catch(() => null);
+		const membership = detail?.membership;
+		if (membership == null || membership.state !== 'active') return null;
+		if (!membership.permissions.includes('*') && !membership.permissions.includes('events.manage')) return null;
+		return nest;
+	}));
+	manageableNests.value = manageable.filter((nest): nest is JoinedNest => nest != null);
+}
+
 async function createEvent(): Promise<void> {
 	createError.value = '';
 	creating.value = true;
 	try {
 		await nookApi<{ id: string }>('nook/events/create', {
-			communityId: null,
+			communityId: selectedCommunityId.value || null,
 			title: title.value.trim(),
 			description: description.value.trim() || null,
 			location: location.value.trim() || null,
@@ -173,7 +211,7 @@ async function createEvent(): Promise<void> {
 			endsAt: endsAt.value ? new Date(endsAt.value).toISOString() : null,
 			maxAttendees: maxAttendees.value ? Number(maxAttendees.value) : null,
 			visibility: visibility.value,
-			participation: 'anyone',
+			participation: participation.value,
 		});
 		title.value = '';
 		description.value = '';
@@ -181,7 +219,6 @@ async function createEvent(): Promise<void> {
 		startsAt.value = '';
 		endsAt.value = '';
 		maxAttendees.value = '';
-		visibility.value = 'public';
 		await loadEvents();
 	} catch (error) {
 		createError.value = errorMessage(error);
@@ -223,6 +260,10 @@ function visibilityLabel(value: NookEventVisibility): string {
 	return '公開';
 }
 
+function nestName(communityId: string): string {
+	return joinedNests.value.find(nest => nest.communityId === communityId)?.name ?? 'ネストイベント';
+}
+
 function eventDay(value: string): string {
 	return new Intl.DateTimeFormat('ja-JP', { month: 'numeric', day: 'numeric' }).format(new Date(value));
 }
@@ -237,8 +278,19 @@ function eventRange(event: NookEvent): string {
 	return `${start} – ${new Date(event.endsAt).toLocaleString()}`;
 }
 
+watch(selectedCommunityId, communityId => {
+	if (communityId === '') {
+		visibility.value = 'public';
+		participation.value = 'anyone';
+	} else {
+		visibility.value = 'community';
+		participation.value = 'community';
+	}
+});
+
 onMounted(() => {
 	void loadEvents();
+	void loadNests();
 });
 
 definePage(() => ({
@@ -377,6 +429,12 @@ definePage(() => ({
 	display: flex;
 	align-items: center;
 	color: var(--nook-muted);
+}
+
+.hint {
+	color: var(--nook-muted);
+	font-size: 10px;
+	font-weight: 500;
 }
 
 .formFooter {
