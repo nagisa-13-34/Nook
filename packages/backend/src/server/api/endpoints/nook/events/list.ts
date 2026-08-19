@@ -41,21 +41,29 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const events = await listNookEvents(this.db, me.id, ps.from == null ? null : new Date(ps.from), ps.limit ?? 50);
 			const voiceEnabled = await this.nookAccessService.isFeatureEnabled('voice_call');
 			const communityIds = [...new Set(events.map(event => event.communityId).filter((id): id is string => id != null))];
+			const accessibleCommunities = new Set<string>();
 			const visibleChannels = new Map<string, Set<string>>();
 
 			await Promise.all(communityIds.map(async communityId => {
-				const channels = await listNookCommunityChannels(this.db, communityId, me.id).catch(() => []);
-				visibleChannels.set(communityId, new Set(channels.map(channel => channel.id)));
+				try {
+					const channels = await listNookCommunityChannels(this.db, communityId, me.id);
+					accessibleCommunities.add(communityId);
+					visibleChannels.set(communityId, new Set(channels.map(channel => channel.id)));
+				} catch {
+					visibleChannels.set(communityId, new Set());
+				}
 			}));
 
-			return events.map(event => {
-				const visibleIds = event.communityId == null ? null : visibleChannels.get(event.communityId);
-				return {
-					...serializeNookEvent(event),
-					textChannelId: event.textChannelId != null && visibleIds?.has(event.textChannelId) === true ? event.textChannelId : null,
-					voiceChannelId: voiceEnabled && event.voiceChannelId != null && visibleIds?.has(event.voiceChannelId) === true ? event.voiceChannelId : null,
-				};
-			});
+			return events
+				.filter(event => event.visibility !== 'community' || event.creatorId === me.id || (event.communityId != null && accessibleCommunities.has(event.communityId)))
+				.map(event => {
+					const visibleIds = event.communityId == null ? null : visibleChannels.get(event.communityId);
+					return {
+						...serializeNookEvent(event),
+						textChannelId: event.textChannelId != null && visibleIds?.has(event.textChannelId) === true ? event.textChannelId : null,
+						voiceChannelId: voiceEnabled && event.voiceChannelId != null && visibleIds?.has(event.voiceChannelId) === true ? event.voiceChannelId : null,
+					};
+				});
 		});
 	}
 }
