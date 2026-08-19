@@ -116,47 +116,11 @@ const headerTabs = computed(() => user.value ? [{
 	key: 'videos',
 	title: i18n.ts.nookVideos,
 	icon: 'ti ti-video',
-}, {
-	key: 'works',
-	title: i18n.ts.nookWorks,
-	icon: 'ti ti-icons',
-}, {
-	key: 'files',
-	title: i18n.ts.files,
-	icon: 'ti ti-file',
-}, {
-	key: 'activity',
-	title: i18n.ts.activity,
-	icon: 'ti ti-chart-line',
-}, ...(user.value.host == null ? [{
-	key: 'achievements',
-	title: i18n.ts.achievements,
-	icon: 'ti ti-medal',
-}] : []), ...($i && ($i.id === user.value.id || $i.isAdmin || $i.isModerator)) || user.value.publicReactions ? [{
+}, ...(($i && ($i.id === user.value.id || $i.isAdmin || $i.isModerator)) || user.value.publicReactions ? [{
 	key: 'reactions',
 	title: i18n.ts.reaction,
 	icon: 'ti ti-mood-happy',
-}] : [], {
-	key: 'clips',
-	title: i18n.ts.clips,
-	icon: 'ti ti-paperclip',
-}, {
-	key: 'lists',
-	title: i18n.ts.lists,
-	icon: 'ti ti-list',
-}, {
-	key: 'pages',
-	title: i18n.ts.pages,
-	icon: 'ti ti-news',
-}, {
-	key: 'flashs',
-	title: 'Play',
-	icon: 'ti ti-player-play',
-}, {
-	key: 'raw',
-	title: 'Raw',
-	icon: 'ti ti-code',
-}] : []);
+}] : [])] : []);
 
 definePage(() => ({
 	title: i18n.ts.user,
