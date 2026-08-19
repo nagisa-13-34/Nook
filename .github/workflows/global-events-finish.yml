@@ -1,3 +1,4 @@
+# Temporary verification workflow for agent/global-events. It intentionally never runs migrations.
 name: Global events finish (no migrations)
 
 on:
