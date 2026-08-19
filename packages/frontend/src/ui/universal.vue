@@ -146,10 +146,17 @@ function onContextmenu(ev: PointerEvent) {
 	--MI_THEME-indicator: var(--nook-yellow);
 	--MI_THEME-buttonGradateA: var(--nook-yellow);
 	--MI_THEME-buttonGradateB: var(--nook-yellow);
-	--MI_THEME-fgOnAccent: var(--nook-blue-deep);
+	--MI_THEME-fgOnAccent: #ffffff;
 	--MI_THEME-accentedBg: var(--nook-blue-soft);
 	--MI_THEME-panelHighlight: #f9fafb;
 	--MI_THEME-focus: var(--nook-blue);
+	--MI_THEME-link: var(--nook-blue);
+	--MI_THEME-switchOnBg: var(--nook-blue);
+	--MI_THEME-switchOnFg: #ffffff;
+	--MI_THEME-switchOffBg: #d8dee8;
+	--MI_THEME-switchOffFg: #ffffff;
+	--MI_THEME-inputBorder: var(--nook-border);
+	--MI_THEME-inputBorderHover: #aab4c4;
 	--MI-radius: 8px;
 
 	height: 100dvh;
