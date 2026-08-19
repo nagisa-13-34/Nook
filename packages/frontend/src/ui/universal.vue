@@ -5,13 +5,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div class="nook-ui" :class="[$style.root, { '_forceShrinkSpacer': deviceKind === 'smartphone' }]">
-	<XTitlebar v-if="prefer.r.showTitlebar.value && !isMobile" style="flex-shrink: 0;"/>
 	<XNookMobileHeader v-if="isMobile" v-model:drawerMenuShowing="drawerMenuShowing"/>
 
 	<div :class="$style.nonTitlebarArea">
 		<XSidebar v-if="!isMobile" :class="$style.sidebar" :showWidgetButton="false"/>
 
-		<div :class="[$style.contents, isRoot ? $style.homeContents : null, !isMobile && prefer.r.showTitlebar.value ? $style.withSidebarAndTitlebar : null]" @contextmenu.stop="onContextmenu">
+		<div :class="[$style.contents, isRoot ? $style.homeContents : null]" @contextmenu.stop="onContextmenu">
 			<div>
 				<XReloadSuggestion v-if="shouldSuggestReload"/>
 				<XPreferenceRestore v-if="shouldSuggestRestoreBackup"/>
@@ -41,7 +40,6 @@ import XNookMobileHeader from '@/ui/_common_/nook-mobile-header.vue';
 import XPreferenceRestore from '@/ui/_common_/PreferenceRestore.vue';
 import XReloadSuggestion from '@/ui/_common_/ReloadSuggestion.vue';
 import XThemePreviewing from '@/ui/_common_/ThemePreviewing.vue';
-import XTitlebar from '@/ui/_common_/titlebar.vue';
 import { isPreviewMode as isThemePreviewMode } from '@/theme.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
@@ -206,12 +204,6 @@ function onContextmenu(ev: PointerEvent) {
 	height: 100%;
 	min-width: 0;
 	background: var(--nook-bg);
-
-	&.withSidebarAndTitlebar {
-		background: var(--nook-bg);
-		border-radius: 0;
-		overflow: clip;
-	}
 }
 
 .content {
@@ -220,8 +212,9 @@ function onContextmenu(ev: PointerEvent) {
 }
 
 .homeContents > .content {
-	width: min(100%, 720px);
-	margin-inline: auto;
+	width: min(calc(100% - 48px), 720px);
+	margin-left: 24px;
+	margin-right: auto;
 	box-sizing: border-box;
 	background: var(--nook-white);
 	border-inline: solid 1px var(--nook-border);
@@ -311,9 +304,17 @@ function onContextmenu(ev: PointerEvent) {
 	text-underline-offset: 2px;
 }
 
+@media (max-width: 900px) {
+	.homeContents > .content {
+		width: min(calc(100% - 24px), 720px);
+		margin-left: 12px;
+	}
+}
+
 @media (max-width: 500px) {
 	.homeContents > .content {
 		width: 100%;
+		margin-left: 0;
 		border-inline: 0;
 	}
 
