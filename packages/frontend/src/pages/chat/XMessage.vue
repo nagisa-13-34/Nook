@@ -18,16 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 
 		<div :class="[$style.bubble, { [$style.myBubble]: isMe, [$style.fileBubble]: message.file != null }]">
-			<Mfm
-				v-if="message.text"
-				ref="text"
-				class="_selectable"
-				:text="message.text"
-				:i="$i"
-				:nyaize="'respect'"
-				:enableEmojiMenu="true"
-				:enableEmojiMenuReaction="true"
-			/>
+			<NookChatMarkdown v-if="message.text" class="_selectable" :text="message.text"/>
 			<MkMediaList v-if="message.file" :mediaList="[message.file]"/>
 		</div>
 
@@ -72,13 +63,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { computed, provide } from 'vue';
-import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
 import { url } from '@@/js/config.js';
 import { isLink } from '@@/js/is-link.js';
 import type { MenuItem } from '@/types/menu.js';
 import type { NormalizedChatMessage } from './room.vue';
-import { extractUrlFromMfm } from '@/utility/extract-url-from-mfm.js';
+import NookChatMarkdown from './NookChatMarkdown.vue';
 import MkUrlPreview from '@/components/MkUrlPreview.vue';
 import { ensureSignin } from '@/i.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -102,7 +92,11 @@ const props = defineProps<{
 
 const isMe = computed(() => props.message.fromUserId === $i.id);
 const isRead = computed(() => isMe.value && 'isRead' in props.message && props.message.isRead === true);
-const urls = computed(() => props.message.text ? extractUrlFromMfm(mfm.parse(props.message.text)) : []);
+const urls = computed(() => {
+	if (!props.message.text) return [];
+	const found = props.message.text.match(/https?:\/\/[^\s<>()]+/g) ?? [];
+	return [...new Set(found.map(value => value.replace(/[.,!?;:]+$/, '')))];
+});
 
 provide(DI.mfmEmojiReactCallback, (reaction) => {
 	if ($i.policies.chatAvailability !== 'available') return;
