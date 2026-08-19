@@ -44,5 +44,8 @@ export function serializeNookEvent(event: NookEventRecord) {
 }
 
 export function serializeNookCommunityEvent(event: NookCommunityEventRecord) {
-	return serializeNookEvent(event);
+	return {
+		...serializeNookEvent(event),
+		communityId: event.communityId,
+	};
 }
