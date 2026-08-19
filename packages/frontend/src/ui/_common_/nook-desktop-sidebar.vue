@@ -14,13 +14,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<i class="ti ti-home" :class="$style.icon"></i>
 			<span :class="$style.itemText">{{ i18n.ts.home }}</span>
 		</MkA>
-		<MkA v-tooltip.noDelay.right="i18n.ts.search" :class="$style.item" :activeClass="$style.active" to="/search">
+		<MkA v-tooltip.noDelay.right="i18n.ts.nookSearchDiscover" :class="$style.item" :activeClass="$style.active" to="/search">
 			<i class="ti ti-search" :class="$style.icon"></i>
-			<span :class="$style.itemText">{{ i18n.ts.search }}</span>
-		</MkA>
-		<MkA v-tooltip.noDelay.right="i18n.ts.explore" :class="$style.item" :activeClass="$style.active" to="/explore">
-			<i class="ti ti-compass" :class="$style.icon"></i>
-			<span :class="$style.itemText">{{ i18n.ts.explore }}</span>
+			<span :class="$style.itemText">{{ i18n.ts.nookSearchDiscover }}</span>
 		</MkA>
 		<MkA v-if="videoFeedAvailable" v-tooltip.noDelay.right="i18n.ts.nookVideo" :class="$style.item" :activeClass="$style.active" to="/videos">
 			<i class="ti ti-video" :class="$style.icon"></i>
@@ -126,207 +122,39 @@ async function openAccountMenu(ev: PointerEvent) {
 	color: var(--nook-ink);
 }
 
-.brandRow {
-	padding: 2px 10px 20px;
-}
-
-.brand {
-	font-size: 27px;
-	font-weight: 850;
-	line-height: 1;
-	letter-spacing: -0.055em;
-	text-decoration: none;
-	color: var(--nook-blue);
-}
-
-.primary,
-.secondary {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-}
-
-.primary {
-	flex: 1;
-	overflow-y: auto;
-}
-
-.secondary {
-	padding-top: 10px;
-	border-top: 1px solid var(--nook-border);
-}
-
-.item {
-	position: relative;
-	width: 100%;
-	min-height: 44px;
-	padding: 0 13px;
-	display: flex;
-	align-items: center;
-	gap: 13px;
-	border-radius: 8px;
-	box-sizing: border-box;
-	font-size: 15px;
-	font-weight: 650;
-	text-align: left;
-	text-decoration: none;
-	color: var(--nook-ink);
-	transition: background-color 0.12s ease, color 0.12s ease;
-
-	&:hover {
-		background: #f7faff;
-	}
-}
-
-.itemText {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.active {
-	background: var(--nook-blue-soft);
-	color: var(--nook-blue);
-}
-
-.iconWrap {
-	position: relative;
-	display: inline-grid;
-	place-items: center;
-}
-
-.icon {
-	width: 22px;
-	font-size: 20px;
-	text-align: center;
-}
-
-.unread {
-	position: absolute;
-	top: -2px;
-	right: -5px;
-	color: var(--nook-yellow);
-}
-
-.create {
-	width: 100%;
-	min-height: 46px;
-	margin-top: 10px;
-	padding: 0 18px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 9px;
-	border: 1px solid #e4bd29;
-	border-radius: 8px;
-	background: var(--nook-yellow);
-	color: var(--nook-ink);
-	font-size: 15px;
-	font-weight: 800;
-
-	&:hover {
-		background: #ffdf69;
-	}
-}
-
-.createIcon {
-	font-size: 19px;
-}
-
-.account {
-	width: 100%;
-	min-height: 56px;
-	margin-top: 8px;
-	padding: 7px 10px;
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	border-radius: 8px;
-	text-align: left;
-
-	&:hover {
-		background: #f7faff;
-	}
-}
-
-.avatar {
-	width: 36px;
-	height: 36px;
-	flex: 0 0 auto;
-}
-
-.accountText {
-	min-width: 0;
-	display: flex;
-	flex: 1;
-	flex-direction: column;
-	gap: 1px;
-}
-
-.accountName,
-.accountHandle {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.accountName {
-	font-size: 13px;
-	font-weight: 700;
-}
-
-.accountHandle {
-	font-size: 11px;
-	opacity: 0.58;
-}
-
-.accountMore {
-	font-size: 17px;
-	opacity: 0.55;
-}
+.brandRow { padding: 2px 10px 20px; }
+.brand { font-size: 27px; font-weight: 850; line-height: 1; letter-spacing: -0.055em; text-decoration: none; color: var(--nook-blue); }
+.primary, .secondary { display: flex; flex-direction: column; gap: 2px; }
+.primary { flex: 1; overflow-y: auto; }
+.secondary { padding-top: 10px; border-top: 1px solid var(--nook-border); }
+.item { position: relative; width: 100%; min-height: 44px; padding: 0 13px; display: flex; align-items: center; gap: 13px; border-radius: 8px; box-sizing: border-box; font-size: 15px; font-weight: 650; text-align: left; text-decoration: none; color: var(--nook-ink); transition: background-color 0.12s ease, color 0.12s ease; }
+.item:hover { background: #f7faff; }
+.itemText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.active { background: var(--nook-blue-soft); color: var(--nook-blue); }
+.iconWrap { position: relative; display: inline-grid; place-items: center; }
+.icon { width: 22px; font-size: 20px; text-align: center; }
+.unread { position: absolute; top: -2px; right: -5px; color: var(--nook-yellow); }
+.create { width: 100%; min-height: 46px; margin-top: 10px; padding: 0 18px; display: flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid #e4bd29; border-radius: 8px; background: var(--nook-yellow); color: var(--nook-ink); font-size: 15px; font-weight: 800; }
+.create:hover { background: #ffdf69; }
+.createIcon { font-size: 19px; }
+.account { width: 100%; min-height: 56px; margin-top: 8px; padding: 7px 10px; display: flex; align-items: center; gap: 10px; border-radius: 8px; text-align: left; }
+.account:hover { background: #f7faff; }
+.avatar { width: 36px; height: 36px; flex: 0 0 auto; }
+.accountText { min-width: 0; display: flex; flex: 1; flex-direction: column; gap: 1px; }
+.accountName, .accountHandle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.accountName { font-size: 13px; font-weight: 700; }
+.accountHandle { font-size: 11px; opacity: 0.58; }
+.accountMore { font-size: 17px; opacity: 0.55; }
 
 @media (max-width: 1279px) {
-	.root {
-		width: 78px;
-		min-width: 78px;
-		padding-inline: 10px;
-	}
-
-	.brandRow {
-		padding-inline: 0;
-		text-align: center;
-	}
-
-	.brand {
-		font-size: 0;
-
-		&::after {
-			content: 'N';
-			font-size: 24px;
-		}
-	}
-
-	.item {
-		justify-content: center;
-		padding: 0;
-	}
-
-	.itemText {
-		display: none;
-	}
-
-	.create {
-		padding: 0;
-	}
-
-	.account {
-		justify-content: center;
-		padding-inline: 0;
-	}
-
-	.accountText,
-	.accountMore {
-		display: none;
-	}
+	.root { width: 78px; min-width: 78px; padding-inline: 10px; }
+	.brandRow { padding-inline: 0; text-align: center; }
+	.brand { font-size: 0; }
+	.brand::after { content: 'N'; font-size: 24px; }
+	.item { justify-content: center; padding: 0; }
+	.itemText { display: none; }
+	.create { padding: 0; }
+	.account { justify-content: center; padding-inline: 0; }
+	.accountText, .accountMore { display: none; }
 }
 </style>
