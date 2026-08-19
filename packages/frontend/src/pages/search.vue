@@ -18,6 +18,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</div>
 
+	<XNests v-else-if="tab === 'nest'" :query="props.query"/>
+
 	<div v-else-if="tab === 'featured'">
 		<XFeatured/>
 	</div>
@@ -35,7 +37,7 @@ import { definePage } from '@/page.js';
 import { usersSearchAvailable } from '@/utility/check-permissions.js';
 import MkInfo from '@/components/MkInfo.vue';
 
-type SearchDiscoverTab = 'note' | 'user' | 'featured' | 'discoverUsers';
+type SearchDiscoverTab = 'note' | 'user' | 'nest' | 'featured' | 'discoverUsers';
 
 const props = withDefaults(defineProps<{
 	query?: string,
@@ -57,6 +59,7 @@ const props = withDefaults(defineProps<{
 
 const XNote = defineAsyncComponent(() => import('./search.note.vue'));
 const XUser = defineAsyncComponent(() => import('./search.user.vue'));
+const XNests = defineAsyncComponent(() => import('./search.nests.vue'));
 const XFeatured = defineAsyncComponent(() => import('./explore.featured.vue'));
 const XExploreUsers = defineAsyncComponent(() => import('./explore.users.vue'));
 
@@ -75,7 +78,11 @@ const headerTabs = computed(() => [{
 }, {
 	key: 'user',
 	title: i18n.ts.users,
-	icon: 'ti ti-search',
+	icon: 'ti ti-user-search',
+}, {
+	key: 'nest',
+	title: i18n.ts.nookCommunity,
+	icon: 'ti ti-users-group',
 }, {
 	key: 'featured',
 	title: i18n.ts.featured,
