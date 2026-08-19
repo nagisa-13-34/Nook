@@ -6,10 +6,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div class="nook-ui" :class="[$style.root, { '_forceShrinkSpacer': deviceKind === 'smartphone' }]">
 	<XTitlebar v-if="prefer.r.showTitlebar.value && !isMobile" style="flex-shrink: 0;"/>
-	<XNookMobileHeader v-if="isMobile" v-model:drawerMenuShowing="drawerMenuShowing" v-model:widgetsShowing="widgetsShowing"/>
+	<XNookMobileHeader v-if="isMobile" v-model:drawerMenuShowing="drawerMenuShowing"/>
 
 	<div :class="$style.nonTitlebarArea">
-		<XSidebar v-if="!isMobile" :class="$style.sidebar" :showWidgetButton="!showWidgetsSide" @widgetButtonClick="widgetsShowing = true"/>
+		<XSidebar v-if="!isMobile" :class="$style.sidebar" :showWidgetButton="false"/>
 
 		<div :class="[$style.contents, isRoot ? $style.homeContents : null, !isMobile && prefer.r.showTitlebar.value ? $style.withSidebarAndTitlebar : null]" @contextmenu.stop="onContextmenu">
 			<div>
@@ -21,15 +21,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 			<StackingRouterView v-if="prefer.s['experimental.stackingRouterView']" :class="$style.content"/>
 			<RouterView v-else :class="$style.content"/>
-			<XMobileFooterMenu v-if="isMobile" ref="navFooter" v-model:drawerMenuShowing="drawerMenuShowing" v-model:widgetsShowing="widgetsShowing"/>
-		</div>
-
-		<div v-if="showWidgetsSide && !pageMetadata?.needWideArea" :class="$style.widgets">
-			<XWidgets/>
+			<XMobileFooterMenu v-if="isMobile" ref="navFooter" v-model:drawerMenuShowing="drawerMenuShowing"/>
 		</div>
 	</div>
 
-	<XCommon v-model:drawerMenuShowing="drawerMenuShowing" v-model:widgetsShowing="widgetsShowing"/>
+	<XCommon v-model:drawerMenuShowing="drawerMenuShowing"/>
 </div>
 </template>
 
@@ -60,28 +56,23 @@ import { DI } from '@/di.js';
 import { shouldSuggestReload } from '@/utility/reload-suggest.js';
 
 const XSidebar = XNookDesktopSidebar;
-const XWidgets = defineAsyncComponent(() => import('./_common_/widgets.vue'));
 const XStatusBars = defineAsyncComponent(() => import('@/ui/_common_/statusbars.vue'));
 const XAnnouncements = defineAsyncComponent(() => import('@/ui/_common_/announcements.vue'));
 
 const isRoot = computed(() => mainRouter.currentRoute.value.name === 'index');
 
-const DESKTOP_THRESHOLD = 1100;
 const MOBILE_THRESHOLD = 500;
 
 // デスクトップでウィンドウを狭くしたときモバイルUIが表示されて欲しいことはあるので deviceKind === 'desktop' の判定は行わない
-const showWidgetsSide = ref(window.innerWidth >= DESKTOP_THRESHOLD);
 const isMobile = ref(deviceKind === 'smartphone' || window.innerWidth <= MOBILE_THRESHOLD);
 
 function updateResponsiveLayout() {
-	showWidgetsSide.value = window.innerWidth >= DESKTOP_THRESHOLD;
 	isMobile.value = deviceKind === 'smartphone' || window.innerWidth <= MOBILE_THRESHOLD;
 }
 
 window.addEventListener('resize', updateResponsiveLayout);
 
 const pageMetadata = ref<null | PageMetadata>(null);
-const widgetsShowing = ref(false);
 
 provide(DI.router, mainRouter);
 provideMetadataReceiver((metadataGetter) => {
@@ -131,8 +122,6 @@ function onContextmenu(ev: PointerEvent) {
 </script>
 
 <style lang="scss" module>
-$widgets-hide-threshold: 1090px;
-
 .root {
 	--nook-blue: #175cd3;
 	--nook-blue-deep: #17324d;
@@ -215,20 +204,6 @@ $widgets-hide-threshold: 1090px;
 	left: 0;
 }
 
-.widgets {
-	width: 350px;
-	height: 100%;
-	box-sizing: border-box;
-	overflow: auto;
-	padding: var(--MI-margin) var(--MI-margin) calc(var(--MI-margin) + env(safe-area-inset-bottom, 0px));
-	border-left: solid 1px var(--nook-border);
-	background: var(--nook-white);
-
-	@media (max-width: $widgets-hide-threshold) {
-		display: none;
-	}
-}
-
 /* Shared surfaces: flat, quiet and product-like rather than card-heavy. */
 :global(.nook-ui ._panel) {
 	background: var(--nook-white);
@@ -272,7 +247,7 @@ $widgets-hide-threshold: 1090px;
 	background: var(--nook-yellow) !important;
 	color: var(--nook-blue-deep) !important;
 	border-radius: 6px;
-	box-shadow: none;
+	box-shadow: none !important;
 }
 
 :global(.nook-ui [data-testid="post-form-submit"]:not(:disabled):hover > div) {
