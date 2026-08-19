@@ -34,6 +34,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							</div>
 							<span v-if="$i && $i.id != user.id && user.isFollowed" class="followed">{{ i18n.ts.followsYou }}</span>
 							<div class="actions">
+								<button v-if="$i?.id === user.id" class="edit-profile _button" @click="editProfile"><i class="ti ti-pencil"></i> 編集</button>
 								<button class="menu _button" @click="menu"><i class="ti ti-dots"></i></button>
 								<MkFollowButton v-if="$i?.id != user.id" v-model:user="user" :inline="true" :transparent="false" :full="true" class="koudoku"/>
 							</div>
@@ -257,6 +258,10 @@ function menu(ev: PointerEvent) {
 	os.popupMenu(menu, ev.currentTarget ?? ev.target).finally(cleanup);
 }
 
+function editProfile() {
+	router.push('/settings/profile');
+}
+
 function showMemoTextarea() {
 	isEditingMemo.value = true;
 	nextTick(() => {
@@ -407,6 +412,23 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 						background: rgba(0, 0, 0, 0.2);
 						padding: 8px;
 						border-radius: 24px;
+
+						> .edit-profile {
+							height: 31px;
+							margin-right: 4px;
+							padding: 0 12px;
+							vertical-align: bottom;
+							border-radius: 16px;
+							background: #fff;
+							color: #17324d;
+							font-size: 13px;
+							font-weight: 750;
+						}
+
+						> .edit-profile:hover {
+							background: #eef5ff;
+							color: #175cd3;
+						}
 
 						> .menu {
 							vertical-align: bottom;
