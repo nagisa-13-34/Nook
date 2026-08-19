@@ -215,8 +215,8 @@ definePage(() => ({
 	grid-auto-columns: minmax(0, 1fr);
 	margin-bottom: var(--MI-margin);
 	padding: 4px;
-	background: #fff;
-	border: 1px solid #e2e7ee;
+	background: var(--MI_THEME-panel);
+	border: 1px solid var(--MI_THEME-divider);
 	border-radius: 9px;
 }
 
@@ -228,23 +228,23 @@ definePage(() => ({
 	min-height: 42px;
 	padding: 6px 10px;
 	border-radius: 7px;
-	color: #667085;
+	color: color(from var(--MI_THEME-fg) srgb r g b / 0.68);
 	font-weight: 700;
 
 	&:hover {
-		background: #f9fafb;
-		color: #1d2939;
+		background: var(--MI_THEME-panelHighlight);
+		color: var(--MI_THEME-fg);
 	}
 
 	&:focus-visible {
-		outline: 2px solid #3657d6;
+		outline: 2px solid var(--MI_THEME-focus);
 		outline-offset: -2px;
 	}
 }
 
 .nookTabActive {
-	background: #eef1ff;
-	color: #3657d6;
+	background: var(--MI_THEME-accentedBg);
+	color: var(--MI_THEME-accent);
 }
 
 .tl {
