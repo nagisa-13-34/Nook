@@ -37,10 +37,10 @@ const menuIndicated = computed(() => {
 
 <style lang="scss" module>
 .root {
-	--nook-blue: #175cd3;
-	--nook-yellow: #ffd84d;
-	--nook-ink: #17324d;
-	--nook-border: #d7e3f1;
+	--nook-blue: #3657d6;
+	--nook-yellow: #f6c94c;
+	--nook-ink: #1d2939;
+	--nook-border: #e2e7ee;
 	position: relative;
 	display: grid;
 	grid-template-columns: 48px 1fr 48px;
