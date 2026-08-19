@@ -31,6 +31,7 @@ type MfmEvents = {
 
 type MarkdownBlock =
 	| { type: 'paragraph'; text: string }
+	| { type: 'literal'; text: string }
 	| { type: 'heading'; level: 1 | 2 | 3; text: string }
 	| { type: 'unorderedList'; items: string[] }
 	| { type: 'orderedList'; items: string[] }
@@ -53,21 +54,23 @@ function hasCompleteCodeFence(source: string): boolean {
 	return false;
 }
 
-function isMarkdownBlockStart(line: string, allowCodeFence = true): boolean {
+function isFenceLine(line: string): boolean {
+	return /^```/.test(line.trimStart());
+}
+
+function isMarkdownBlockStart(line: string): boolean {
 	return /^(#{1,3})\s+/.test(line)
 		|| /^[-+*]\s+/.test(line)
 		|| /^\d+\.\s+/.test(line)
-		|| (allowCodeFence && /^```/.test(line.trimStart()))
+		|| isFenceLine(line)
 		|| /^\s*(?:---|___)\s*$/.test(line);
 }
 
 function hasMarkdownBlocks(text: string): boolean {
-	const normalized = text.replace(/\r\n?/g, '\n');
-	const allowCodeFence = hasCompleteCodeFence(normalized);
-
-	return normalized
+	return text
+		.replace(/\r\n?/g, '\n')
 		.split('\n')
-		.some(line => isMarkdownBlockStart(line, allowCodeFence));
+		.some(isMarkdownBlockStart);
 }
 
 function parseMarkdownBlocks(source: string): MarkdownBlock[] {
@@ -85,10 +88,19 @@ function parseMarkdownBlocks(source: string): MarkdownBlock[] {
 			continue;
 		}
 
-		if (allowCodeFence && line.trimStart().startsWith('```')) {
+		if (isFenceLine(line)) {
+			if (!allowCodeFence) {
+				// Keep an unfinished fence isolated from the following text. Passing
+				// "```text\n#tag" to the MFM parser can swallow the hashtag as code-ish
+				// syntax. Treat the fence as literal text so the next line starts fresh.
+				blocks.push({ type: 'literal', text: line });
+				index++;
+				continue;
+			}
+
 			index++;
 			const codeLines: string[] = [];
-			while (index < lines.length && !lines[index].trimStart().startsWith('```')) {
+			while (index < lines.length && !isFenceLine(lines[index])) {
 				codeLines.push(lines[index]);
 				index++;
 			}
@@ -138,7 +150,7 @@ function parseMarkdownBlocks(source: string): MarkdownBlock[] {
 		while (index < lines.length) {
 			const current = lines[index];
 			if (current.trim() === '') break;
-			if (paragraph.length > 0 && isMarkdownBlockStart(current, allowCodeFence)) break;
+			if (paragraph.length > 0 && isMarkdownBlockStart(current)) break;
 			paragraph.push(current);
 			index++;
 		}
@@ -205,6 +217,12 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					key: index,
 					style: 'max-width: 100%; margin: 0.5em 0; padding: 10px 12px; overflow-x: auto; border: 1px solid var(--MI_THEME-divider); border-radius: 8px; background: color(from var(--MI_THEME-fg) srgb r g b / 0.06); font: 0.9em/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre;',
 				}, [h('code', block.text)]);
+
+			case 'literal':
+				return h('div', {
+					key: index,
+					style: 'margin: 0.25em 0; white-space: pre-wrap;',
+				}, block.text);
 
 			case 'hr':
 				return h('hr', {
