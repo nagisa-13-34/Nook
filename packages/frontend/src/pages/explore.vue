@@ -8,8 +8,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div v-if="tab === 'featured'">
 		<XFeatured/>
 	</div>
-	<div v-else-if="tab === 'videos'">
-		<XVideos/>
+	<div v-else-if="tab === 'spark'">
+		<XVideos initialTab="shorts" :showTabs="false"/>
+	</div>
+	<div v-else-if="tab === 'theater'">
+		<XVideos initialTab="videos" :showTabs="false"/>
 	</div>
 	<div v-else-if="tab === 'users'">
 		<XUsers/>
@@ -38,7 +41,14 @@ const props = withDefaults(defineProps<{
 });
 
 const videoFeedAvailable = computed(() => isNookVideoFeedAvailable(availableBasicTimelines()));
-const tab = ref(props.initialTab === 'videos' && !videoFeedAvailable.value ? 'featured' : props.initialTab);
+
+function normalizeInitialTab(value: string): string {
+	const normalized = value === 'shorts' ? 'spark' : value === 'videos' ? 'theater' : value;
+	if ((normalized === 'spark' || normalized === 'theater') && !videoFeedAvailable.value) return 'featured';
+	return normalized;
+}
+
+const tab = ref(normalizeInitialTab(props.initialTab));
 
 const headerActions = computed(() => []);
 
@@ -47,8 +57,12 @@ const headerTabs = computed(() => [{
 	icon: 'ti ti-bolt',
 	title: i18n.ts.featured,
 }, ...(videoFeedAvailable.value ? [{
-	key: 'videos',
-	icon: 'ti ti-video',
+	key: 'spark',
+	icon: 'ti ti-sparkles',
+	title: i18n.ts.nookShorts,
+}, {
+	key: 'theater',
+	icon: 'ti ti-device-tv',
 	title: i18n.ts.nookVideos,
 }] : []), {
 	key: 'users',
