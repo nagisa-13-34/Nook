@@ -14,27 +14,21 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<MkSuperMenu :def="menuDef" :grid="narrow"></MkSuperMenu>
 
 						<section class="appearance" aria-label="表示モード">
-							<div class="appearanceLabel"><i class="ti ti-adjustments-horizontal"></i><span>表示</span></div>
-							<div class="appearanceButtons" role="group" aria-label="Light / Dark">
-								<button
-									type="button"
-									class="_button appearanceButton"
-									:class="{ active: !store.r.darkMode.value }"
-									:aria-pressed="!store.r.darkMode.value"
-									@click="setColorMode(false)"
-								>
-									<i class="ti ti-sun"></i><span>{{ i18n.ts.light }}</span>
-								</button>
-								<button
-									type="button"
-									class="_button appearanceButton"
-									:class="{ active: store.r.darkMode.value }"
-									:aria-pressed="store.r.darkMode.value"
-									@click="setColorMode(true)"
-								>
-									<i class="ti ti-moon"></i><span>{{ i18n.ts.dark }}</span>
-								</button>
-							</div>
+							<button
+								type="button"
+								class="_button appearanceButton"
+								:aria-label="store.r.darkMode.value ? 'ダークモード。押すとライトモードに切り替えます' : 'ライトモード。押すとダークモードに切り替えます'"
+								@click="toggleColorMode"
+							>
+								<span class="appearanceIcon">
+									<i :class="store.r.darkMode.value ? 'ti ti-moon' : 'ti ti-sun'"></i>
+								</span>
+								<span class="appearanceText">
+									<strong>{{ store.r.darkMode.value ? i18n.ts.dark : i18n.ts.light }}</strong>
+									<small>{{ store.r.darkMode.value ? 'ライトに切り替え' : 'ダークに切り替え' }}</small>
+								</span>
+								<i class="ti ti-switch-horizontal appearanceSwitch"></i>
+							</button>
 						</section>
 					</div>
 				</div>
@@ -85,10 +79,10 @@ const ro = new ResizeObserver((entries) => {
 	narrow.value = entries[0].borderBoxSize[0].inlineSize < NARROW_THRESHOLD;
 });
 
-function setColorMode(dark: boolean) {
-	// Nook only exposes explicit Light / Dark modes. Manual selection wins over device sync.
+function toggleColorMode() {
+	// Nook only exposes one explicit Light / Dark switch. Manual selection wins over device sync.
 	if (syncDeviceDarkMode.value) syncDeviceDarkMode.value = false;
-	store.set('darkMode', dark);
+	store.set('darkMode', !store.r.darkMode.value);
 }
 
 const menuDef = computed<SuperMenuDef[]>(() => [{
@@ -226,50 +220,60 @@ definePage(() => INFO.value);
 }
 
 .appearance {
-	padding: 12px;
-	border: 1px solid var(--MI_THEME-divider);
-	border-radius: 10px;
-	background: var(--MI_THEME-panel);
-}
-
-.appearanceLabel {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin-bottom: 10px;
-	color: color(from var(--MI_THEME-fg) srgb r g b / 0.72);
-	font-size: 12px;
-	font-weight: 700;
-}
-
-.appearanceButtons {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 6px;
-	padding: 4px;
-	border: 1px solid var(--MI_THEME-divider);
-	border-radius: 9px;
-	background: var(--MI_THEME-bg);
+	padding-top: 2px;
 }
 
 .appearanceButton {
+	width: 100%;
+	min-height: 48px;
+	padding: 7px 10px;
 	display: flex;
 	align-items: center;
-	justify-content: center;
-	gap: 7px;
-	min-height: 38px;
-	border-radius: 7px;
+	gap: 10px;
+	border: 1px solid var(--MI_THEME-divider);
+	border-radius: 9px;
+	background: var(--MI_THEME-panel);
 	color: var(--MI_THEME-fg);
-	font-size: 13px;
-	font-weight: 750;
+	text-align: left;
 }
 
 .appearanceButton:hover {
 	background: var(--MI_THEME-panelHighlight);
 }
 
-.appearanceButton.active {
+.appearanceIcon {
+	display: grid;
+	width: 32px;
+	height: 32px;
+	flex: 0 0 auto;
+	place-items: center;
+	border-radius: 8px;
 	background: var(--MI_THEME-accentedBg);
 	color: var(--MI_THEME-accent);
+	font-size: 17px;
+}
+
+.appearanceText {
+	min-width: 0;
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.appearanceText strong {
+	font-size: 13px;
+	font-weight: 750;
+}
+
+.appearanceText small {
+	color: color(from var(--MI_THEME-fg) srgb r g b / 0.6);
+	font-size: 11px;
+}
+
+.appearanceSwitch {
+	flex: 0 0 auto;
+	color: color(from var(--MI_THEME-fg) srgb r g b / 0.5);
+	font-size: 17px;
 }
 </style>
