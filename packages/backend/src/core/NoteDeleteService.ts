@@ -110,10 +110,22 @@ export class NoteDeleteService {
 
 		this.searchService.unindexNote(note);
 
-		await this.notesRepository.delete({
+		const deleteResult = await this.notesRepository.delete({
 			id: note.id,
 			userId: user.id,
 		});
+
+		// Nook shows the number of posts that currently exist on the profile.
+		// Keep the local cached counter in sync when a post is actually deleted.
+		if ((deleteResult.affected ?? 0) > 0 && user.host == null) {
+			await this.usersRepository.createQueryBuilder().update()
+				.set({
+					updatedAt: deletedAt,
+					notesCount: () => 'GREATEST("notesCount" - 1, 0)',
+				})
+				.where('id = :id', { id: user.id })
+				.execute();
+		}
 
 		if (deleter && (note.userId !== deleter.id)) {
 			const user = await this.usersRepository.findOneByOrFail({ id: note.userId });
