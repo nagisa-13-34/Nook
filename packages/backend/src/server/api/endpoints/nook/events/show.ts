@@ -47,9 +47,19 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			if (event == null) throw new ApiError(meta.errors.eventUnavailable);
 
 			const voiceEnabled = await this.nookAccessService.isFeatureEnabled('voice_call');
-			const visibleIds = event.communityId == null
-				? new Set<string>()
-				: new Set((await listNookCommunityChannels(this.db, event.communityId, me.id).catch(() => [])).map(channel => channel.id));
+			let communityAccessible = false;
+			let visibleIds = new Set<string>();
+			if (event.communityId != null) {
+				try {
+					const channels = await listNookCommunityChannels(this.db, event.communityId, me.id);
+					communityAccessible = true;
+					visibleIds = new Set(channels.map(channel => channel.id));
+				} catch {
+					// Public and unlisted events remain viewable, but community-only metadata stays hidden.
+				}
+			}
+
+			if (event.visibility === 'community' && event.creatorId !== me.id && !communityAccessible) throw new ApiError(meta.errors.eventUnavailable);
 
 			return {
 				...serializeNookEvent(event),
