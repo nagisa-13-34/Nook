@@ -163,8 +163,7 @@ definePage(() => ({
 }
 
 .search {
-	display: grid;
-	grid-template-columns: auto minmax(0, 1fr) auto auto;
+	display: flex;
 	align-items: center;
 	gap: 9px;
 	min-height: 48px;
@@ -177,6 +176,7 @@ definePage(() => ({
 }
 
 .search > i {
+	flex: 0 0 auto;
 	color: var(--nook-muted, #667a91);
 	font-size: 18px;
 }
@@ -184,6 +184,7 @@ definePage(() => ({
 .search input {
 	min-width: 0;
 	width: 100%;
+	flex: 1;
 	border: 0;
 	outline: 0;
 	background: transparent;
@@ -203,6 +204,7 @@ definePage(() => ({
 	display: grid;
 	width: 34px;
 	height: 34px;
+	flex: 0 0 auto;
 	place-items: center;
 	border-radius: 7px;
 	color: var(--nook-muted, #667a91);
@@ -216,6 +218,7 @@ definePage(() => ({
 .searchButton {
 	min-width: 72px;
 	height: 36px;
+	flex: 0 0 auto;
 	padding: 0 15px;
 	border-radius: 7px;
 	background: var(--nook-yellow, #f6c94c);
@@ -313,17 +316,9 @@ definePage(() => ({
 		padding: 16px;
 	}
 
-	.search {
-		grid-template-columns: auto minmax(0, 1fr) auto;
-	}
-
-	.clearSearch {
-		grid-column: 3;
-	}
-
 	.searchButton {
-		grid-column: 1 / -1;
-		width: 100%;
+		min-width: 64px;
+		padding-inline: 12px;
 	}
 
 	.modePicker {
