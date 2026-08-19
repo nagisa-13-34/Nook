@@ -14,6 +14,35 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 		</section>
 
+		<form v-if="videoFeedAvailable" :class="$style.search" @submit.prevent="submitVideoSearch">
+			<i class="ti ti-search" aria-hidden="true"></i>
+			<input
+				v-model="videoSearchInput"
+				type="search"
+				placeholder="動画を検索"
+				aria-label="動画を検索"
+				autocomplete="off"
+			>
+			<button
+				v-if="videoSearchQuery !== ''"
+				type="button"
+				class="_button"
+				:class="$style.clearSearch"
+				aria-label="検索をクリア"
+				@click="clearVideoSearch"
+			>
+				<i class="ti ti-x"></i>
+			</button>
+			<button
+				type="submit"
+				class="_button"
+				:class="$style.searchButton"
+				:disabled="videoSearchInput.trim() === ''"
+			>
+				検索
+			</button>
+		</form>
+
 		<div v-if="videoFeedAvailable" :class="$style.modePicker" role="tablist" :aria-label="i18n.ts.nookVideo">
 			<button
 				class="_button"
@@ -47,7 +76,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<i class="ti ti-video-off"></i>
 			<span>{{ i18n.ts.noNotes }}</span>
 		</div>
-		<XVideos v-else :initialTab="tab" :showTabs="false"/>
+		<XVideos v-else :initialTab="tab" :showTabs="false" :searchQuery="videoSearchQuery"/>
 	</div>
 </PageWithHeader>
 </template>
@@ -62,8 +91,21 @@ import { definePage } from '@/page.js';
 import { availableBasicTimelines } from '@/timelines.js';
 
 const tab = ref<NookVideoTab>('shorts');
+const videoSearchInput = ref('');
+const videoSearchQuery = ref('');
 const videoFeedAvailable = computed(() => isNookVideoFeedAvailable(availableBasicTimelines()));
 const headerActions = computed(() => []);
+
+function submitVideoSearch(): void {
+	const query = videoSearchInput.value.trim();
+	if (query === '') return;
+	videoSearchQuery.value = query;
+}
+
+function clearVideoSearch(): void {
+	videoSearchInput.value = '';
+	videoSearchQuery.value = '';
+}
 
 definePage(() => ({
 	title: i18n.ts.nookVideo,
@@ -89,7 +131,7 @@ definePage(() => ({
 	gap: 16px;
 	padding: 22px 24px;
 	margin-bottom: 16px;
-	background: #fff;
+	background: var(--nook-white, #fff);
 	border: 1px solid var(--nook-border);
 	border-radius: 14px;
 }
@@ -116,8 +158,73 @@ definePage(() => ({
 
 .description {
 	margin: 5px 0 0;
-	color: #667a91;
+	color: var(--nook-muted, #667a91);
 	font-size: 13px;
+}
+
+.search {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto auto;
+	align-items: center;
+	gap: 9px;
+	min-height: 48px;
+	margin-bottom: 14px;
+	padding: 5px 6px 5px 14px;
+	box-sizing: border-box;
+	background: var(--nook-white, #fff);
+	border: 1px solid var(--nook-border);
+	border-radius: 11px;
+}
+
+.search > i {
+	color: var(--nook-muted, #667a91);
+	font-size: 18px;
+}
+
+.search input {
+	min-width: 0;
+	width: 100%;
+	border: 0;
+	outline: 0;
+	background: transparent;
+	color: var(--nook-blue-deep, var(--nook-ink));
+	font: inherit;
+}
+
+.search input::placeholder {
+	color: var(--nook-muted, #667a91);
+}
+
+.search:focus-within {
+	border-color: var(--nook-blue);
+}
+
+.clearSearch {
+	display: grid;
+	width: 34px;
+	height: 34px;
+	place-items: center;
+	border-radius: 7px;
+	color: var(--nook-muted, #667a91);
+}
+
+.clearSearch:hover {
+	background: var(--nook-blue-soft);
+	color: var(--nook-blue);
+}
+
+.searchButton {
+	min-width: 72px;
+	height: 36px;
+	padding: 0 15px;
+	border-radius: 7px;
+	background: var(--nook-yellow, #f6c94c);
+	color: var(--nook-on-yellow, #1d2939);
+	font-weight: 800;
+}
+
+.searchButton:disabled {
+	opacity: 0.45;
 }
 
 .modePicker {
@@ -136,14 +243,14 @@ definePage(() => ({
 	box-sizing: border-box;
 	border: 1px solid var(--nook-border);
 	border-radius: 12px;
-	background: #fff;
+	background: var(--nook-white, #fff);
 	color: var(--nook-ink);
 	text-align: left;
 	transition: border-color 0.12s ease, background-color 0.12s ease, color 0.12s ease;
 }
 
 .mode:hover {
-	background: #f8fbff;
+	background: var(--nook-panel-highlight, #f8fbff);
 }
 
 .active {
@@ -176,7 +283,7 @@ definePage(() => ({
 }
 
 .modeText small {
-	color: #667a91;
+	color: var(--nook-muted, #667a91);
 	font-size: 12px;
 	font-weight: 500;
 }
@@ -188,7 +295,7 @@ definePage(() => ({
 	align-items: center;
 	justify-content: center;
 	gap: 10px;
-	color: #667a91;
+	color: var(--nook-muted, #667a91);
 	font-size: 14px;
 }
 
@@ -204,6 +311,19 @@ definePage(() => ({
 
 	.hero {
 		padding: 16px;
+	}
+
+	.search {
+		grid-template-columns: auto minmax(0, 1fr) auto;
+	}
+
+	.clearSearch {
+		grid-column: 3;
+	}
+
+	.searchButton {
+		grid-column: 1 / -1;
+		width: 100%;
 	}
 
 	.modePicker {
