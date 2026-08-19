@@ -659,6 +659,7 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 						> span {
 							font-size: 70%;
 						}
+					}
 				}
 			}
 		}
