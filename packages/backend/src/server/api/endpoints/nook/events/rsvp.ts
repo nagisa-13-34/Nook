@@ -42,14 +42,21 @@ export const paramDef = {
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(@Inject(DI.db) private db: DataSource) {
 		super(meta, paramDef, async (ps, me) => {
-			const rows = await this.db.query<Array<{ communityId: string | null; participation: 'anyone' | 'community' }>>(
-				'SELECT "communityId", "participation" FROM "nook_community_event" WHERE "id"=$1 LIMIT 1',
+			const rows = await this.db.query<Array<{
+				communityId: string | null;
+				creatorId: string | null;
+				visibility: 'public' | 'community' | 'unlisted' | 'private';
+				participation: 'anyone' | 'community';
+			}>>(
+				'SELECT "communityId", "creatorId", "visibility", "participation" FROM "nook_community_event" WHERE "id"=$1 LIMIT 1',
 				[ps.eventId],
 			);
 			const event = rows[0];
 			if (event == null) throw new ApiError(meta.errors.eventUnavailable);
 
-			if (event.participation === 'community') {
+			const requiresCommunityAccess = event.participation === 'community'
+				|| (event.visibility === 'community' && event.creatorId !== me.id);
+			if (requiresCommunityAccess) {
 				if (event.communityId == null) throw new ApiError(meta.errors.eventUnavailable);
 				try {
 					await requireNookCommunityMember(this.db, event.communityId, me.id);
