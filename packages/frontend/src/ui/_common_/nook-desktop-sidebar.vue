@@ -116,8 +116,8 @@ async function openAccountMenu(ev: PointerEvent) {
 	if ($i.isAdmin || $i.isModerator) {
 		menuItems.push({
 			type: 'link',
-			icon: 'ti ti-dashboard',
-			text: i18n.ts.controlPanel,
+			icon: 'ti ti-shield-cog',
+			text: '管理',
 			to: '/admin',
 		});
 	}
