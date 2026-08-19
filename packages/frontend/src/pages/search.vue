@@ -4,40 +4,64 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<PageWithHeader v-model:tab="tab" :actions="headerActions" :tabs="headerTabs" :swipable="true">
-	<div v-if="tab === 'note'" class="_spacer" style="--MI_SPACER-w: 800px;">
-		<XNote v-bind="props"/>
-	</div>
+<PageWithHeader :actions="headerActions" :tabs="[]">
+	<div class="_spacer" style="--MI_SPACER-w: 800px;">
+		<div :class="$style.root">
+			<form :class="$style.searchForm" @submit.prevent="search">
+				<MkInput
+					v-model="inputQuery"
+					large
+					autofocus
+					type="search"
+					placeholder="投稿、ユーザー、ネストを検索"
+				>
+					<template #prefix><i class="ti ti-search"></i></template>
+				</MkInput>
+				<MkButton
+					type="submit"
+					large
+					primary
+					gradate
+					:disabled="inputQuery.trim() === ''"
+				>
+					検索
+				</MkButton>
+			</form>
 
-	<div v-else-if="tab === 'user'" class="_spacer" style="--MI_SPACER-w: 800px;">
-		<div v-if="usersSearchAvailable">
-			<XUser v-bind="props"/>
+			<template v-if="submittedQuery !== ''">
+				<nav :class="$style.tabs" aria-label="検索結果">
+					<button
+						v-for="item in resultTabs"
+						:key="item.key"
+						class="_button"
+						:class="[$style.tab, { [$style.activeTab]: tab === item.key }]"
+						:aria-current="tab === item.key ? 'page' : undefined"
+						@click="selectTab(item.key)"
+					>
+						<i :class="item.icon"></i>
+						<span>{{ item.title }}</span>
+					</button>
+				</nav>
+
+				<div :class="$style.results">
+					<XSearchResults :query="submittedQuery" :tab="tab"/>
+				</div>
+			</template>
 		</div>
-		<div v-else>
-			<MkInfo warn>{{ i18n.ts.usersSearchNotAvailable }}</MkInfo>
-		</div>
-	</div>
-
-	<XNests v-else-if="tab === 'nest'" :query="props.query"/>
-
-	<div v-else-if="tab === 'featured'">
-		<XFeatured/>
-	</div>
-
-	<div v-else-if="tab === 'discoverUsers'">
-		<XExploreUsers/>
 	</div>
 </PageWithHeader>
 </template>
 
 <script lang="ts" setup>
-import { computed, defineAsyncComponent, ref, toRef, watch } from 'vue';
+import { computed, defineAsyncComponent, ref, watch } from 'vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { usersSearchAvailable } from '@/utility/check-permissions.js';
-import MkInfo from '@/components/MkInfo.vue';
+import { useRouter } from '@/router.js';
+import MkInput from '@/components/MkInput.vue';
+import MkButton from '@/components/MkButton.vue';
 
-type SearchDiscoverTab = 'note' | 'user' | 'nest' | 'featured' | 'discoverUsers';
+type SearchResultTab = 'note' | 'user' | 'nest';
+type SearchDiscoverTab = SearchResultTab | 'featured' | 'discoverUsers';
 
 const props = withDefaults(defineProps<{
 	query?: string,
@@ -57,21 +81,29 @@ const props = withDefaults(defineProps<{
 	ignoreNotesSearchAvailable: false,
 });
 
-const XNote = defineAsyncComponent(() => import('./search.note.vue'));
-const XUser = defineAsyncComponent(() => import('./search.user.vue'));
-const XNests = defineAsyncComponent(() => import('./search.nests.vue'));
-const XFeatured = defineAsyncComponent(() => import('./explore.featured.vue'));
-const XExploreUsers = defineAsyncComponent(() => import('./explore.users.vue'));
+const router = useRouter();
+const XSearchResults = defineAsyncComponent(() => import('./search.results.vue'));
 
-const tab = ref<SearchDiscoverTab>(toRef(props, 'type').value);
+function normalizeTab(value: SearchDiscoverTab | undefined): SearchResultTab {
+	if (value === 'user' || value === 'nest') return value;
+	return 'note';
+}
 
-watch(() => props.type, (value) => {
-	if (value != null) tab.value = value;
+const inputQuery = ref(props.query ?? '');
+const submittedQuery = ref((props.query ?? '').trim());
+const tab = ref<SearchResultTab>(normalizeTab(props.type));
+
+watch(() => props.query, value => {
+	inputQuery.value = value ?? '';
+	submittedQuery.value = (value ?? '').trim();
+});
+
+watch(() => props.type, value => {
+	tab.value = normalizeTab(value);
 });
 
 const headerActions = computed(() => []);
-
-const headerTabs = computed(() => [{
+const resultTabs: Array<{ key: SearchResultTab; title: string; icon: string }> = [{
 	key: 'note',
 	title: i18n.ts.notes,
 	icon: 'ti ti-pencil',
@@ -83,18 +115,116 @@ const headerTabs = computed(() => [{
 	key: 'nest',
 	title: i18n.ts.nookCommunity,
 	icon: 'ti ti-users-group',
-}, {
-	key: 'featured',
-	title: i18n.ts.featured,
-	icon: 'ti ti-bolt',
-}, {
-	key: 'discoverUsers',
-	title: i18n.ts.nookDiscoverUsers,
-	icon: 'ti ti-users-plus',
-}]);
+}];
+
+function syncUrl() {
+	if (submittedQuery.value === '') return;
+	router.replace('/search', {
+		query: {
+			q: submittedQuery.value,
+			type: tab.value,
+		},
+	});
+}
+
+function search() {
+	const query = inputQuery.value.trim();
+	if (query === '') {
+		submittedQuery.value = '';
+		return;
+	}
+
+	submittedQuery.value = query;
+	syncUrl();
+}
+
+function selectTab(nextTab: SearchResultTab) {
+	tab.value = nextTab;
+	syncUrl();
+}
 
 definePage(() => ({
 	title: i18n.ts.nookSearchDiscover,
 	icon: 'ti ti-search',
 }));
 </script>
+
+<style lang="scss" module>
+.root {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: 18px 0;
+}
+
+.searchForm {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 10px;
+	align-items: end;
+}
+
+.tabs {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	background: var(--MI_THEME-panel);
+	border: 1px solid var(--MI_THEME-divider);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.tab {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 7px;
+	min-height: 44px;
+	padding: 0 12px;
+	color: var(--MI_THEME-fg);
+	font-weight: 650;
+}
+
+.tab + .tab {
+	border-left: 1px solid var(--MI_THEME-divider);
+}
+
+.tab:hover {
+	background: var(--MI_THEME-panelHighlight);
+}
+
+.activeTab {
+	color: var(--MI_THEME-accent);
+	background: var(--MI_THEME-accentedBg);
+}
+
+.activeTab::after {
+	content: '';
+	position: absolute;
+	left: 12px;
+	right: 12px;
+	bottom: 0;
+	height: 2px;
+	background: var(--MI_THEME-accent);
+}
+
+.results {
+	min-width: 0;
+}
+
+@media (max-width: 600px) {
+	.root {
+		padding: 12px 0;
+	}
+
+	.searchForm {
+		grid-template-columns: 1fr;
+	}
+
+	.tab {
+		min-height: 42px;
+		padding-inline: 6px;
+		font-size: 13px;
+	}
+}
+</style>
